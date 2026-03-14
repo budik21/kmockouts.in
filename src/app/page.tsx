@@ -1,66 +1,100 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { getDb } from '@/lib/db';
+import { ALL_GROUPS } from '@/lib/constants';
+import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
+import { calculateStandings } from '@/engine/standings';
+import { getAllCachedProbsOrCompute } from '@/lib/probability-cache';
+import GroupOverview from './components/GroupOverview';
 
-export default function Home() {
+function rowToTeam(row: TeamRow): Team {
+  return {
+    id: row.id, name: row.name, shortName: row.short_name,
+    countryCode: row.country_code, groupId: row.group_id as GroupId,
+    isPlaceholder: row.is_placeholder === 1, externalId: row.external_id ?? undefined,
+  };
+}
+
+function rowToMatch(row: MatchRow): Match {
+  return {
+    id: row.id, groupId: row.group_id as GroupId, round: row.round,
+    homeTeamId: row.home_team_id, awayTeamId: row.away_team_id,
+    homeGoals: row.home_goals, awayGoals: row.away_goals,
+    homeYc: row.home_yc, homeRcDirect: row.home_rc_direct,
+    awayYc: row.away_yc, awayRcDirect: row.away_rc_direct,
+    venue: row.venue, kickOff: row.kick_off, status: row.status as Match['status'],
+  };
+}
+
+export const dynamic = 'force-dynamic';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildGroupsData(): Record<string, any> {
+  const db = getDb();
+  const groups: Record<string, unknown> = {};
+
+  // Read cached probabilities (computes any missing groups on first load)
+  const cachedProbs = getAllCachedProbsOrCompute();
+
+  for (const gid of ALL_GROUPS) {
+    const teamRows = db.prepare('SELECT * FROM team WHERE group_id = ? ORDER BY id').all(gid) as TeamRow[];
+    const matchRows = db.prepare("SELECT * FROM match WHERE group_id = ? AND status = 'FINISHED' ORDER BY round").all(gid) as MatchRow[];
+    const teams = teamRows.map(rowToTeam);
+    const matches = matchRows.map(rowToMatch);
+    const standings = calculateStandings({ teams, matches });
+
+    // Build probability map for this group from cache
+    const groupCache = cachedProbs.get(gid);
+    let probabilities: Record<number, { probFirst: number; probSecond: number; probThird: number; probOut: number }> | undefined;
+    if (groupCache && groupCache.size > 0) {
+      probabilities = {};
+      for (const [teamId, cp] of groupCache) {
+        probabilities[teamId] = {
+          probFirst: cp.probFirst,
+          probSecond: cp.probSecond,
+          probThird: cp.probThird,
+          probOut: cp.probOut,
+        };
+      }
+    }
+
+    groups[gid] = {
+      groupId: gid,
+      standings: standings.map((s) => ({
+        position: s.position,
+        team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder },
+        matchesPlayed: s.matchesPlayed,
+        wins: s.wins,
+        draws: s.draws,
+        losses: s.losses,
+        goalsFor: s.goalsFor,
+        goalsAgainst: s.goalsAgainst,
+        goalDifference: s.goalDifference,
+        points: s.points,
+      })),
+      probabilities,
+    };
+  }
+
+  return groups;
+}
+
+export default function HomePage() {
+  const groups = buildGroupsData();
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <>
+      <section className="hero">
+        <div className="container">
+          <h1>Who Will Qualify?</h1>
+          <p className="subtitle">FIFA World Cup 2026 &mdash; Group Stage Tracker</p>
+          <p className="tournament-info">
+            48 teams &bull; 12 groups &bull; Canada, Mexico &amp; USA &bull; June 11 &ndash; July 19, 2026
           </p>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+      </section>
+
+      <main className="container">
+        <GroupOverview groups={groups} />
       </main>
-    </div>
+    </>
   );
 }

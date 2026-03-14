@@ -1,0 +1,25 @@
+{
+  "id": 2,
+  "name": "Round 1 complete (B)",
+  "description": "All round 1 matches played. Draw and upset.",
+  "results": [
+    {
+      "group_id": "A", "round": 1,
+      "home_team_id": 1, "away_team_id": 2,
+      "home_goals": 1, "away_goals": 1,
+      "home_yc": 2, "home_rc_direct": 0,
+      "away_yc": 1, "away_rc_direct": 0,
+      "status": "FINISHED",
+      "_label": "Mexico 1-1 South Africa"
+    },
+    {
+      "group_id": "A", "round": 1,
+      "home_team_id": 3, "away_team_id": 4,
+      "home_goals": 0, "away_goals": 2,
+      "home_yc": 1, "home_rc_direct": 0,
+      "away_yc": 0, "away_rc_direct": 0,
+      "status": "FINISHED",
+      "_label": "South Korea 0-2 TBD (Euro PO D)"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+[
+  {"id": 1, "name": "Mexico", "short_name": "MEX", "country_code": "MX", "group_id": "A", "is_placeholder": 0},
+  {"id": 2, "name": "South Africa", "short_name": "RSA", "country_code": "ZA", "group_id": "A", "is_placeholder": 0},
+  {"id": 3, "name": "South Korea", "short_name": "KOR", "country_code": "KR", "group_id": "A", "is_placeholder": 0},
+  {"id": 4, "name": "TBD (Euro Playoff D)", "short_name": "EPD", "country_code": "", "group_id": "A", "is_placeholder": 1},
+
+  {"id": 5, "name": "Canada", "short_name": "CAN", "country_code": "CA", "group_id": "B", "is_placeholder": 0},
+  {"id": 6, "name": "TBD (Euro Playoff A)", "short_name": "EPA", "country_code": "", "group_id": "B", "is_placeholder": 1},
+  {"id": 7, "name": "Qatar", "short_name": "QAT", "country_code": "QA", "group_id": "B", "is_placeholder": 0},
+  {"id": 8, "name": "Switzerland", "short_name": "SUI", "country_code": "CH", "group_id": "B", "is_placeholder": 0},
+
+  {"id": 9, "name": "Brazil", "short_name": "BRA", "country_code": "BR", "group_id": "C", "is_placeholder": 0},
+  {"id": 10, "name": "Morocco", "short_name": "MAR", "country_code": "MA", "group_id": "C", "is_placeholder": 0},
+  {"id": 11, "name": "Haiti", "short_name": "HAI", "country_code": "HT", "group_id": "C", "is_placeholder": 0},
+  {"id": 12, "name": "Scotland", "short_name": "SCO", "country_code": "GB-SCT", "group_id": "C", "is_placeholder": 0},
+
+  {"id": 13, "name": "United States", "short_name": "USA", "country_code": "US", "group_id": "D", "is_placeholder": 0},
+  {"id": 14, "name": "Paraguay", "short_name": "PAR", "country_code": "PY", "group_id": "D", "is_placeholder": 0},
+  {"id": 15, "name": "Australia", "short_name": "AUS", "country_code": "AU", "group_id": "D", "is_placeholder": 0},
+  {"id": 16, "name": "TBD (Euro Playoff C)", "short_name": "EPC", "country_code": "", "group_id": "D", "is_placeholder": 1},
+
+  {"id": 17, "name": "Germany", "short_name": "GER", "country_code": "DE", "group_id": "E", "is_placeholder": 0},
+  {"id": 18, "name": "Curaçao", "short_name": "CUW", "country_code": "CW", "group_id": "E", "is_placeholder": 0},
+  {"id": 19, "name": "Ivory Coast", "short_name": "CIV", "country_code": "CI", "group_id": "E", "is_placeholder": 0},
+  {"id": 20, "name": "Ecuador", "short_name": "ECU", "country_code": "EC", "group_id": "E", "is_placeholder": 0},
+
+  {"id": 21, "name": "Netherlands", "short_name": "NED", "country_code": "NL", "group_id": "F", "is_placeholder": 0},
+  {"id": 22, "name": "Japan", "short_name": "JPN", "country_code": "JP", "group_id": "F", "is_placeholder": 0},
+  {"id": 23, "name": "TBD (Euro Playoff B)", "short_name": "EPB", "country_code": "", "group_id": "F", "is_placeholder": 1},
+  {"id": 24, "name": "Tunisia", "short_name": "TUN", "country_code": "TN", "group_id": "F", "is_placeholder": 0},
+
+  {"id": 25, "name": "Belgium", "short_name": "BEL", "country_code": "BE", "group_id": "G", "is_placeholder": 0},
+  {"id": 26, "name": "Egypt", "short_name": "EGY", "country_code": "EG", "group_id": "G", "is_placeholder": 0},
+  {"id": 27, "name": "Iran", "short_name": "IRN", "country_code": "IR", "group_id": "G", "is_placeholder": 0},
+  {"id": 28, "name": "New Zealand", "short_name": "NZL", "country_code": "NZ", "group_id": "G", "is_placeholder": 0},
+
+  {"id": 29, "name": "Spain", "short_name": "ESP", "country_code": "ES", "group_id": "H", "is_placeholder": 0},
+  {"id": 30, "name": "Cape Verde", "short_name": "CPV", "country_code": "CV", "group_id": "H", "is_placeholder": 0},
+  {"id": 31, "name": "Saudi Arabia", "short_name": "KSA", "country_code": "SA", "group_id": "H", "is_placeholder": 0},
+  {"id": 32, "name": "Uruguay", "short_name": "URU", "country_code": "UY", "group_id": "H", "is_placeholder": 0},
+
+  {"id": 33, "name": "France", "short_name": "FRA", "country_code": "FR", "group_id": "I", "is_placeholder": 0},
+  {"id": 34, "name": "Senegal", "short_name": "SEN", "country_code": "SN", "group_id": "I", "is_placeholder": 0},
+  {"id": 35, "name": "TBD (IC Playoff 2)", "short_name": "IP2", "country_code": "", "group_id": "I", "is_placeholder": 1},
+  {"id": 36, "name": "Norway", "short_name": "NOR", "country_code": "NO", "group_id": "I", "is_placeholder": 0},
+
+  {"id": 37, "name": "Argentina", "short_name": "ARG", "country_code": "AR", "group_id": "J", "is_placeholder": 0},
+  {"id": 38, "name": "Algeria", "short_name": "ALG", "country_code": "DZ", "group_id": "J", "is_placeholder": 0},
+  {"id": 39, "name": "Austria", "short_name": "AUT", "country_code": "AT", "group_id": "J", "is_placeholder": 0},
+  {"id": 40, "name": "Jordan", "short_name": "JOR", "country_code": "JO", "group_id": "J", "is_placeholder": 0},
+
+  {"id": 41, "name": "Portugal", "short_name": "POR", "country_code": "PT", "group_id": "K", "is_placeholder": 0},
+  {"id": 42, "name": "TBD (IC Playoff 1)", "short_name": "IP1", "country_code": "", "group_id": "K", "is_placeholder": 1},
+  {"id": 43, "name": "Uzbekistan", "short_name": "UZB", "country_code": "UZ", "group_id": "K", "is_placeholder": 0},
+  {"id": 44, "name": "Colombia", "short_name": "COL", "country_code": "CO", "group_id": "K", "is_placeholder": 0},
+
+  {"id": 45, "name": "England", "short_name": "ENG", "country_code": "GB-ENG", "group_id": "L", "is_placeholder": 0},
+  {"id": 46, "name": "Croatia", "short_name": "CRO", "country_code": "HR", "group_id": "L", "is_placeholder": 0},
+  {"id": 47, "name": "Ghana", "short_name": "GHA", "country_code": "GH", "group_id": "L", "is_placeholder": 0},
+  {"id": 48, "name": "Panama", "short_name": "PAN", "country_code": "PA", "group_id": "L", "is_placeholder": 0}
+]

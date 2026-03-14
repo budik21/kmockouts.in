@@ -1,27 +1,41 @@
+/* ============================================================
+   Knockouts.in WC2026 — CSS Custom Properties & Theme
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --wc-primary: #6f003c;
+  --wc-secondary: #1a472a;
+  --wc-accent: #d4a843;
+  --wc-bg: #f8f9fa;
+  --wc-surface: #ffffff;
+  --wc-text: #212529;
+  --wc-text-muted: #6c757d;
+  --wc-border: #dee2e6;
+
+  --prob-first: #198754;
+  --prob-second: #0d6efd;
+  --prob-third: #ffc107;
+  --prob-out: #dc3545;
+
+  --badge-qualified: #198754;
+  --badge-possible: #ffc107;
+  --badge-eliminated: #dc3545;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+[data-bs-theme="dark"] {
+  --wc-primary: #4a1520;
+  --wc-secondary: #5a2a25;
+  --wc-accent: #e8c46a;
+  --wc-bg: #280905;
+  --wc-surface: #3a110d;
+  --wc-text: #ede0de;
+  --wc-text-muted: #b09a97;
+  --wc-border: #5a2a25;
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --prob-first: #28a745;
+  --prob-second: #4d8eff;
+  --prob-third: #ffd43b;
+  --prob-out: #ff6b6b;
 }
 
 * {
@@ -30,13 +44,569 @@ body {
   margin: 0;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+body {
+  background-color: var(--wc-bg);
+  color: var(--wc-text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ============================================================
+   Hero Section
+   ============================================================ */
+
+.hero {
+  background: var(--wc-primary);
+  color: white;
+  padding: 3rem 0;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.hero .subtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+.hero .tournament-info {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* ============================================================
+   Group Card
+   ============================================================ */
+
+.group-card {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 1.5rem;
+}
+
+.group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.group-card-header {
+  background: var(--wc-primary);
+  color: white;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-card-body { padding: 0; }
+
+/* ============================================================
+   Standings Table
+   ============================================================ */
+
+.standings-table {
+  margin: 0;
+  font-size: 0.875rem;
+  width: 100%;
+}
+
+.standings-table th {
+  background: var(--wc-surface);
+  border-bottom: 2px solid var(--wc-border);
+  font-weight: 600;
+  padding: 0.5rem;
+  white-space: nowrap;
+  color: var(--wc-text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.standings-table td {
+  padding: 0.5rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.standings-table .team-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.standings-table .team-short { display: none; }
+
+@media (max-width: 576px) {
+  .standings-table .team-name-full { display: none; }
+  .standings-table .team-short { display: inline; }
+}
+
+.pos-1, .pos-2 { border-left: 3px solid var(--badge-qualified); }
+.pos-3 { border-left: 3px solid var(--badge-possible); }
+.pos-4 { border-left: 3px solid var(--badge-eliminated); }
+
+.standings-row-clickable:hover td {
+  background: var(--wc-bg);
+  transition: background 0.15s;
+}
+
+/* ============================================================
+   Probability Bar
+   ============================================================ */
+
+.prob-bar-container {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--wc-border);
+}
+
+.prob-bar-first { background: var(--prob-first); }
+.prob-bar-second { background: var(--prob-second); }
+.prob-bar-third { background: var(--prob-third); }
+.prob-bar-out { background: var(--prob-out); }
+
+.prob-legend {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.prob-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.prob-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ============================================================
+   Match List
+   ============================================================ */
+
+.match-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--wc-border);
+  gap: 0.5rem;
+}
+
+.match-item:last-child { border-bottom: none; }
+
+.match-team {
+  flex: 1;
+  font-weight: 500;
+}
+
+.match-team.home { text-align: right; }
+
+.match-score {
+  font-weight: 700;
+  font-size: 1.1rem;
+  min-width: 60px;
+  text-align: center;
+  background: var(--wc-bg);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.match-score.scheduled {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--wc-text-muted);
+}
+
+.match-round {
+  font-size: 0.75rem;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 1rem 0;
+}
+
+/* ============================================================
+   Theme Toggle
+   ============================================================ */
+
+.theme-toggle {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: background 0.2s;
+}
+
+.theme-toggle:hover { background: rgba(255,255,255,0.1); }
+
+/* ============================================================
+   Navbar
+   ============================================================ */
+
+.navbar-wc {
+  background: var(--wc-primary) !important;
+}
+
+.navbar-wc .nav-link {
+  color: rgba(255,255,255,0.85) !important;
+  font-weight: 500;
+}
+
+.navbar-wc .nav-link:hover { color: white !important; }
+
+.navbar-wc .navbar-brand {
+  color: white !important;
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+/* ============================================================
+   Breadcrumb Nav
+   ============================================================ */
+
+.breadcrumb-nav {
+  font-size: 0.85rem;
+  color: var(--wc-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.breadcrumb-nav a {
+  color: var(--wc-text-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.breadcrumb-nav a:hover {
+  color: var(--wc-accent);
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  opacity: 0.5;
+}
+
+.breadcrumb-current {
+  color: var(--wc-text);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Team Flags
+   ============================================================ */
+
+.team-flag {
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+
+.team-flag-sm { font-size: 0.9rem; }
+.team-flag-md { font-size: 1.25rem; }
+.team-flag-lg { font-size: 1.6rem; }
+
+.team-flag-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 0.85em;
+  background: var(--wc-border);
+  color: var(--wc-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.standings-table .team-name .team-flag,
+.standings-table .team-name .team-flag-placeholder {
+  margin-right: 0.35rem;
+}
+
+/* ============================================================
+   Team Link (clickable names in standings)
+   ============================================================ */
+
+.team-link {
+  color: var(--wc-text);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.team-link:hover {
+  color: var(--wc-accent);
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Probability Circle
+   ============================================================ */
+
+.prob-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  user-select: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.prob-circle:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* Probability Tooltip Styling */
+.prob-tooltip .tooltip-inner {
+  background: var(--wc-surface, #fff);
+  color: var(--wc-text, #212529);
+  border: 1px solid var(--wc-border, #dee2e6);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  border-radius: 0.5rem;
+  padding: 0;
+  max-width: 220px;
+  text-align: left;
+}
+
+.prob-tooltip .tooltip-arrow::before {
+  border-top-color: var(--wc-border, #dee2e6);
+}
+
+.prob-tooltip-inner {
+  padding: 0.6rem 0.75rem;
+}
+
+.prob-tooltip-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--wc-text-muted, #6c757d);
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--wc-border, #dee2e6);
+}
+
+.prob-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0;
+  font-size: 0.8rem;
+}
+
+.prob-tooltip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.prob-tooltip-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.prob-tooltip-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   Qualify / Eliminate Widgets
+   ============================================================ */
+
+.qualify-widget {
+  border-radius: 0.75rem;
+  color: white;
+  overflow: hidden;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.qualify-widget-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1rem 0;
+  opacity: 0.9;
+}
+
+.qualify-widget-body {
+  padding: 1rem;
+}
+
+.qualify-widget-pct {
+  font-size: 2.75rem;
+  font-weight: 800;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+  line-height: 1;
+}
+
+.qualify-widget-footer {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(0,0,0,0.15);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+/* ============================================================
+   Scenarios Accordion & Cards
+   ============================================================ */
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  padding: 0.5rem;
+}
+
+.scenario-card {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+
+.scenario-card-header {
+  background: var(--wc-bg);
+  padding: 0.35rem 0.5rem;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--wc-text-muted);
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.scenario-card-body {
+  padding: 0.35rem 0;
+}
+
+.scenario-match {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  gap: 0.25rem;
+}
+
+.scenario-match:not(:last-child) {
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.scenario-team {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scenario-team.home { text-align: right; }
+.scenario-team.away { text-align: left; }
+
+.scenario-team-short { display: none; }
+
+@media (max-width: 576px) {
+  .scenario-team-full { display: none; }
+  .scenario-team-short { display: inline; }
+}
+
+.scenario-score {
+  min-width: 40px;
+  text-align: center;
+  font-weight: 700;
+  background: var(--wc-bg);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.25rem;
+  flex-shrink: 0;
+}
+
+/* Accordion overrides for our theme */
+.accordion-item {
+  background: var(--wc-surface);
+  border-color: var(--wc-border);
+}
+
+.accordion-button {
+  background: var(--wc-surface);
+  color: var(--wc-text);
+}
+
+.accordion-button:not(.collapsed) {
+  background: var(--wc-bg);
+  color: var(--wc-text);
+}
+
+.accordion-button:focus {
+  box-shadow: 0 0 0 0.15rem rgba(111, 0, 60, 0.25);
+}
+
+.accordion-body {
+  background: var(--wc-surface);
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+
+@media (max-width: 768px) {
+  .hero h1 { font-size: 1.75rem; }
+  .hero .subtitle { font-size: 1rem; }
+  .standings-table { font-size: 0.8rem; }
+  .standings-table th, .standings-table td { padding: 0.35rem; }
+  .qualify-widget-pct { font-size: 2rem; }
+  .scenario-grid { grid-template-columns: 1fr; }
 }

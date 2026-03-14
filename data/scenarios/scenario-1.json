@@ -1,0 +1,25 @@
+{
+  "id": 1,
+  "name": "Round 1 complete (A)",
+  "description": "All round 1 matches played. Mexico and South Korea win.",
+  "results": [
+    {
+      "group_id": "A", "round": 1,
+      "home_team_id": 1, "away_team_id": 2,
+      "home_goals": 2, "away_goals": 0,
+      "home_yc": 1, "home_rc_direct": 0,
+      "away_yc": 2, "away_rc_direct": 0,
+      "status": "FINISHED",
+      "_label": "Mexico 2-0 South Africa"
+    },
+    {
+      "group_id": "A", "round": 1,
+      "home_team_id": 3, "away_team_id": 4,
+      "home_goals": 1, "away_goals": 0,
+      "home_yc": 0, "home_rc_direct": 0,
+      "away_yc": 3, "away_rc_direct": 0,
+      "status": "FINISHED",
+      "_label": "South Korea 1-0 TBD (Euro PO D)"
+    }
+  ]
+}
