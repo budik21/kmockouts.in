@@ -4,6 +4,7 @@ import "flag-icons/css/flag-icons.min.css";
 import "./globals.css";
 import Navbar from "./components/Navbar";
 import BootstrapClient from "./components/BootstrapClient";
+import CookieConsent from "./components/CookieConsent";
 
 export const metadata: Metadata = {
   title: "Knockouts.in | FIFA World Cup 2026",
@@ -27,6 +28,7 @@ export default function RootLayout({
             <p className="mb-0">Canada, Mexico &amp; USA &bull; June 11 &ndash; July 19, 2026</p>
           </div>
         </footer>
+        <CookieConsent />
         <BootstrapClient />
       </body>
     </html>
