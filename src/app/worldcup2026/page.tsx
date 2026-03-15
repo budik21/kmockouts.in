@@ -6,6 +6,7 @@ import { getAllCachedProbsOrCompute } from '@/lib/probability-cache';
 import Link from 'next/link';
 import GroupOverview from '@/app/components/GroupOverview';
 import NewsWidget from '@/app/components/NewsWidget';
+import Countdown from '@/app/components/Countdown';
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -105,31 +106,39 @@ async function getNewsArticles() {
 export default async function HomePage() {
   const [groups, articles] = await Promise.all([buildGroupsData(), getNewsArticles()]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hasMatchesPlayed = Object.values(groups).some((g: any) =>
+    g.standings.some((s: any) => s.matchesPlayed > 0)
+  );
+
   return (
     <>
       <section className="hero">
         <div className="container">
-          <h1>Who Will Qualify?</h1>
-          <p className="subtitle">FIFA World Cup 2026 &mdash; Group Stage Tracker</p>
-          <p className="tournament-info">
-            48 teams &bull; 12 groups &bull; Canada, Mexico &amp; USA &bull; June 11 &ndash; July 19, 2026
-          </p>
+          <h1>Who Clinches a World Cup Play-Off?</h1>
+          <p className="subtitle">Be the first to know who qualifies for the FIFA World Cup knockout phase</p>
+          <Countdown />
+          <Link href="/worldcup2026/how-to-clinch-play-off-worldcup2026" className="hero-clinch-link">
+            How to Clinch a Play-Off Spot &rarr;
+          </Link>
         </div>
       </section>
 
       <main className="container">
         <NewsWidget articles={articles} />
-        <Link href="/worldcup2026/best-third-placed" className="best-third-banner mb-3 d-block">
-          <div className="d-flex align-items-center justify-content-between">
-            <div>
-              <strong>Best Third-Placed Teams</strong>
-              <span className="d-none d-sm-inline text-muted ms-2">
-                &mdash; 8 of 12 third-placed teams qualify for Round of 32
-              </span>
+        {hasMatchesPlayed && (
+          <Link href="/worldcup2026/best-third-placed" className="best-third-banner mb-3 d-block">
+            <div className="d-flex align-items-center justify-content-between">
+              <div>
+                <strong>Best Third-Placed Teams</strong>
+                <span className="d-none d-sm-inline text-muted ms-2">
+                  &mdash; 8 of 12 third-placed teams qualify for Round of 32
+                </span>
+              </div>
+              <span className="best-third-banner-arrow">&rarr;</span>
             </div>
-            <span className="best-third-banner-arrow">&rarr;</span>
-          </div>
-        </Link>
+          </Link>
+        )}
         <GroupOverview groups={groups} />
       </main>
     </>
