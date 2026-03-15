@@ -11,18 +11,18 @@
     "scraper": "tsx src/scraper/index.ts"
   },
   "dependencies": {
-    "better-sqlite3": "^12.8.0",
     "bootstrap": "^5.3.8",
     "flag-icons": "^7.5.0",
     "next": "16.1.6",
     "node-cron": "^4.2.1",
+    "pg": "^8.20.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.18.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

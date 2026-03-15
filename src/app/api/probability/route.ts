@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const summaries = calculateGroupProbabilities(groupId);
+    const summaries = await calculateGroupProbabilities(groupId);
 
     const result = summaries.map((s) => ({
       teamId: s.teamId,

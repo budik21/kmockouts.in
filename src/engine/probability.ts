@@ -3,7 +3,7 @@
  * to produce final qualification probabilities for every team.
  */
 
-import { getDb } from '../lib/db';
+import { query, getPool } from '../lib/db';
 import { ALL_GROUPS } from '../lib/constants';
 import { GroupId, Team, Match, TeamRow, MatchRow } from '../lib/types';
 import { enumerateGroupScenarios, TeamScenarioSummary } from './scenarios';
@@ -20,7 +20,7 @@ function rowToTeam(row: TeamRow): Team {
     shortName: row.short_name,
     countryCode: row.country_code,
     groupId: row.group_id as GroupId,
-    isPlaceholder: row.is_placeholder === 1,
+    isPlaceholder: row.is_placeholder,
     externalId: row.external_id ?? undefined,
   };
 }
@@ -44,15 +44,13 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
-function getGroupTeams(groupId: GroupId): Team[] {
-  const db = getDb();
-  const rows = db.prepare('SELECT * FROM team WHERE group_id = ? ORDER BY id').all(groupId) as TeamRow[];
+async function getGroupTeams(groupId: GroupId): Promise<Team[]> {
+  const rows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
   return rows.map(rowToTeam);
 }
 
-function getGroupMatches(groupId: GroupId): { played: Match[]; remaining: Match[] } {
-  const db = getDb();
-  const allRows = db.prepare('SELECT * FROM match WHERE group_id = ? ORDER BY round, kick_off').all(groupId) as MatchRow[];
+async function getGroupMatches(groupId: GroupId): Promise<{ played: Match[]; remaining: Match[] }> {
+  const allRows = await query<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
   const all = allRows.map(rowToMatch);
   return {
     played: all.filter((m) => m.status === 'FINISHED'),
@@ -67,23 +65,23 @@ function getGroupMatches(groupId: GroupId): { played: Match[]; remaining: Match[
 /**
  * Calculate scenario summaries for a single group.
  */
-export function calculateGroupProbabilities(groupId: GroupId): TeamScenarioSummary[] {
-  const teams = getGroupTeams(groupId);
-  const { played, remaining } = getGroupMatches(groupId);
+export async function calculateGroupProbabilities(groupId: GroupId): Promise<TeamScenarioSummary[]> {
+  const teams = await getGroupTeams(groupId);
+  const { played, remaining } = await getGroupMatches(groupId);
   return enumerateGroupScenarios(teams, played, remaining);
 }
 
 /**
  * Calculate probabilities for ALL groups and include best-third qualification.
  */
-export function calculateAllProbabilities(): Map<GroupId, TeamScenarioSummary[]> {
+export async function calculateAllProbabilities(): Promise<Map<GroupId, TeamScenarioSummary[]>> {
   const allGroupData: GroupData[] = [];
   const allResults = new Map<GroupId, TeamScenarioSummary[]>();
 
   // Step 1: Calculate within-group probabilities
   for (const groupId of ALL_GROUPS) {
-    const teams = getGroupTeams(groupId);
-    const { played, remaining } = getGroupMatches(groupId);
+    const teams = await getGroupTeams(groupId);
+    const { played, remaining } = await getGroupMatches(groupId);
 
     allGroupData.push({ groupId, teams, playedMatches: played, remainingMatches: remaining });
 
@@ -95,16 +93,11 @@ export function calculateAllProbabilities(): Map<GroupId, TeamScenarioSummary[]>
   const bestThird = calculateBestThirdProbabilities(allGroupData);
 
   // Step 3: Merge best-third probability into team summaries
-  // For each group, the third-placed team's "qualify as third" probability
-  // is the Monte Carlo result for that group
   for (const groupId of ALL_GROUPS) {
     const summaries = allResults.get(groupId)!;
     const thirdQualProb = bestThird.groupProbabilities.get(groupId) ?? 0;
 
     for (const summary of summaries) {
-      // prob_third_qualified = prob_third * (chance group's third qualifies)
-      // This is an approximation — true probability would require
-      // joint simulation, but this gives a good estimate
       (summary as TeamScenarioSummary & { probThirdQualified?: number }).probThirdQualified =
         Math.round(summary.positionProbabilities[3] * thirdQualProb) / 100;
     }
@@ -116,39 +109,47 @@ export function calculateAllProbabilities(): Map<GroupId, TeamScenarioSummary[]>
 /**
  * Save calculated probabilities to the cache table.
  */
-export function cacheProbabilities(
+export async function cacheProbabilities(
   groupId: GroupId,
   summaries: TeamScenarioSummary[]
-): void {
-  const db = getDb();
-  const upsert = db.prepare(`
-    INSERT INTO probability_cache (group_id, team_id, prob_first, prob_second, prob_third, prob_third_qual, prob_out, scenarios_json, calculated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    ON CONFLICT(group_id, team_id) DO UPDATE SET
-      prob_first = excluded.prob_first,
-      prob_second = excluded.prob_second,
-      prob_third = excluded.prob_third,
-      prob_third_qual = excluded.prob_third_qual,
-      prob_out = excluded.prob_out,
-      scenarios_json = excluded.scenarios_json,
-      calculated_at = excluded.calculated_at
-  `);
+): Promise<void> {
+  const pool = getPool();
+  const client = await pool.connect();
 
-  const insertAll = db.transaction(() => {
+  try {
+    await client.query('BEGIN');
+
     for (const s of summaries) {
       const summary = s as TeamScenarioSummary & { probThirdQualified?: number };
-      upsert.run(
-        groupId,
-        s.teamId,
-        s.positionProbabilities[1] ?? 0,
-        s.positionProbabilities[2] ?? 0,
-        s.positionProbabilities[3] ?? 0,
-        summary.probThirdQualified ?? 0,
-        s.positionProbabilities[4] ?? 0,
-        JSON.stringify(s.edgeScenariosByPosition)
+      await client.query(
+        `INSERT INTO probability_cache (group_id, team_id, prob_first, prob_second, prob_third, prob_third_qual, prob_out, scenarios_json, calculated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+         ON CONFLICT(group_id, team_id) DO UPDATE SET
+           prob_first = EXCLUDED.prob_first,
+           prob_second = EXCLUDED.prob_second,
+           prob_third = EXCLUDED.prob_third,
+           prob_third_qual = EXCLUDED.prob_third_qual,
+           prob_out = EXCLUDED.prob_out,
+           scenarios_json = EXCLUDED.scenarios_json,
+           calculated_at = EXCLUDED.calculated_at`,
+        [
+          groupId,
+          s.teamId,
+          s.positionProbabilities[1] ?? 0,
+          s.positionProbabilities[2] ?? 0,
+          s.positionProbabilities[3] ?? 0,
+          summary.probThirdQualified ?? 0,
+          s.positionProbabilities[4] ?? 0,
+          JSON.stringify(s.edgeScenariosByPosition),
+        ]
       );
     }
-  });
 
-  insertAll();
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }

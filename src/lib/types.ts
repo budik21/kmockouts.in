@@ -111,7 +111,7 @@ export interface TeamRow {
   short_name: string;
   country_code: string;
   group_id: string;
-  is_placeholder: number;
+  is_placeholder: boolean;
   external_id: string | null;
 }
 

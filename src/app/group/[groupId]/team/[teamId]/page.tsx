@@ -1,4 +1,4 @@
-import { getDb } from '@/lib/db';
+import { query } from '@/lib/db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
@@ -14,7 +14,7 @@ function rowToTeam(row: TeamRow): Team {
   return {
     id: row.id, name: row.name, shortName: row.short_name,
     countryCode: row.country_code, groupId: row.group_id as GroupId,
-    isPlaceholder: row.is_placeholder === 1, externalId: row.external_id ?? undefined,
+    isPlaceholder: row.is_placeholder, externalId: row.external_id ?? undefined,
   };
 }
 
@@ -44,9 +44,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
     return <main className="container py-4"><h2>Group not found</h2></main>;
   }
 
-  const db = getDb();
-  const teamRows = db.prepare('SELECT * FROM team WHERE group_id = ? ORDER BY id').all(groupId) as TeamRow[];
-  const matchRows = db.prepare('SELECT * FROM match WHERE group_id = ? ORDER BY round, kick_off').all(groupId) as MatchRow[];
+  const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
+  const matchRows = await query<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
 
   const teams = teamRows.map(rowToTeam);
   const allMatches = matchRows.map(rowToMatch);
@@ -76,10 +75,10 @@ export default async function TeamDetailPage({ params }: PageProps) {
   const eliminateProb = (probs[3] ?? 0) + (probs[4] ?? 0);
 
   // Read cached probabilities for the standings table
-  let cachedProbs = getCachedGroupProbs(groupId);
+  let cachedProbs = await getCachedGroupProbs(groupId);
   if (!cachedProbs) {
-    recalculateGroupProbabilities(groupId);
-    cachedProbs = getCachedGroupProbs(groupId);
+    await recalculateGroupProbabilities(groupId);
+    cachedProbs = await getCachedGroupProbs(groupId);
   }
   let probabilities: Record<number, { probFirst: number; probSecond: number; probThird: number; probOut: number }> | undefined;
   if (cachedProbs && cachedProbs.size > 0) {

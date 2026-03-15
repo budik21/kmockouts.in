@@ -9,7 +9,7 @@ import { recalculateAllProbabilities } from '@/lib/probability-cache';
 export async function POST() {
   try {
     const start = Date.now();
-    recalculateAllProbabilities();
+    await recalculateAllProbabilities();
     const elapsed = Date.now() - start;
 
     return NextResponse.json({

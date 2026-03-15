@@ -1,8 +1,8 @@
 /**
- * Writer: updates the SQLite database with scraped match results.
+ * Writer: updates the PostgreSQL database with scraped match results.
  */
 
-import { getDb } from '../lib/db';
+import { getPool, query } from '../lib/db';
 import { ParsedMatchUpdate, normalizeTeamName } from './parser';
 
 interface TeamLookup {
@@ -22,30 +22,24 @@ interface MatchLookup {
  * Write parsed match updates to the database.
  * Returns the number of matches updated.
  */
-export function writeMatchUpdates(updates: ParsedMatchUpdate[]): number {
-  const db = getDb();
+export async function writeMatchUpdates(updates: ParsedMatchUpdate[]): Promise<number> {
+  const pool = getPool();
   let updatedCount = 0;
 
   // Build team lookup by short_name
-  const allTeams = db.prepare('SELECT id, short_name, group_id FROM team').all() as TeamLookup[];
+  const allTeams = await query<TeamLookup>('SELECT id, short_name, group_id FROM team');
   const teamByShortName = new Map<string, TeamLookup>();
   for (const t of allTeams) {
     teamByShortName.set(t.short_name, t);
   }
 
   // All matches
-  const allMatches = db.prepare('SELECT id, home_team_id, away_team_id, status FROM match').all() as MatchLookup[];
+  const allMatches = await query<MatchLookup>('SELECT id, home_team_id, away_team_id, status FROM match');
 
-  const updateStmt = db.prepare(`
-    UPDATE match
-    SET home_goals = ?, away_goals = ?,
-        home_yc = ?, home_rc_direct = ?,
-        away_yc = ?, away_rc_direct = ?,
-        status = ?, last_scraped = datetime('now')
-    WHERE id = ?
-  `);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  const transaction = db.transaction(() => {
     for (const update of updates) {
       // Resolve team names to IDs
       const homeShort = normalizeTeamName(update.homeTeamName);
@@ -75,28 +69,41 @@ export function writeMatchUpdates(updates: ParsedMatchUpdate[]): number {
       }
 
       // Only update if there's a change
-      updateStmt.run(
-        update.homeGoals,
-        update.awayGoals,
-        update.homeYc,
-        update.homeRcDirect,
-        update.awayYc,
-        update.awayRcDirect,
-        update.status,
-        match.id
+      await client.query(
+        `UPDATE match
+         SET home_goals = $1, away_goals = $2,
+             home_yc = $3, home_rc_direct = $4,
+             away_yc = $5, away_rc_direct = $6,
+             status = $7, last_scraped = NOW()
+         WHERE id = $8`,
+        [
+          update.homeGoals,
+          update.awayGoals,
+          update.homeYc,
+          update.homeRcDirect,
+          update.awayYc,
+          update.awayRcDirect,
+          update.status,
+          match.id,
+        ]
       );
 
       updatedCount++;
     }
-  });
 
-  transaction();
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 
   // Log the scrape
-  db.prepare(`
-    INSERT INTO scrape_log (source, matches_updated, status)
-    VALUES ('fifa-api', ?, 'OK')
-  `).run(updatedCount);
+  await pool.query(
+    `INSERT INTO scrape_log (source, matches_updated, status) VALUES ('fifa-api', $1, 'OK')`,
+    [updatedCount]
+  );
 
   return updatedCount;
 }

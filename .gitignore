@@ -30,8 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+.env
+.env.local
+.env.*.local
 
 # vercel
 .vercel
@@ -44,3 +46,11 @@ next-env.d.ts
 data/*.db
 data/*.db-wal
 data/*.db-shm
+/.idea/.gitignore
+/.idea/copilot.data.migration.ask2agent.xml
+/.idea/knockouts.in.iml
+/.claude/launch.json
+/.idea/modules.xml
+/.idea/php.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/vcs.xml

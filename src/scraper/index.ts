@@ -11,13 +11,13 @@
  */
 
 import cron from 'node-cron';
-import { initializeSchema, getDb, closeDb } from '../lib/db';
+import { initializeSchema, getPool, closeDb } from '../lib/db';
 import { fetchFifaMatchResults } from './fifa-client';
 import { parseFifaResults } from './parser';
 import { writeMatchUpdates } from './writer';
 
 // Ensure DB is initialized
-initializeSchema();
+await initializeSchema();
 
 async function scrapeOnce(): Promise<void> {
   const startTime = Date.now();
@@ -29,7 +29,7 @@ async function scrapeOnce(): Promise<void> {
 
     if (results.length > 0) {
       const parsed = parseFifaResults(results);
-      const updated = writeMatchUpdates(parsed);
+      const updated = await writeMatchUpdates(parsed);
       console.log(`  Updated ${updated} matches in database`);
     } else {
       console.log('  No results from API (may not be available yet)');
@@ -39,11 +39,12 @@ async function scrapeOnce(): Promise<void> {
 
     // Log the error
     try {
-      const db = getDb();
-      db.prepare(`
-        INSERT INTO scrape_log (source, matches_updated, status, error_message)
-        VALUES ('fifa-api', 0, 'ERROR', ?)
-      `).run(String(error));
+      const pool = getPool();
+      await pool.query(
+        `INSERT INTO scrape_log (source, matches_updated, status, error_message)
+         VALUES ('fifa-api', 0, 'ERROR', $1)`,
+        [String(error)]
+      );
     } catch {
       // Ignore logging errors
     }
@@ -51,24 +52,6 @@ async function scrapeOnce(): Promise<void> {
 
   const elapsed = Date.now() - startTime;
   console.log(`  Completed in ${elapsed}ms`);
-}
-
-function isMatchDay(): boolean {
-  const db = getDb();
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  const count = db.prepare(`
-    SELECT COUNT(*) as cnt FROM match
-    WHERE date(kick_off) = date(?)
-  `).get(today) as { cnt: number };
-  return count.cnt > 0;
-}
-
-function hasLiveMatches(): boolean {
-  const db = getDb();
-  const count = db.prepare(`
-    SELECT COUNT(*) as cnt FROM match WHERE status = 'LIVE'
-  `).get() as { cnt: number };
-  return count.cnt > 0;
 }
 
 // ============================================================
@@ -88,13 +71,13 @@ cron.schedule('*/5 * * * *', async () => {
 });
 
 // Handle graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('\n👋 Shutting down scraper...');
-  closeDb();
+  await closeDb();
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
-  closeDb();
+process.on('SIGTERM', async () => {
+  await closeDb();
   process.exit(0);
 });

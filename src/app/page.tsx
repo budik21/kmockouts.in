@@ -1,4 +1,4 @@
-import { getDb } from '@/lib/db';
+import { query } from '@/lib/db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
@@ -9,7 +9,7 @@ function rowToTeam(row: TeamRow): Team {
   return {
     id: row.id, name: row.name, shortName: row.short_name,
     countryCode: row.country_code, groupId: row.group_id as GroupId,
-    isPlaceholder: row.is_placeholder === 1, externalId: row.external_id ?? undefined,
+    isPlaceholder: row.is_placeholder, externalId: row.external_id ?? undefined,
   };
 }
 
@@ -27,16 +27,15 @@ function rowToMatch(row: MatchRow): Match {
 export const dynamic = 'force-dynamic';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildGroupsData(): Record<string, any> {
-  const db = getDb();
+async function buildGroupsData(): Promise<Record<string, any>> {
   const groups: Record<string, unknown> = {};
 
   // Read cached probabilities (computes any missing groups on first load)
-  const cachedProbs = getAllCachedProbsOrCompute();
+  const cachedProbs = await getAllCachedProbsOrCompute();
 
   for (const gid of ALL_GROUPS) {
-    const teamRows = db.prepare('SELECT * FROM team WHERE group_id = ? ORDER BY id').all(gid) as TeamRow[];
-    const matchRows = db.prepare("SELECT * FROM match WHERE group_id = ? AND status = 'FINISHED' ORDER BY round").all(gid) as MatchRow[];
+    const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
+    const matchRows = await query<MatchRow>("SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round", [gid]);
     const teams = teamRows.map(rowToTeam);
     const matches = matchRows.map(rowToMatch);
     const standings = calculateStandings({ teams, matches });
@@ -77,8 +76,8 @@ function buildGroupsData(): Record<string, any> {
   return groups;
 }
 
-export default function HomePage() {
-  const groups = buildGroupsData();
+export default async function HomePage() {
+  const groups = await buildGroupsData();
 
   return (
     <>

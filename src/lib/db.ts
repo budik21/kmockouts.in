@@ -1,41 +1,61 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
+import { Pool, QueryResultRow } from 'pg';
 
-const DB_PATH = path.join(process.cwd(), 'data', 'wc2026.db');
+const connectionString = process.env.DATABASE_URL;
 
-let db: Database.Database | null = null;
+let pool: Pool | null = null;
 
-export function getDb(): Database.Database {
-  if (!db) {
-    // Ensure directory exists
-    const dir = path.dirname(DB_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+export function getPool(): Pool {
+  if (!pool) {
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is not set');
     }
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');      // Better concurrent access
-    db.pragma('foreign_keys = ON');
+    pool = new Pool({
+      connectionString,
+      max: 10,
+    });
   }
-  return db;
+  return pool;
 }
 
-export function initializeSchema(): void {
-  const db = getDb();
+/**
+ * Convenience wrapper for pool.query().
+ * Returns typed rows array.
+ */
+export async function query<T extends QueryResultRow = QueryResultRow>(
+  sql: string,
+  params?: unknown[]
+): Promise<T[]> {
+  const result = await getPool().query<T>(sql, params);
+  return result.rows;
+}
 
-  db.exec(`
+/**
+ * Convenience wrapper that returns the first row or null.
+ */
+export async function queryOne<T extends QueryResultRow = QueryResultRow>(
+  sql: string,
+  params?: unknown[]
+): Promise<T | null> {
+  const rows = await query<T>(sql, params);
+  return rows[0] ?? null;
+}
+
+export async function initializeSchema(): Promise<void> {
+  const pool = getPool();
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS team (
       id              INTEGER PRIMARY KEY,
       name            TEXT NOT NULL,
       short_name      TEXT NOT NULL,
       country_code    TEXT NOT NULL DEFAULT '',
       group_id        TEXT NOT NULL,
-      is_placeholder  INTEGER NOT NULL DEFAULT 0,
+      is_placeholder  BOOLEAN NOT NULL DEFAULT false,
       external_id     TEXT
     );
 
     CREATE TABLE IF NOT EXISTS match (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      id              SERIAL PRIMARY KEY,
       group_id        TEXT NOT NULL,
       round           INTEGER NOT NULL,
       home_team_id    INTEGER NOT NULL REFERENCES team(id),
@@ -55,19 +75,19 @@ export function initializeSchema(): void {
     CREATE TABLE IF NOT EXISTS probability_cache (
       group_id        TEXT NOT NULL,
       team_id         INTEGER NOT NULL,
-      prob_first      REAL NOT NULL DEFAULT 0,
-      prob_second     REAL NOT NULL DEFAULT 0,
-      prob_third      REAL NOT NULL DEFAULT 0,
-      prob_third_qual REAL NOT NULL DEFAULT 0,
-      prob_out        REAL NOT NULL DEFAULT 0,
+      prob_first      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      prob_second     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      prob_third      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      prob_third_qual DOUBLE PRECISION NOT NULL DEFAULT 0,
+      prob_out        DOUBLE PRECISION NOT NULL DEFAULT 0,
       scenarios_json  TEXT,
-      calculated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      calculated_at   TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
       PRIMARY KEY (group_id, team_id)
     );
 
     CREATE TABLE IF NOT EXISTS scrape_log (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      scraped_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      id              SERIAL PRIMARY KEY,
+      scraped_at      TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
       source          TEXT,
       matches_updated INTEGER NOT NULL DEFAULT 0,
       status          TEXT NOT NULL,
@@ -80,9 +100,9 @@ export function initializeSchema(): void {
   `);
 }
 
-export function closeDb(): void {
-  if (db) {
-    db.close();
-    db = null;
+export async function closeDb(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
   }
 }

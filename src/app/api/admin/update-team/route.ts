@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { query, queryOne, getPool } from '@/lib/db';
 
 /**
  * POST /api/admin/update-team
@@ -19,26 +19,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = getDb();
-
-    // Verify team exists and is a placeholder
-    const team = db.prepare('SELECT * FROM team WHERE id = ?').get(teamId) as { is_placeholder: number } | undefined;
+    // Verify team exists
+    const team = await queryOne<{ is_placeholder: boolean }>('SELECT * FROM team WHERE id = $1', [teamId]);
     if (!team) {
       return NextResponse.json({ error: 'Team not found' }, { status: 404 });
     }
 
+    const pool = getPool();
+
     // Update team
-    db.prepare(`
-      UPDATE team
-      SET name = ?, short_name = ?, country_code = ?, is_placeholder = 0
-      WHERE id = ?
-    `).run(name, shortName, countryCode ?? '', teamId);
+    await pool.query(
+      `UPDATE team SET name = $1, short_name = $2, country_code = $3, is_placeholder = false WHERE id = $4`,
+      [name, shortName, countryCode ?? '', teamId]
+    );
 
     // Clear probability cache for this team's group
-    db.prepare(`
-      DELETE FROM probability_cache
-      WHERE team_id = ? OR group_id = (SELECT group_id FROM team WHERE id = ?)
-    `).run(teamId, teamId);
+    await pool.query(
+      `DELETE FROM probability_cache WHERE team_id = $1 OR group_id = (SELECT group_id FROM team WHERE id = $2)`,
+      [teamId, teamId]
+    );
 
     return NextResponse.json({
       success: true,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { getDb } from '@/lib/db';
+import { getPool } from '@/lib/db';
 import { recalculateAllProbabilities } from '@/lib/probability-cache';
 
 export const dynamic = 'force-dynamic';
@@ -31,22 +31,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const scenarioId: number = body.scenarioId;
 
-    const db = getDb();
+    const pool = getPool();
     const scenariosDir = path.join(process.cwd(), 'data', 'scenarios');
     const flagPath = path.join(scenariosDir, '.active');
 
     if (scenarioId === 0) {
       // Reset: set all matches back to SCHEDULED with no scores
-      db.prepare(`
+      await pool.query(`
         UPDATE match
         SET home_goals = NULL, away_goals = NULL,
             home_yc = 0, home_rc_direct = 0,
             away_yc = 0, away_rc_direct = 0,
             status = 'SCHEDULED', last_scraped = NULL
-      `).run();
+      `);
 
       // Recalculate probabilities for clean state
-      recalculateAllProbabilities();
+      await recalculateAllProbabilities();
 
       // Save active flag
       fs.writeFileSync(flagPath, '0');
@@ -64,40 +64,47 @@ export async function POST(request: NextRequest) {
     const results: ScenarioResult[] = scenario.results ?? [];
 
     // First, reset ALL matches to SCHEDULED
-    db.prepare(`
+    await pool.query(`
       UPDATE match
       SET home_goals = NULL, away_goals = NULL,
           home_yc = 0, home_rc_direct = 0,
           away_yc = 0, away_rc_direct = 0,
           status = 'SCHEDULED', last_scraped = NULL
-    `).run();
-
-    // Then apply scenario results
-    const updateStmt = db.prepare(`
-      UPDATE match
-      SET home_goals = ?, away_goals = ?,
-          home_yc = ?, home_rc_direct = ?,
-          away_yc = ?, away_rc_direct = ?,
-          status = ?, last_scraped = datetime('now')
-      WHERE group_id = ? AND round = ? AND home_team_id = ? AND away_team_id = ?
     `);
 
-    const applyAll = db.transaction(() => {
+    // Then apply scenario results in a transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
       for (const r of results) {
-        updateStmt.run(
-          r.home_goals, r.away_goals,
-          r.home_yc ?? 0, r.home_rc_direct ?? 0,
-          r.away_yc ?? 0, r.away_rc_direct ?? 0,
-          r.status ?? 'FINISHED',
-          r.group_id, r.round, r.home_team_id, r.away_team_id
+        await client.query(
+          `UPDATE match
+           SET home_goals = $1, away_goals = $2,
+               home_yc = $3, home_rc_direct = $4,
+               away_yc = $5, away_rc_direct = $6,
+               status = $7, last_scraped = NOW()
+           WHERE group_id = $8 AND round = $9 AND home_team_id = $10 AND away_team_id = $11`,
+          [
+            r.home_goals, r.away_goals,
+            r.home_yc ?? 0, r.home_rc_direct ?? 0,
+            r.away_yc ?? 0, r.away_rc_direct ?? 0,
+            r.status ?? 'FINISHED',
+            r.group_id, r.round, r.home_team_id, r.away_team_id,
+          ]
         );
       }
-    });
 
-    applyAll();
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
 
     // Recalculate probabilities after applying scenario
-    recalculateAllProbabilities();
+    await recalculateAllProbabilities();
 
     // Save active flag
     fs.writeFileSync(flagPath, String(scenarioId));

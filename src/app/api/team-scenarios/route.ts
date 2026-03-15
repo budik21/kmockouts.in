@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { ALL_GROUPS } from '@/lib/constants';
-import { getDb } from '@/lib/db';
+import { query } from '@/lib/db';
 import { enumerateGroupScenarios } from '@/engine/scenarios';
 
 function rowToTeam(row: TeamRow): Team {
   return {
     id: row.id, name: row.name, shortName: row.short_name,
     countryCode: row.country_code, groupId: row.group_id as GroupId,
-    isPlaceholder: row.is_placeholder === 1, externalId: row.external_id ?? undefined,
+    isPlaceholder: row.is_placeholder, externalId: row.external_id ?? undefined,
   };
 }
 
@@ -41,9 +41,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Valid team ID required' }, { status: 400 });
   }
 
-  const db = getDb();
-  const teamRows = db.prepare('SELECT * FROM team WHERE group_id = ? ORDER BY id').all(groupId) as TeamRow[];
-  const matchRows = db.prepare('SELECT * FROM match WHERE group_id = ? ORDER BY round, kick_off').all(groupId) as MatchRow[];
+  const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
+  const matchRows = await query<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
 
   const teams = teamRows.map(rowToTeam);
   const allMatches = matchRows.map(rowToMatch);
