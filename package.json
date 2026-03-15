@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed-db.ts",
-    "scraper": "tsx src/scraper/index.ts"
+    "scraper": "node --env-file=.env --import tsx src/scraper/index.ts"
   },
   "dependencies": {
     "bootstrap": "^5.3.8",

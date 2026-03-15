@@ -15,9 +15,7 @@ import { initializeSchema, getPool, closeDb } from '../lib/db';
 import { fetchFifaMatchResults } from './fifa-client';
 import { parseFifaResults } from './parser';
 import { writeMatchUpdates } from './writer';
-
-// Ensure DB is initialized
-await initializeSchema();
+import { scrapeFlashscoreNews, writeNewsArticles } from './flashscore-news';
 
 async function scrapeOnce(): Promise<void> {
   const startTime = Date.now();
@@ -50,6 +48,19 @@ async function scrapeOnce(): Promise<void> {
     }
   }
 
+  // Scrape news articles (independent — failure does not block match scraping)
+  try {
+    const articles = await scrapeFlashscoreNews();
+    if (articles.length > 0) {
+      const newCount = await writeNewsArticles(articles);
+      console.log(`  News: ${articles.length} scraped, ${newCount} new`);
+    } else {
+      console.log('  No news articles found');
+    }
+  } catch (error) {
+    console.warn('  News scrape failed:', error);
+  }
+
   const elapsed = Date.now() - startTime;
   console.log(`  Completed in ${elapsed}ms`);
 }
@@ -58,26 +69,36 @@ async function scrapeOnce(): Promise<void> {
 // Scheduling
 // ============================================================
 
-console.log('🏟️  WC2026 Scraper started');
-console.log('   Schedule: */5 * * * * (every 5 minutes)');
-console.log('   Press Ctrl+C to stop\n');
+async function main() {
+  // Ensure DB schema exists
+  await initializeSchema();
 
-// Run once immediately
-scrapeOnce();
+  console.log('🏟️  WC2026 Scraper started');
+  console.log('   Schedule: */5 * * * * (every 5 minutes)');
+  console.log('   Press Ctrl+C to stop\n');
 
-// Schedule: every 5 minutes
-cron.schedule('*/5 * * * *', async () => {
-  await scrapeOnce();
-});
+  // Run once immediately
+  scrapeOnce();
 
-// Handle graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('\n👋 Shutting down scraper...');
-  await closeDb();
-  process.exit(0);
-});
+  // Schedule: every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    await scrapeOnce();
+  });
 
-process.on('SIGTERM', async () => {
-  await closeDb();
-  process.exit(0);
+  // Handle graceful shutdown
+  process.on('SIGINT', async () => {
+    console.log('\n👋 Shutting down scraper...');
+    await closeDb();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    await closeDb();
+    process.exit(0);
+  });
+}
+
+main().catch((err) => {
+  console.error('Scraper failed to start:', err);
+  process.exit(1);
 });

@@ -94,9 +94,21 @@ export async function initializeSchema(): Promise<void> {
       error_message   TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS news_article (
+      id            SERIAL PRIMARY KEY,
+      external_url  TEXT NOT NULL UNIQUE,
+      title         TEXT NOT NULL,
+      image_url     TEXT NOT NULL DEFAULT '',
+      published_at  TIMESTAMPTZ,
+      scraped_at    TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
+
     CREATE INDEX IF NOT EXISTS idx_match_group ON match(group_id);
     CREATE INDEX IF NOT EXISTS idx_match_status ON match(status);
     CREATE INDEX IF NOT EXISTS idx_team_group ON team(group_id);
+
+    -- Migrations for existing tables
+    ALTER TABLE news_article ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
   `);
 }
 
