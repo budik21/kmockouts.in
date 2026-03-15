@@ -1,13 +1,8 @@
 /**
  * Standalone scraper entry point.
- * Runs on a schedule (node-cron) to fetch match results from FIFA.
+ * Each scraper job has its own cron schedule.
  *
  * Usage: npx tsx src/scraper/index.ts
- *
- * Smart polling:
- *   - During match windows: every 5 minutes
- *   - Outside match windows: every 30 minutes
- *   - No matches today: every 60 minutes
  */
 
 import cron from 'node-cron';
@@ -17,10 +12,17 @@ import { parseFifaResults } from './parser';
 import { writeMatchUpdates } from './writer';
 import { scrapeFlashscoreNews, writeNewsArticles } from './flashscore-news';
 
-async function scrapeOnce(): Promise<void> {
-  const startTime = Date.now();
-  console.log(`[${new Date().toISOString()}] Starting scrape...`);
+// ============================================================
+// Scraper job definitions
+// ============================================================
 
+interface ScraperJob {
+  name: string;
+  schedule: string; // cron expression
+  run: () => Promise<void>;
+}
+
+async function scrapeFifa(): Promise<void> {
   try {
     const results = await fetchFifaMatchResults();
     console.log(`  Fetched ${results.length} match results from FIFA API`);
@@ -33,9 +35,8 @@ async function scrapeOnce(): Promise<void> {
       console.log('  No results from API (may not be available yet)');
     }
   } catch (error) {
-    console.error('  Scrape failed:', error);
+    console.error('  FIFA scrape failed:', error);
 
-    // Log the error
     try {
       const pool = getPool();
       await pool.query(
@@ -47,8 +48,9 @@ async function scrapeOnce(): Promise<void> {
       // Ignore logging errors
     }
   }
+}
 
-  // Scrape news articles (independent — failure does not block match scraping)
+async function scrapeNews(): Promise<void> {
   try {
     const articles = await scrapeFlashscoreNews();
     if (articles.length > 0) {
@@ -60,32 +62,59 @@ async function scrapeOnce(): Promise<void> {
   } catch (error) {
     console.warn('  News scrape failed:', error);
   }
-
-  const elapsed = Date.now() - startTime;
-  console.log(`  Completed in ${elapsed}ms`);
 }
 
+const jobs: ScraperJob[] = [
+  {
+    name: 'FIFA Results',
+    schedule: '0 6 * * *',    // once daily at 06:00 UTC
+    run: scrapeFifa,
+  },
+  {
+    name: 'Flashscore News',
+    schedule: '0 * * * *',    // every hour at :00
+    run: scrapeNews,
+  },
+  // Add more scrapers here:
+  // {
+  //   name: 'My New Scraper',
+  //   schedule: '*/15 * * * *',  // every 15 min
+  //   run: scrapeMyNewThing,
+  // },
+];
+
 // ============================================================
-// Scheduling
+// Runner
 // ============================================================
+
+async function runJob(job: ScraperJob): Promise<void> {
+  const start = Date.now();
+  console.log(`[${new Date().toISOString()}] ▶ ${job.name}`);
+  await job.run();
+  console.log(`  ✓ ${job.name} done in ${Date.now() - start}ms\n`);
+}
 
 async function main() {
-  // Ensure DB schema exists
   await initializeSchema();
 
-  console.log('🏟️  WC2026 Scraper started');
-  console.log('   Schedule: */5 * * * * (every 5 minutes)');
-  console.log('   Press Ctrl+C to stop\n');
+  console.log('🏟️  WC2026 Scraper started\n');
+  console.log('   Registered jobs:');
+  for (const job of jobs) {
+    console.log(`     • ${job.name}  —  ${job.schedule}`);
+  }
+  console.log('');
 
-  // Run once immediately
-  scrapeOnce();
+  // Run all jobs once on startup
+  for (const job of jobs) {
+    await runJob(job);
+  }
 
-  // Schedule: every 5 minutes
-  cron.schedule('*/5 * * * *', async () => {
-    await scrapeOnce();
-  });
+  // Schedule each job independently
+  for (const job of jobs) {
+    cron.schedule(job.schedule, () => runJob(job));
+  }
 
-  // Handle graceful shutdown
+  // Graceful shutdown
   process.on('SIGINT', async () => {
     console.log('\n👋 Shutting down scraper...');
     await closeDb();
