@@ -659,3 +659,27 @@ a { color: inherit; text-decoration: none; }
   background: var(--wc-bg);
   color: var(--wc-text);
 }
+
+/* ============================================================
+   Page Transition Spinner
+   ============================================================ */
+
+.spinner-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+}
+
+.spinner-ring {
+  width: 44px;
+  height: 44px;
+  border: 3.5px solid var(--wc-border);
+  border-top-color: var(--wc-accent);
+  border-radius: 50%;
+  animation: spinnerRotate 0.8s linear infinite;
+}
+
+@keyframes spinnerRotate {
+  to { transform: rotate(360deg); }
+}
