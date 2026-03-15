@@ -96,7 +96,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                   <td className="text-center">
                     {prob && (
                       <ProbabilityCircle
-                        qualifyProb={prob.probFirst + prob.probSecond}
+                        qualifyProb={prob.probFirst + prob.probSecond + prob.probThird}
                         probFirst={prob.probFirst}
                         probSecond={prob.probSecond}
                         probThird={prob.probThird}
@@ -152,7 +152,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                   <td className="text-center">
                     {prob && (
                       <ProbabilityCircle
-                        qualifyProb={prob.probFirst + prob.probSecond}
+                        qualifyProb={prob.probFirst + prob.probSecond + prob.probThird}
                         probFirst={prob.probFirst}
                         probSecond={prob.probSecond}
                         probThird={prob.probThird}

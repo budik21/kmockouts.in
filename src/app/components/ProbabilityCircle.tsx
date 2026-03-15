@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 
 interface ProbabilityCircleProps {
-  qualifyProb: number; // 1st + 2nd combined
+  qualifyProb: number; // 1st + 2nd + 3rd combined (3rd can qualify via best-third table)
   probFirst: number;
   probSecond: number;
   probThird: number;
@@ -79,7 +79,7 @@ export default function ProbabilityCircle({
     }
   };
 
-  // Always display the qualify probability (1st + 2nd)
+  // Display qualify probability (1st + 2nd + 3rd, since 3rd can qualify via best-third)
   const displayProb = Math.round(qualifyProb);
 
   // Color: green shades for qualify, red shades for eliminate

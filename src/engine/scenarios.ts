@@ -23,6 +23,8 @@ export interface TeamScenarioSummary {
   positionProbabilities: { [position: number]: number };
   /** Deduplicated edge scenarios grouped by position */
   edgeScenariosByPosition: { [position: number]: MatchCombination[] };
+  /** All distinct W/D/L outcome patterns per position (e.g. "H|D", "A|H") — complete, not capped */
+  outcomePatternsByPosition: { [position: number]: string[] };
 }
 
 /** A single match result within a combination */
@@ -70,6 +72,7 @@ export function enumerateGroupScenarios(
           3: pos === 3 ? 100 : 0, 4: pos === 4 ? 100 : 0,
         },
         edgeScenariosByPosition: { 1: [], 2: [], 3: [], 4: [] },
+        outcomePatternsByPosition: { 1: [], 2: [], 3: [], 4: [] },
       };
     });
   }
@@ -98,6 +101,7 @@ function fullEnumerationScenarios(
     positionCounts: { [pos: number]: number };
     edgeSets: { [pos: number]: Set<string> };
     edgeScenarios: { [pos: number]: MatchCombination[] };
+    patternSets: { [pos: number]: Set<string> };
   }>();
 
   for (const team of teams) {
@@ -105,6 +109,7 @@ function fullEnumerationScenarios(
       positionCounts: { 1: 0, 2: 0, 3: 0, 4: 0 },
       edgeSets: { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() },
       edgeScenarios: { 1: [], 2: [], 3: [], 4: [] },
+      patternSets: { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() },
     });
   }
 
@@ -123,10 +128,18 @@ function fullEnumerationScenarios(
     // Build the match combination description
     const matchCombo = buildMatchCombination(remainingMatches, indices);
 
+    // Build pattern key with goal difference (e.g. "H3|D0|A2")
+    const patternKey = matchCombo.matchResults.map(r =>
+      `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
+    ).join('|');
+
     // Record for each team
     for (const s of standings) {
       const data = teamData.get(s.team.id)!;
       data.positionCounts[s.position]++;
+
+      // Track outcome pattern with goal diff (complete, uncapped)
+      data.patternSets[s.position].add(patternKey);
 
       // Deduplicate by short key (W/D/L pattern)
       const edgeSet = data.edgeSets[s.position];
@@ -143,8 +156,10 @@ function fullEnumerationScenarios(
   return teams.map((team) => {
     const data = teamData.get(team.id)!;
     const probs: { [pos: number]: number } = {};
+    const outcomePatterns: { [pos: number]: string[] } = {};
     for (let p = 1; p <= 4; p++) {
       probs[p] = Math.round((data.positionCounts[p] / totalCombinations) * 10000) / 100;
+      outcomePatterns[p] = Array.from(data.patternSets[p]);
     }
 
     return {
@@ -154,6 +169,7 @@ function fullEnumerationScenarios(
       totalScenarios: totalCombinations,
       positionProbabilities: probs,
       edgeScenariosByPosition: data.edgeScenarios,
+      outcomePatternsByPosition: outcomePatterns,
     };
   });
 }
@@ -175,6 +191,7 @@ function monteCarloGroupScenarios(
     positionCounts: { [pos: number]: number };
     edgeSets: { [pos: number]: Set<string> };
     edgeScenarios: { [pos: number]: MatchCombination[] };
+    patternSets: { [pos: number]: Set<string> };
   }>();
 
   for (const team of teams) {
@@ -182,6 +199,7 @@ function monteCarloGroupScenarios(
       positionCounts: { 1: 0, 2: 0, 3: 0, 4: 0 },
       edgeSets: { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() },
       edgeScenarios: { 1: [], 2: [], 3: [], 4: [] },
+      patternSets: { 1: new Set(), 2: new Set(), 3: new Set(), 4: new Set() },
     });
   }
 
@@ -195,9 +213,15 @@ function monteCarloGroupScenarios(
     const standings = calculateStandings({ teams, matches: allMatches });
     const matchCombo = buildMatchCombination(remainingMatches, indices);
 
+    const patternKey = matchCombo.matchResults.map(r =>
+      `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
+    ).join('|');
+
     for (const s of standings) {
       const data = teamData.get(s.team.id)!;
       data.positionCounts[s.position]++;
+
+      data.patternSets[s.position].add(patternKey);
 
       const edgeSet = data.edgeSets[s.position];
       if (edgeSet.size < MAX_EDGES && !edgeSet.has(matchCombo.shortKey)) {
@@ -210,8 +234,10 @@ function monteCarloGroupScenarios(
   return teams.map((team) => {
     const data = teamData.get(team.id)!;
     const probs: { [pos: number]: number } = {};
+    const outcomePatterns: { [pos: number]: string[] } = {};
     for (let p = 1; p <= 4; p++) {
       probs[p] = Math.round((data.positionCounts[p] / iterations) * 10000) / 100;
+      outcomePatterns[p] = Array.from(data.patternSets[p]);
     }
     return {
       teamId: team.id,
@@ -220,6 +246,7 @@ function monteCarloGroupScenarios(
       totalScenarios: iterations,
       positionProbabilities: probs,
       edgeScenariosByPosition: data.edgeScenarios,
+      outcomePatternsByPosition: outcomePatterns,
     };
   });
 }

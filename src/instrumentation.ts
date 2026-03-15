@@ -11,6 +11,21 @@ export async function register() {
       console.log('[instrumentation] DB schema initialized');
     } catch (e) {
       console.error('[instrumentation] Failed to initialize DB schema:', e);
+      return;
+    }
+
+    // Apply the active scenario so the homepage shows data immediately
+    const { readActiveScenarioId, applyScenario } = await import('./lib/apply-scenario');
+    const { recalculateAllProbabilities } = await import('./lib/probability-cache');
+    const scenarioId = readActiveScenarioId();
+    if (scenarioId > 0) {
+      try {
+        const applied = await applyScenario(scenarioId);
+        await recalculateAllProbabilities();
+        console.log(`[instrumentation] Applied scenario ${scenarioId} (${applied} matches)`);
+      } catch (e) {
+        console.error(`[instrumentation] Failed to apply scenario ${scenarioId}:`, e);
+      }
     }
   }
 }

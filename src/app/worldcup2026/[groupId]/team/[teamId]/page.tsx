@@ -4,6 +4,8 @@ import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
 import { enumerateGroupScenarios } from '@/engine/scenarios';
 import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probability-cache';
+import { compareThirdPlaced } from '@/engine/best-third';
+import { generateScenarioSummaries } from '@/engine/scenario-summary';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { slugify } from '@/lib/slugify';
@@ -11,6 +13,7 @@ import TeamFlag from '@/app/components/TeamFlag';
 import QualifyWidgets from '@/app/components/QualifyWidgets';
 import ScenariosAccordion from '@/app/components/ScenariosAccordion';
 import GroupStandings from '@/app/components/GroupStandings';
+import MatchList from '@/app/components/MatchList';
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -93,8 +96,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
   const teamSummary = summaries.find((s) => s.teamId === team.id)!;
 
   const probs = teamSummary.positionProbabilities;
-  const qualifyProb = (probs[1] ?? 0) + (probs[2] ?? 0);
-  const eliminateProb = (probs[3] ?? 0) + (probs[4] ?? 0);
+  const qualifyProb = (probs[1] ?? 0) + (probs[2] ?? 0) + (probs[3] ?? 0);
+  const eliminateProb = probs[4] ?? 0;
 
   // Read cached probabilities for the standings table
   let cachedProbs = await getCachedGroupProbs(groupId);
@@ -115,6 +118,38 @@ export default async function TeamDetailPage({ params }: PageProps) {
     }
   }
 
+  // Compute best-3rd ranking (current snapshot across all groups)
+  let bestThirdRank: number | null = null;
+  let bestThirdQualifies = false;
+  const currentPosition = standings.find((s) => s.team.id === team.id)?.position ?? null;
+  const isCurrentlyThird = currentPosition === 3;
+  if ((probs[3] ?? 0) > 0 && isCurrentlyThird) {
+    const thirdPlaced: { groupId: GroupId; standing: typeof standings[0] }[] = [];
+    for (const gid of ALL_GROUPS) {
+      if (gid === groupId) {
+        const third = standings.find((s) => s.position === 3);
+        if (third) thirdPlaced.push({ groupId: gid, standing: third });
+      } else {
+        const gTeamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
+        const gMatchRows = await query<MatchRow>(
+          "SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round",
+          [gid],
+        );
+        const gTeams = gTeamRows.map(rowToTeam);
+        const gMatches = gMatchRows.map(rowToMatch);
+        const gStandings = calculateStandings({ teams: gTeams, matches: gMatches });
+        const third = gStandings.find((s) => s.position === 3);
+        if (third) thirdPlaced.push({ groupId: gid, standing: third });
+      }
+    }
+    thirdPlaced.sort((a, b) => compareThirdPlaced(a.standing, b.standing));
+    const idx = thirdPlaced.findIndex((tp) => tp.groupId === groupId);
+    if (idx !== -1) {
+      bestThirdRank = idx + 1;
+      bestThirdQualifies = bestThirdRank <= 8;
+    }
+  }
+
   // Enrich edge scenarios with team names and country codes
   const enrichedEdges: { [pos: number]: { shortKey: string; matchResults: { matchId: number; homeTeamId: number; awayTeamId: number; homeGoals: number; awayGoals: number; label: string; homeTeamName: string; homeTeamShort: string; homeCountryCode: string; awayTeamName: string; awayTeamShort: string; awayCountryCode: string }[] }[] } = {};
 
@@ -132,6 +167,22 @@ export default async function TeamDetailPage({ params }: PageProps) {
       })),
     }));
   }
+
+  // Generate scenario summaries
+  const remainingMatchesInfo = remaining.map((m, i) => ({
+    matchIndex: i,
+    homeTeamId: m.homeTeamId,
+    awayTeamId: m.awayTeamId,
+    homeTeamName: teamMap.get(m.homeTeamId)?.name ?? '?',
+    awayTeamName: teamMap.get(m.awayTeamId)?.name ?? '?',
+  }));
+  const scenarioSummaries = generateScenarioSummaries(
+    team.id,
+    team.name,
+    teamSummary.outcomePatternsByPosition,
+    remainingMatchesInfo,
+    probs,
+  );
 
   const groupSlug = `group-${groupId.toLowerCase()}`;
 
@@ -162,6 +213,9 @@ export default async function TeamDetailPage({ params }: PageProps) {
         prob4th={probs[4] ?? 0}
         totalScenarios={teamSummary.totalScenarios}
         matchesRemaining={remaining.length}
+        teamName={team.name}
+        bestThirdRank={bestThirdRank}
+        bestThirdQualifies={bestThirdQualifies}
       />
 
       {/* Current standings */}
@@ -180,6 +234,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
           edgeScenariosByPosition={enrichedEdges}
           probabilities={probs}
           teamName={team.name}
+          summaries={scenarioSummaries}
         />
       )}
 
@@ -188,6 +243,43 @@ export default async function TeamDetailPage({ params }: PageProps) {
           All matches have been played. Final standings are confirmed.
         </div>
       )}
+
+      {/* Team matches */}
+      {(() => {
+        const teamMatches = allMatches
+          .filter((m) => m.homeTeamId === team.id || m.awayTeamId === team.id)
+          .map((m) => ({
+            id: m.id,
+            round: m.round,
+            homeTeam: {
+              id: m.homeTeamId,
+              name: teamMap.get(m.homeTeamId)?.name ?? '?',
+              shortName: teamMap.get(m.homeTeamId)?.shortName ?? '?',
+              countryCode: teamMap.get(m.homeTeamId)?.countryCode ?? '',
+            },
+            awayTeam: {
+              id: m.awayTeamId,
+              name: teamMap.get(m.awayTeamId)?.name ?? '?',
+              shortName: teamMap.get(m.awayTeamId)?.shortName ?? '?',
+              countryCode: teamMap.get(m.awayTeamId)?.countryCode ?? '',
+            },
+            homeGoals: m.homeGoals,
+            awayGoals: m.awayGoals,
+            venue: m.venue,
+            kickOff: m.kickOff,
+            status: m.status,
+          }));
+        return teamMatches.length > 0 ? (
+          <div className="group-card mb-4">
+            <div className="group-card-header">
+              <span>Matches</span>
+            </div>
+            <div className="group-card-body">
+              <MatchList matches={teamMatches} />
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       {/* SEO text */}
       <p className="text-muted mt-4" style={{ fontSize: '0.9rem' }}>

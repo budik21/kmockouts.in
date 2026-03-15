@@ -27,6 +27,7 @@ interface ScenariosAccordionProps {
   edgeScenariosByPosition: { [pos: number]: EnrichedCombination[] };
   probabilities: { [pos: number]: number };
   teamName: string;
+  summaries?: { [pos: number]: string };
 }
 
 const INITIAL_VISIBLE = 4;
@@ -50,6 +51,7 @@ export default function ScenariosAccordion({
   edgeScenariosByPosition,
   probabilities,
   teamName,
+  summaries,
 }: ScenariosAccordionProps) {
   return (
     <div className="group-card mb-4">
@@ -64,6 +66,7 @@ export default function ScenariosAccordion({
               pos={pos}
               combos={edgeScenariosByPosition[pos] ?? []}
               prob={probabilities[pos] ?? 0}
+              summary={summaries?.[pos]}
             />
           ))}
         </div>
@@ -72,7 +75,7 @@ export default function ScenariosAccordion({
   );
 }
 
-function PositionSection({ pos, combos, prob }: { pos: number; combos: EnrichedCombination[]; prob: number }) {
+function PositionSection({ pos, combos, prob, summary }: { pos: number; combos: EnrichedCombination[]; prob: number; summary?: string }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const id = `pos-${pos}`;
   const visibleCombos = combos.slice(0, visibleCount);
@@ -106,6 +109,13 @@ function PositionSection({ pos, combos, prob }: { pos: number; combos: EnrichedC
       </h2>
       <div id={id} className="accordion-collapse collapse" data-bs-parent="#scenariosAccordion">
         <div className="accordion-body p-2">
+          {summary && (
+            <div
+              className="scenario-summary-box"
+              style={{ borderLeftColor: POSITION_COLORS[pos] }}
+              dangerouslySetInnerHTML={{ __html: summary }}
+            />
+          )}
           {combos.length === 0 ? (
             <div className="text-muted text-center py-3" style={{ fontSize: '0.85rem' }}>
               {prob === 0
