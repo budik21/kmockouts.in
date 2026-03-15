@@ -741,6 +741,101 @@ a { color: inherit; text-decoration: none; }
   font-size: 0.95rem;
 }
 
+/* ============================================================
+   News Widget
+   ============================================================ */
+
+.news-widget {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+}
+
+.news-widget::-webkit-scrollbar { height: 4px; }
+.news-widget::-webkit-scrollbar-thumb { background: var(--wc-border); border-radius: 2px; }
+
+.news-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 340px;
+  min-width: 340px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  color: var(--wc-text);
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.news-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  color: var(--wc-text);
+  text-decoration: none;
+}
+
+.news-card-img {
+  width: 100px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+}
+
+.news-card-placeholder {
+  width: 100px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--wc-border);
+  border-radius: 0.5rem;
+  flex-shrink: 0;
+  font-size: 1.5rem;
+}
+
+.news-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.news-card-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.news-card-meta {
+  font-size: 0.7rem;
+  color: var(--wc-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+  .news-card {
+    min-width: 260px;
+  }
+  .news-card-img {
+    width: 80px;
+    height: 56px;
+  }
+}
+
+/* ============================================================
+   Best Third Banner
+   ============================================================ */
+
 .best-third-banner {
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);

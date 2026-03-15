@@ -5,6 +5,7 @@ import { calculateStandings } from '@/engine/standings';
 import { getAllCachedProbsOrCompute } from '@/lib/probability-cache';
 import Link from 'next/link';
 import GroupOverview from '@/app/components/GroupOverview';
+import NewsWidget from '@/app/components/NewsWidget';
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -77,8 +78,32 @@ async function buildGroupsData(): Promise<Record<string, any>> {
   return groups;
 }
 
+interface NewsRow {
+  id: number;
+  external_url: string;
+  title: string;
+  image_url: string;
+  published_at: string | null;
+}
+
+async function getNewsArticles() {
+  try {
+    const rows = await query<NewsRow>(
+      'SELECT id, external_url, title, image_url, published_at FROM news_article ORDER BY published_at DESC NULLS LAST, id DESC LIMIT 10'
+    );
+    return rows.map((r) => ({
+      title: r.title,
+      url: r.external_url,
+      imageUrl: r.image_url,
+      publishedAt: r.published_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const groups = await buildGroupsData();
+  const [groups, articles] = await Promise.all([buildGroupsData(), getNewsArticles()]);
 
   return (
     <>
@@ -93,6 +118,7 @@ export default async function HomePage() {
       </section>
 
       <main className="container">
+        <NewsWidget articles={articles} />
         <Link href="/worldcup2026/best-third-placed" className="best-third-banner mb-3 d-block">
           <div className="d-flex align-items-center justify-content-between">
             <div>
