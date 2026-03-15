@@ -25,6 +25,11 @@ export default function RootLayout({
         <footer className="text-center py-4 mt-4" style={{ color: 'var(--wc-text-muted)', fontSize: '0.85rem' }}>
           <div className="container">
             <p className="mb-1">Knockouts.in &mdash; FIFA World Cup 2026 Tracker</p>
+            <p className="mb-1">
+              <a href="/worldcup2026/how-to-clinch-play-off-worldcup2026" style={{ color: 'var(--wc-accent)' }}>
+                How to Clinch a Play-Off Spot
+              </a>
+            </p>
             <p className="mb-0">Canada, Mexico &amp; USA &bull; June 11 &ndash; July 19, 2026</p>
           </div>
         </footer>

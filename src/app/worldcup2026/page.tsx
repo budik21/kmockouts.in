@@ -3,6 +3,7 @@ import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
 import { getAllCachedProbsOrCompute } from '@/lib/probability-cache';
+import Link from 'next/link';
 import GroupOverview from '@/app/components/GroupOverview';
 
 function rowToTeam(row: TeamRow): Team {
@@ -92,6 +93,17 @@ export default async function HomePage() {
       </section>
 
       <main className="container">
+        <Link href="/worldcup2026/best-third-placed" className="best-third-banner mb-3 d-block">
+          <div className="d-flex align-items-center justify-content-between">
+            <div>
+              <strong>Best Third-Placed Teams</strong>
+              <span className="d-none d-sm-inline text-muted ms-2">
+                &mdash; 8 of 12 third-placed teams qualify for Round of 32
+              </span>
+            </div>
+            <span className="best-third-banner-arrow">&rarr;</span>
+          </div>
+        </Link>
         <GroupOverview groups={groups} />
       </main>
     </>

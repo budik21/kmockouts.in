@@ -15,6 +15,9 @@ export default function Navbar() {
           <Link href="/worldcup2026" className="nav-link d-none d-sm-inline">
             Groups
           </Link>
+          <Link href="/worldcup2026/best-third-placed" className="nav-link d-none d-sm-inline">
+            Best 3rd
+          </Link>
           <ScenarioSwitcher />
           <ThemeToggle />
         </div>

@@ -23,14 +23,14 @@ export interface BestThirdResult {
 }
 
 /**
- * Third-placed teams are ranked by:
+ * Third-placed teams are ranked by (FIFA Article 13):
  * 1. Points
  * 2. Goal difference
  * 3. Goals scored
- * 4. Fair play (not implemented in cross-group comparison)
- * 5. Drawing of lots
+ * 4. Fair play points
+ * 5. FIFA/Coca-Cola Men's World Ranking
  */
-function compareThirdPlaced(a: TeamStanding, b: TeamStanding): number {
+export function compareThirdPlaced(a: TeamStanding, b: TeamStanding): number {
   // Higher points first
   if (b.points !== a.points) return b.points - a.points;
   // Higher GD first
