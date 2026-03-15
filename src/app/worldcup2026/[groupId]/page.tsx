@@ -6,6 +6,7 @@ import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probab
 import GroupStandings from '@/app/components/GroupStandings';
 import MatchList from '@/app/components/MatchList';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -26,22 +27,40 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
+/** Extract group letter from slug like "group-a" → "A" */
+function parseGroupSlug(slug: string): GroupId | null {
+  const match = slug.match(/^group-([a-l])$/i);
+  if (!match) return null;
+  const groupId = match[1].toUpperCase() as GroupId;
+  return ALL_GROUPS.includes(groupId) ? groupId : null;
+}
+
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ groupId: string }>;
 }
 
-export default async function GroupDetailPage({ params }: PageProps) {
-  const { groupId: rawGroupId } = await params;
-  const groupId = rawGroupId.toUpperCase() as GroupId;
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { groupId: slug } = await params;
+  const groupId = parseGroupSlug(slug);
+  if (!groupId) return { title: 'Group not found' };
+  return {
+    title: `Group ${groupId} Standings & Scenarios | FIFA World Cup 2026`,
+    description: `Live standings, match results, and qualification probabilities for Group ${groupId} of the FIFA World Cup 2026 in Canada, Mexico & USA.`,
+  };
+}
 
-  if (!ALL_GROUPS.includes(groupId)) {
+export default async function GroupDetailPage({ params }: PageProps) {
+  const { groupId: slug } = await params;
+  const groupId = parseGroupSlug(slug);
+
+  if (!groupId) {
     return (
       <main className="container py-4">
         <h2>Group not found</h2>
         <p>Valid groups: A through L</p>
-        <Link href="/" className="btn btn-primary">Back to overview</Link>
+        <Link href="/worldcup2026" className="btn btn-primary">Back to overview</Link>
       </main>
     );
   }
@@ -98,11 +117,24 @@ export default async function GroupDetailPage({ params }: PageProps) {
     <main className="container py-4">
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Group {groupId}</h2>
-        <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-          <Link href="/">Groups</Link>
-          <span className="breadcrumb-sep">/</span>
-          <span className="breadcrumb-current">Group {groupId}</span>
-        </nav>
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <nav className="group-switcher" aria-label="Switch group">
+            {ALL_GROUPS.map((gid) => (
+              <Link
+                key={gid}
+                href={`/worldcup2026/group-${gid.toLowerCase()}`}
+                className={`group-switcher-item${gid === groupId ? ' active' : ''}`}
+              >
+                {gid}
+              </Link>
+            ))}
+          </nav>
+          <nav className="breadcrumb-nav" aria-label="Breadcrumb">
+            <Link href="/worldcup2026">Groups</Link>
+            <span className="breadcrumb-sep">/</span>
+            <span className="breadcrumb-current">Group {groupId}</span>
+          </nav>
+        </div>
       </div>
 
       {/* Standings */}
@@ -131,6 +163,13 @@ export default async function GroupDetailPage({ params }: PageProps) {
           <MatchList matches={matchesForDisplay} />
         </div>
       </div>
+
+      {/* SEO text */}
+      <p className="text-muted mt-4" style={{ fontSize: '0.9rem' }}>
+        Group {groupId} of the FIFA World Cup 2026 features {teams.map((t) => t.name).join(', ')}.
+        The top 2 teams qualify automatically for the Round of 32, while the 3rd-placed team may advance
+        as one of the 8 best third-placed teams across all 12 groups.
+      </p>
     </main>
   );
 }

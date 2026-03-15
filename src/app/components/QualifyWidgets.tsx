@@ -61,7 +61,7 @@ export default function QualifyWidgets({
           className="qualify-widget"
           style={{ background: 'linear-gradient(135deg, #007E33, #00C851)' }}
         >
-          <div className="qualify-widget-header">QUALIFIES</div>
+          <div className="qualify-widget-header">CLINCHES PLAY-OFF</div>
           <div className="qualify-widget-body">
             <span className="qualify-widget-pct">{fmt(qualifyProb)}%</span>
           </div>
@@ -78,7 +78,7 @@ export default function QualifyWidgets({
           className="qualify-widget"
           style={{ background: 'linear-gradient(135deg, #CC0000, #e57373)' }}
         >
-          <div className="qualify-widget-header">DOES NOT QUALIFY</div>
+          <div className="qualify-widget-header">WILL BE ELIMINATED</div>
           <div className="qualify-widget-body">
             <span className="qualify-widget-pct">{fmt(eliminateProb)}%</span>
           </div>

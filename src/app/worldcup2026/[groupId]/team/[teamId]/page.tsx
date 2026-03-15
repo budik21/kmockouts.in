@@ -5,6 +5,8 @@ import { calculateStandings } from '@/engine/standings';
 import { enumerateGroupScenarios } from '@/engine/scenarios';
 import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probability-cache';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+import { slugify } from '@/lib/slugify';
 import TeamFlag from '@/app/components/TeamFlag';
 import QualifyWidgets from '@/app/components/QualifyWidgets';
 import ScenariosAccordion from '@/app/components/ScenariosAccordion';
@@ -29,18 +31,38 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
+/** Extract group letter from slug like "group-a" → "A" */
+function parseGroupSlug(slug: string): GroupId | null {
+  const match = slug.match(/^group-([a-l])$/i);
+  if (!match) return null;
+  const groupId = match[1].toUpperCase() as GroupId;
+  return ALL_GROUPS.includes(groupId) ? groupId : null;
+}
+
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ groupId: string; teamId: string }>;
 }
 
-export default async function TeamDetailPage({ params }: PageProps) {
-  const { groupId: rawGroupId, teamId: rawTeamId } = await params;
-  const groupId = rawGroupId.toUpperCase() as GroupId;
-  const teamId = parseInt(rawTeamId, 10);
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { groupId: slug, teamId: rawTeamId } = await params;
+  const groupId = parseGroupSlug(slug);
+  if (!groupId) return { title: 'Team not found' };
+  const rows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1', [groupId]);
+  const team = rows.find((r) => slugify(r.name) === rawTeamId.toLowerCase());
+  if (!team) return { title: 'Team not found' };
+  return {
+    title: `${team.name} — Group ${groupId} | FIFA World Cup 2026`,
+    description: `Track ${team.name}'s qualification scenarios, standings, and match results in Group ${groupId} of the FIFA World Cup 2026.`,
+  };
+}
 
-  if (!ALL_GROUPS.includes(groupId)) {
+export default async function TeamDetailPage({ params }: PageProps) {
+  const { groupId: slug, teamId: rawTeamId } = await params;
+  const groupId = parseGroupSlug(slug);
+
+  if (!groupId) {
     return <main className="container py-4"><h2>Group not found</h2></main>;
   }
 
@@ -52,7 +74,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
   const played = allMatches.filter((m) => m.status === 'FINISHED');
   const remaining = allMatches.filter((m) => m.status !== 'FINISHED');
 
-  const team = teams.find((t) => t.id === teamId);
+  const team = teams.find((t) => slugify(t.name) === rawTeamId.toLowerCase());
   if (!team) {
     return <main className="container py-4"><h2>Team not found</h2></main>;
   }
@@ -68,7 +90,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
 
   // Calculate scenarios
   const summaries = enumerateGroupScenarios(teams, played, remaining);
-  const teamSummary = summaries.find((s) => s.teamId === teamId)!;
+  const teamSummary = summaries.find((s) => s.teamId === team.id)!;
 
   const probs = teamSummary.positionProbabilities;
   const qualifyProb = (probs[1] ?? 0) + (probs[2] ?? 0);
@@ -111,6 +133,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
     }));
   }
 
+  const groupSlug = `group-${groupId.toLowerCase()}`;
+
   return (
     <main className="container py-4">
       {/* Header: team name left, breadcrumb right */}
@@ -120,9 +144,9 @@ export default async function TeamDetailPage({ params }: PageProps) {
           {team.name}
         </h2>
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-          <Link href="/">Groups</Link>
+          <Link href="/worldcup2026">Groups</Link>
           <span className="breadcrumb-sep">/</span>
-          <Link href={`/group/${groupId}`}>Group {groupId}</Link>
+          <Link href={`/worldcup2026/${groupSlug}`}>Group {groupId}</Link>
           <span className="breadcrumb-sep">/</span>
           <span className="breadcrumb-current">{team.shortName}</span>
         </nav>
@@ -164,6 +188,12 @@ export default async function TeamDetailPage({ params }: PageProps) {
           All matches have been played. Final standings are confirmed.
         </div>
       )}
+
+      {/* SEO text */}
+      <p className="text-muted mt-4" style={{ fontSize: '0.9rem' }}>
+        Follow {team.name}&apos;s journey in Group {groupId} of the FIFA World Cup 2026.
+        See current standings, qualification probability, and all possible scenarios for advancing to the knockout stage.
+      </p>
     </main>
   );
 }

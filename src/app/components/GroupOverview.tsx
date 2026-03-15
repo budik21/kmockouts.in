@@ -33,7 +33,7 @@ export default function GroupOverview({ groups }: GroupOverviewProps) {
         const group = groups[gid];
         return (
           <div key={gid} className="col-12 col-md-6 col-lg-4">
-            <Link href={`/group/${gid}`} style={{ textDecoration: 'none' }}>
+            <Link href={`/worldcup2026/group-${gid.toLowerCase()}`} style={{ textDecoration: 'none' }}>
               <div className="group-card">
                 <div className="group-card-header">
                   <span>Group {gid}</span>

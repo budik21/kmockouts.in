@@ -331,6 +331,41 @@ a { color: inherit; text-decoration: none; }
   font-weight: 600;
 }
 
+/* Group switcher nav */
+.group-switcher {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.group-switcher-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--wc-text-muted);
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  transition: all 0.15s;
+}
+
+.group-switcher-item:hover {
+  color: var(--wc-accent);
+  border-color: var(--wc-accent);
+  text-decoration: none;
+}
+
+.group-switcher-item.active {
+  background: var(--wc-primary);
+  color: #fff;
+  border-color: var(--wc-primary);
+}
+
 /* ============================================================
    Team Flags
    ============================================================ */

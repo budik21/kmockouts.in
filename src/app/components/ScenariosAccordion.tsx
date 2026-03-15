@@ -40,10 +40,10 @@ const POSITION_LABELS: { [pos: number]: string } = {
 };
 
 const POSITION_COLORS: { [pos: number]: string } = {
-  1: 'var(--prob-first)',
-  2: 'var(--prob-second)',
-  3: 'var(--prob-third)',
-  4: 'var(--prob-out)',
+  1: '#0a6b3f',
+  2: '#0a6b3f',
+  3: '#a31b1b',
+  4: '#a31b1b',
 };
 
 export default function ScenariosAccordion({
@@ -88,17 +88,17 @@ function PositionSection({ pos, combos, prob }: { pos: number; combos: EnrichedC
           data-bs-target={`#${id}`}
           aria-expanded="false"
           aria-controls={id}
-          style={{ fontSize: '0.9rem' }}
+          style={{ fontSize: '1.125rem' }}
         >
           <span
             className="badge me-2"
-            style={{ background: POSITION_COLORS[pos], minWidth: '60px' }}
+            style={{ background: POSITION_COLORS[pos], minWidth: '75px', fontSize: '1rem', padding: '0.4em 0.6em' }}
           >
             {prob.toFixed(1)}%
           </span>
           {POSITION_LABELS[pos]}
           {combos.length > 0 && (
-            <span className="text-muted ms-2" style={{ fontSize: '0.75rem' }}>
+            <span className="text-muted ms-2" style={{ fontSize: '0.9375rem' }}>
               ({combos.length} scenario{combos.length !== 1 ? 's' : ''})
             </span>
           )}

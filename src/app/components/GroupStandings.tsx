@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { slugify } from '@/lib/slugify';
 import TeamFlag from './TeamFlag';
 import ProbabilityCircle from './ProbabilityCircle';
 
@@ -52,13 +53,13 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
   const router = useRouter();
 
   const handleRowClick = groupId
-    ? (teamId: number) => router.push(`/group/${groupId}/team/${teamId}`)
+    ? (teamName: string) => router.push(`/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(teamName)}`)
     : undefined;
 
-  const rowProps = (teamId: number) =>
+  const rowProps = (teamName: string) =>
     handleRowClick
       ? {
-          onClick: () => handleRowClick(teamId),
+          onClick: () => handleRowClick(teamName),
           style: { cursor: 'pointer' } as React.CSSProperties,
           className: 'standings-row-clickable',
         }
@@ -83,7 +84,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
           {standings.map((s) => {
             const prob = probabilities?.[s.team.id];
             return (
-              <tr key={s.team.id} className={`pos-${s.position}`} {...rowProps(s.team.id)}>
+              <tr key={s.team.id} className={`pos-${s.position}`} {...rowProps(s.team.name)}>
                 <td>{s.position}</td>
                 <td className="team-name">
                   <TeamNameContent team={s.team} />
@@ -134,7 +135,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
           {standings.map((s) => {
             const prob = probabilities?.[s.team.id];
             return (
-              <tr key={s.team.id} className={`pos-${s.position}`} {...rowProps(s.team.id)}>
+              <tr key={s.team.id} className={`pos-${s.position}`} {...rowProps(s.team.name)}>
                 <td>{s.position}</td>
                 <td className="team-name">
                   <TeamNameContent team={s.team} />
