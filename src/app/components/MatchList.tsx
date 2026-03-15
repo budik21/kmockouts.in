@@ -41,7 +41,14 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
           {roundMatches.map((m) => (
             <div key={m.id} className="match-item">
               <div className="match-team home">
-                {compact ? m.homeTeam.shortName : m.homeTeam.name}
+                {compact ? (
+                  m.homeTeam.shortName
+                ) : (
+                  <>
+                    <span className="match-name-full">{m.homeTeam.name}</span>
+                    <span className="match-name-short">{m.homeTeam.shortName}</span>
+                  </>
+                )}
                 <TeamFlag countryCode={m.homeTeam.countryCode} className="ms-2" />
               </div>
               <div className={`match-score ${m.status === 'SCHEDULED' ? 'scheduled' : ''}`}>
@@ -51,7 +58,14 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
               </div>
               <div className="match-team away">
                 <TeamFlag countryCode={m.awayTeam.countryCode} className="me-2" />
-                {compact ? m.awayTeam.shortName : m.awayTeam.name}
+                {compact ? (
+                  m.awayTeam.shortName
+                ) : (
+                  <>
+                    <span className="match-name-full">{m.awayTeam.name}</span>
+                    <span className="match-name-short">{m.awayTeam.shortName}</span>
+                  </>
+                )}
               </div>
             </div>
           ))}
