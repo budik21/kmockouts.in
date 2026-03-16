@@ -9,7 +9,7 @@
  * 3. Points in head-to-head matches (among tied teams)
  * 4. Goal difference in head-to-head matches
  * 5. Goals scored in head-to-head matches
- * 6. Fair play points (YC=-1, direct RC=-4, combined=-5)
+ * 6. Fair play points (YC=-1, 2×YC=-3, direct RC=-4, YC+direct RC=-5)
  * 7. Drawing of lots (not implemented — we treat as equal)
  *
  * KEY DIFFERENCE from UCL: FIFA uses overall GD first, then H2H.

@@ -12,9 +12,11 @@ interface AdminMatchRow {
   home_yc: number;
   home_yc2: number;
   home_rc_direct: number;
+  home_yc_rc: number;
   away_yc: number;
   away_yc2: number;
   away_rc_direct: number;
+  away_yc_rc: number;
   venue: string;
   kick_off: string;
   status: string;
@@ -37,9 +39,11 @@ export interface AdminMatch {
   homeYc: number;
   homeYc2: number;
   homeRcDirect: number;
+  homeYcRc: number;
   awayYc: number;
   awayYc2: number;
   awayRcDirect: number;
+  awayYcRc: number;
   venue: string;
   kickOff: string;
   status: string;
@@ -69,9 +73,11 @@ export default async function AdminPage() {
     homeYc: r.home_yc,
     homeYc2: r.home_yc2,
     homeRcDirect: r.home_rc_direct,
+    homeYcRc: r.home_yc_rc,
     awayYc: r.away_yc,
     awayYc2: r.away_yc2,
     awayRcDirect: r.away_rc_direct,
+    awayYcRc: r.away_yc_rc,
     venue: r.venue,
     kickOff: r.kick_off,
     status: r.status,

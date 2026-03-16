@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import type { AdminMatch } from '../page';
-import { YellowCardIcon, SecondYellowIcon, RedCardIcon } from '@/app/components/CardIcons';
+import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from '@/app/components/CardIcons';
 
 interface MatchState {
   homeGoals: number | null;
@@ -11,9 +11,11 @@ interface MatchState {
   homeYc: number;
   homeYc2: number;
   homeRcDirect: number;
+  homeYcRc: number;
   awayYc: number;
   awayYc2: number;
   awayRcDirect: number;
+  awayYcRc: number;
   status: string;
   saving: boolean;
   saved: boolean;
@@ -90,14 +92,17 @@ function CardStepper({
   value,
   onChange,
   icon,
+  label,
 }: {
   value: number;
   onChange: (v: number) => void;
   icon: React.ReactNode;
+  label: string;
 }) {
   return (
     <div className="card-stepper">
       <div className="card-stepper-icon">{icon}</div>
+      <span className="card-stepper-label">{label}</span>
       <ArrowStepper value={value} onChange={(v) => onChange(v ?? 0)} />
     </div>
   );
@@ -120,9 +125,11 @@ function MatchCard({
     state.homeYc !== match.homeYc ||
     state.homeYc2 !== match.homeYc2 ||
     state.homeRcDirect !== match.homeRcDirect ||
+    state.homeYcRc !== match.homeYcRc ||
     state.awayYc !== match.awayYc ||
     state.awayYc2 !== match.awayYc2 ||
     state.awayRcDirect !== match.awayRcDirect ||
+    state.awayYcRc !== match.awayYcRc ||
     state.status !== match.status;
 
   const kickOffTime = useMemo(() => formatKickOff(match.kickOff), [match.kickOff]);
@@ -141,66 +148,64 @@ function MatchCard({
         </span>
       </div>
 
-      {/* Team names row — centered above score */}
-      <div className="admin-teams-row">
-        <Link href={homeTeamUrl} className="admin-team-label admin-team-label-home">
-          <FlagIcon code={match.homeTeam.countryCode} size="md" />
-          <span className="admin-team-name">{match.homeTeam.shortName}</span>
-        </Link>
-        <span className="admin-teams-vs">vs</span>
-        <Link href={awayTeamUrl} className="admin-team-label admin-team-label-away">
-          <span className="admin-team-name">{match.awayTeam.shortName}</span>
-          <FlagIcon code={match.awayTeam.countryCode} size="md" />
-        </Link>
-      </div>
+      {/* Grid: home cards | center (teams + score) | away cards */}
+      <div className="admin-grid">
+        {/* Home cards column */}
+        <div className="admin-cards-col admin-cards-home">
+          <CardStepper label="YC" icon={<YellowCardIcon />} value={state.homeYc} onChange={(v) => onUpdate({ homeYc: v })} />
+          <CardStepper label="YRC" icon={<SecondYellowIcon />} value={state.homeYc2} onChange={(v) => onUpdate({ homeYc2: v })} />
+          <CardStepper label="RC" icon={<RedCardIcon />} value={state.homeRcDirect} onChange={(v) => onUpdate({ homeRcDirect: v })} />
+          <CardStepper label="Y+RC" icon={<YellowAndRedCardIcon />} value={state.homeYcRc} onChange={(v) => onUpdate({ homeYcRc: v })} />
+        </div>
 
-      {/* Controls row: home cards | score | away cards */}
-      <div className="admin-main-row">
-        {/* Home cards */}
-        <div className="admin-side admin-side-home">
-          <div className="admin-side-cards">
-            <CardStepper icon={<YellowCardIcon />} value={state.homeYc} onChange={(v) => onUpdate({ homeYc: v })} />
-            <CardStepper icon={<SecondYellowIcon />} value={state.homeYc2} onChange={(v) => onUpdate({ homeYc2: v })} />
-            <CardStepper icon={<RedCardIcon />} value={state.homeRcDirect} onChange={(v) => onUpdate({ homeRcDirect: v })} />
+        {/* Center column: team names row 1, score rows 2-4 */}
+        <div className="admin-center-col">
+          <div className="admin-teams-row">
+            <Link href={homeTeamUrl} className="admin-team-label admin-team-label-home">
+              <FlagIcon code={match.homeTeam.countryCode} size="md" />
+              <span className="admin-team-name">{match.homeTeam.shortName}</span>
+            </Link>
+            <span className="admin-teams-vs">vs</span>
+            <Link href={awayTeamUrl} className="admin-team-label admin-team-label-away">
+              <span className="admin-team-name">{match.awayTeam.shortName}</span>
+              <FlagIcon code={match.awayTeam.countryCode} size="md" />
+            </Link>
+          </div>
+          <div className="admin-score-center">
+            <div className="admin-score-box">
+              <ArrowStepper
+                value={state.homeGoals}
+                onChange={(v) => {
+                  const patch: Partial<MatchState> = { homeGoals: v };
+                  if (v !== null && state.awayGoals === null) patch.awayGoals = 0;
+                  if (v !== null && state.status === 'SCHEDULED') patch.status = 'FINISHED';
+                  onUpdate(patch);
+                }}
+                nullable
+                big
+              />
+              <span className="admin-score-separator">:</span>
+              <ArrowStepper
+                value={state.awayGoals}
+                onChange={(v) => {
+                  const patch: Partial<MatchState> = { awayGoals: v };
+                  if (v !== null && state.homeGoals === null) patch.homeGoals = 0;
+                  if (v !== null && state.status === 'SCHEDULED') patch.status = 'FINISHED';
+                  onUpdate(patch);
+                }}
+                nullable
+                big
+              />
+            </div>
           </div>
         </div>
 
-        {/* Score center */}
-        <div className="admin-score-center">
-          <div className="admin-score-box">
-            <ArrowStepper
-              value={state.homeGoals}
-              onChange={(v) => {
-                const patch: Partial<MatchState> = { homeGoals: v };
-                if (v !== null && state.awayGoals === null) patch.awayGoals = 0;
-                if (v !== null && state.status === 'SCHEDULED') patch.status = 'FINISHED';
-                onUpdate(patch);
-              }}
-              nullable
-              big
-            />
-            <span className="admin-score-separator">:</span>
-            <ArrowStepper
-              value={state.awayGoals}
-              onChange={(v) => {
-                const patch: Partial<MatchState> = { awayGoals: v };
-                if (v !== null && state.homeGoals === null) patch.homeGoals = 0;
-                if (v !== null && state.status === 'SCHEDULED') patch.status = 'FINISHED';
-                onUpdate(patch);
-              }}
-              nullable
-              big
-            />
-          </div>
-        </div>
-
-        {/* Away cards */}
-        <div className="admin-side admin-side-away">
-          <div className="admin-side-cards">
-            <CardStepper icon={<YellowCardIcon />} value={state.awayYc} onChange={(v) => onUpdate({ awayYc: v })} />
-            <CardStepper icon={<SecondYellowIcon />} value={state.awayYc2} onChange={(v) => onUpdate({ awayYc2: v })} />
-            <CardStepper icon={<RedCardIcon />} value={state.awayRcDirect} onChange={(v) => onUpdate({ awayRcDirect: v })} />
-          </div>
+        {/* Away cards column */}
+        <div className="admin-cards-col admin-cards-away">
+          <CardStepper label="YC" icon={<YellowCardIcon />} value={state.awayYc} onChange={(v) => onUpdate({ awayYc: v })} />
+          <CardStepper label="YRC" icon={<SecondYellowIcon />} value={state.awayYc2} onChange={(v) => onUpdate({ awayYc2: v })} />
+          <CardStepper label="RC" icon={<RedCardIcon />} value={state.awayRcDirect} onChange={(v) => onUpdate({ awayRcDirect: v })} />
+          <CardStepper label="Y+RC" icon={<YellowAndRedCardIcon />} value={state.awayYcRc} onChange={(v) => onUpdate({ awayYcRc: v })} />
         </div>
       </div>
 
@@ -257,9 +262,11 @@ export default function MatchEditor({
         homeYc: m.homeYc,
         homeYc2: m.homeYc2,
         homeRcDirect: m.homeRcDirect,
+        homeYcRc: m.homeYcRc,
         awayYc: m.awayYc,
         awayYc2: m.awayYc2,
         awayRcDirect: m.awayRcDirect,
+        awayYcRc: m.awayYcRc,
         status: m.status,
         saving: false,
         saved: false,
@@ -295,9 +302,11 @@ export default function MatchEditor({
             homeYc: s.homeYc,
             homeYc2: s.homeYc2,
             homeRcDirect: s.homeRcDirect,
+            homeYcRc: s.homeYcRc,
             awayYc: s.awayYc,
             awayYc2: s.awayYc2,
             awayRcDirect: s.awayRcDirect,
+            awayYcRc: s.awayYcRc,
             status: s.status,
           }),
         });
@@ -311,6 +320,14 @@ export default function MatchEditor({
           ...prev,
           [match.id]: { ...prev[match.id], saving: false, saved: true },
         }));
+
+        // Auto-clear saved indicator after 3 seconds
+        setTimeout(() => {
+          setStates((prev) => ({
+            ...prev,
+            [match.id]: { ...prev[match.id], saved: false },
+          }));
+        }, 3000);
       } catch (err) {
         setStates((prev) => ({
           ...prev,

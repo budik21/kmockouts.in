@@ -27,9 +27,11 @@ export interface Match {
   homeYc: number;
   homeYc2: number;          // second yellow → red incidents
   homeRcDirect: number;
+  homeYcRc: number;          // yellow card + direct red card
   awayYc: number;
   awayYc2: number;          // second yellow → red incidents
   awayRcDirect: number;
+  awayYcRc: number;          // yellow card + direct red card
   venue: string;
   kickOff: string;         // ISO 8601
   status: MatchStatus;
@@ -53,6 +55,7 @@ export interface TeamStanding {
   yellowCards: number;
   secondYellows: number;
   redCardsDirect: number;
+  yellowAndDirectRed: number;
   fairPlayPoints: number;
   position: number;
 }
@@ -129,9 +132,11 @@ export interface MatchRow {
   home_yc: number;
   home_yc2: number;
   home_rc_direct: number;
+  home_yc_rc: number;
   away_yc: number;
   away_yc2: number;
   away_rc_direct: number;
+  away_yc_rc: number;
   venue: string;
   kick_off: string;
   status: string;

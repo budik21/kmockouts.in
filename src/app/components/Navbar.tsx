@@ -10,19 +10,33 @@ export default function Navbar() {
   const router = useRouter();
   const offcanvasRef = useRef<HTMLDivElement>(null);
 
+  const closeOffcanvas = useCallback(() => {
+    const el = offcanvasRef.current;
+    if (!el) return;
+    // Try Bootstrap JS API first
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bs = (window as any).bootstrap;
+    const instance = bs?.Offcanvas?.getInstance(el);
+    if (instance) {
+      instance.hide();
+      return;
+    }
+    // Fallback: close manually (Bootstrap JS may not be loaded)
+    el.classList.remove('show');
+    document.body.classList.remove('offcanvas-backdrop-active');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+    const backdrop = document.querySelector('.offcanvas-backdrop');
+    backdrop?.remove();
+  }, []);
+
   const navigateAndClose = useCallback(
     (href: string) => (e: React.MouseEvent) => {
       e.preventDefault();
-      // Close offcanvas via Bootstrap API
-      const el = offcanvasRef.current;
-      if (el) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const bsOffcanvas = (window as any).bootstrap?.Offcanvas?.getInstance(el);
-        bsOffcanvas?.hide();
-      }
+      closeOffcanvas();
       router.push(href);
     },
-    [router],
+    [router, closeOffcanvas],
   );
 
   return (

@@ -21,8 +21,8 @@ function rowToMatch(row: MatchRow): Match {
     id: row.id, groupId: row.group_id as GroupId, round: row.round,
     homeTeamId: row.home_team_id, awayTeamId: row.away_team_id,
     homeGoals: row.home_goals, awayGoals: row.away_goals,
-    homeYc: row.home_yc, homeYc2: row.home_yc2, homeRcDirect: row.home_rc_direct,
-    awayYc: row.away_yc, awayYc2: row.away_yc2, awayRcDirect: row.away_rc_direct,
+    homeYc: row.home_yc, homeYc2: row.home_yc2, homeRcDirect: row.home_rc_direct, homeYcRc: row.home_yc_rc,
+    awayYc: row.away_yc, awayYc2: row.away_yc2, awayRcDirect: row.away_rc_direct, awayYcRc: row.away_yc_rc,
     venue: row.venue, kickOff: row.kick_off, status: row.status as Match['status'],
   };
 }
@@ -87,9 +87,11 @@ export default async function GroupDetailPage({ params }: PageProps) {
     homeYc: m.homeYc,
     homeYc2: m.homeYc2,
     homeRcDirect: m.homeRcDirect,
+    homeYcRc: m.homeYcRc,
     awayYc: m.awayYc,
     awayYc2: m.awayYc2,
     awayRcDirect: m.awayRcDirect,
+    awayYcRc: m.awayYcRc,
     venue: m.venue,
     kickOff: m.kickOff,
     status: m.status,
