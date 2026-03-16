@@ -30,3 +30,15 @@ export function RedCardIcon({ size = 1 }: { size?: number }) {
     </svg>
   );
 }
+
+export function YellowAndRedCardIcon({ size = 1 }: { size?: number }) {
+  const w = Math.round(34 * size);
+  const h = Math.round(18 * size);
+  return (
+    <svg width={w} height={h} viewBox="0 0 34 18" className="card-icon">
+      <rect x="1" y="1" width="10" height="16" rx="1.5" fill="#ffc107" stroke="#b8860b" strokeWidth="1" />
+      <text x="17" y="13" textAnchor="middle" fontSize="10" fontWeight="bold" fill="var(--wc-text-muted, #999)">+</text>
+      <rect x="23" y="1" width="10" height="16" rx="1.5" fill="#dc3545" stroke="#a71d2a" strokeWidth="1" />
+    </svg>
+  );
+}

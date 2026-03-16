@@ -33,6 +33,7 @@ function aggregateStandings(teams: Team[], matches: Match[]): TeamStanding[] {
       yellowCards: 0,
       secondYellows: 0,
       redCardsDirect: 0,
+      yellowAndDirectRed: 0,
       fairPlayPoints: 0,
       position: 0,
     });
@@ -73,9 +74,11 @@ function aggregateStandings(teams: Team[], matches: Match[]): TeamStanding[] {
     home.yellowCards += m.homeYc;
     home.secondYellows += m.homeYc2;
     home.redCardsDirect += m.homeRcDirect;
+    home.yellowAndDirectRed += m.homeYcRc;
     away.yellowCards += m.awayYc;
     away.secondYellows += m.awayYc2;
     away.redCardsDirect += m.awayRcDirect;
+    away.yellowAndDirectRed += m.awayYcRc;
   }
 
   // Compute derived fields
@@ -85,6 +88,7 @@ function aggregateStandings(teams: Team[], matches: Match[]): TeamStanding[] {
       yellowCards: s.yellowCards,
       secondYellows: s.secondYellows,
       redCardsDirect: s.redCardsDirect,
+      yellowAndDirectRed: s.yellowAndDirectRed,
     });
   }
 

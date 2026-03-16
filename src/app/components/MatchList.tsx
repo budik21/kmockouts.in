@@ -1,7 +1,7 @@
 'use client';
 
 import TeamFlag from './TeamFlag';
-import { YellowCardIcon, SecondYellowIcon, RedCardIcon } from './CardIcons';
+import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from './CardIcons';
 
 interface MatchData {
   id: number;
@@ -13,9 +13,11 @@ interface MatchData {
   homeYc?: number;
   homeYc2?: number;
   homeRcDirect?: number;
+  homeYcRc?: number;
   awayYc?: number;
   awayYc2?: number;
   awayRcDirect?: number;
+  awayYcRc?: number;
   venue: string;
   kickOff: string;
   status: string;
@@ -32,8 +34,8 @@ function formatDate(iso: string): string {
 }
 
 /** Renders card counts with icons */
-function CardBadges({ yc, yc2, rc }: { yc: number; yc2: number; rc: number }) {
-  const hasCards = yc > 0 || yc2 > 0 || rc > 0;
+function CardBadges({ yc, yc2, rc, ycRc }: { yc: number; yc2: number; rc: number; ycRc: number }) {
+  const hasCards = yc > 0 || yc2 > 0 || rc > 0 || ycRc > 0;
   if (!hasCards) return null;
 
   return (
@@ -56,6 +58,12 @@ function CardBadges({ yc, yc2, rc }: { yc: number; yc2: number; rc: number }) {
           <span className="match-card-count">{rc}</span>
         </span>
       )}
+      {ycRc > 0 && (
+        <span className="match-card-badge">
+          <YellowAndRedCardIcon size={0.65} />
+          <span className="match-card-count">{ycRc}</span>
+        </span>
+      )}
     </span>
   );
 }
@@ -76,8 +84,8 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
           {!compact && <div className="match-round">Matchday {round}</div>}
           {roundMatches.map((m) => {
             const isPlayed = m.status === 'FINISHED' || m.status === 'LIVE';
-            const homeHasCards = isPlayed && ((m.homeYc ?? 0) > 0 || (m.homeYc2 ?? 0) > 0 || (m.homeRcDirect ?? 0) > 0);
-            const awayHasCards = isPlayed && ((m.awayYc ?? 0) > 0 || (m.awayYc2 ?? 0) > 0 || (m.awayRcDirect ?? 0) > 0);
+            const homeHasCards = isPlayed && ((m.homeYc ?? 0) > 0 || (m.homeYc2 ?? 0) > 0 || (m.homeRcDirect ?? 0) > 0 || (m.homeYcRc ?? 0) > 0);
+            const awayHasCards = isPlayed && ((m.awayYc ?? 0) > 0 || (m.awayYc2 ?? 0) > 0 || (m.awayRcDirect ?? 0) > 0 || (m.awayYcRc ?? 0) > 0);
             const hasCards = homeHasCards || awayHasCards;
 
             return (
@@ -114,11 +122,11 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
                 {hasCards && (
                   <div className="match-cards-row">
                     <div className="match-cards-home">
-                      {homeHasCards && <CardBadges yc={m.homeYc ?? 0} yc2={m.homeYc2 ?? 0} rc={m.homeRcDirect ?? 0} />}
+                      {homeHasCards && <CardBadges yc={m.homeYc ?? 0} yc2={m.homeYc2 ?? 0} rc={m.homeRcDirect ?? 0} ycRc={m.homeYcRc ?? 0} />}
                     </div>
                     <div className="match-cards-spacer" />
                     <div className="match-cards-away">
-                      {awayHasCards && <CardBadges yc={m.awayYc ?? 0} yc2={m.awayYc2 ?? 0} rc={m.awayRcDirect ?? 0} />}
+                      {awayHasCards && <CardBadges yc={m.awayYc ?? 0} yc2={m.awayYc2 ?? 0} rc={m.awayRcDirect ?? 0} ycRc={m.awayYcRc ?? 0} />}
                     </div>
                   </div>
                 )}

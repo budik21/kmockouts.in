@@ -37,5 +37,6 @@ export const SCORE_BUCKETS: ScoreBucket[] = [
 
 // FIFA Article 13 — Fair Play point deductions
 export const FAIR_PLAY_YELLOW_CARD = -1;
+export const FAIR_PLAY_YELLOW_THEN_RED = -3;        // indirect red (2× yellow cards)
 export const FAIR_PLAY_RED_CARD_DIRECT = -4;
-export const FAIR_PLAY_YELLOW_THEN_RED = -5;  // YC + RC in same match for same player
+export const FAIR_PLAY_YELLOW_AND_DIRECT_RED = -5;   // yellow card + direct red card

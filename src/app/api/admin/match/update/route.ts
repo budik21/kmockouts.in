@@ -11,9 +11,11 @@ interface UpdateBody {
   homeYc: number;
   homeYc2: number;
   homeRcDirect: number;
+  homeYcRc: number;
   awayYc: number;
   awayYc2: number;
   awayRcDirect: number;
+  awayYcRc: number;
   status: string;
 }
 
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body: UpdateBody = await request.json();
-    const { matchId, homeGoals, awayGoals, homeYc, homeYc2, homeRcDirect, awayYc, awayYc2, awayRcDirect, status } = body;
+    const { matchId, homeGoals, awayGoals, homeYc, homeYc2, homeRcDirect, homeYcRc, awayYc, awayYc2, awayRcDirect, awayYcRc, status } = body;
 
     if (!matchId || !['SCHEDULED', 'LIVE', 'FINISHED'].includes(status)) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
@@ -48,11 +50,11 @@ export async function POST(request: NextRequest) {
     await query(
       `UPDATE match
        SET home_goals = $1, away_goals = $2,
-           home_yc = $3, home_yc2 = $4, home_rc_direct = $5,
-           away_yc = $6, away_yc2 = $7, away_rc_direct = $8,
-           status = $9, last_scraped = NOW()
-       WHERE id = $10`,
-      [homeGoals, awayGoals, homeYc, homeYc2, homeRcDirect, awayYc, awayYc2, awayRcDirect, status, matchId],
+           home_yc = $3, home_yc2 = $4, home_rc_direct = $5, home_yc_rc = $6,
+           away_yc = $7, away_yc2 = $8, away_rc_direct = $9, away_yc_rc = $10,
+           status = $11, last_scraped = NOW()
+       WHERE id = $12`,
+      [homeGoals, awayGoals, homeYc, homeYc2, homeRcDirect, homeYcRc, awayYc, awayYc2, awayRcDirect, awayYcRc, status, matchId],
     );
 
     // Mark group as recalculating

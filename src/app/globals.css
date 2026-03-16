@@ -1558,7 +1558,6 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 
 .admin-match-list {
-  max-width: 900px;
 }
 
 .admin-day-group {
@@ -1627,13 +1626,47 @@ a { color: inherit; text-decoration: none; }
   color: var(--wc-text-muted);
 }
 
-/* Team names row — centered above controls */
+/* 3-column grid: home cards | center | away cards */
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  margin-bottom: 0.15rem;
+}
+
+/* Cards column — vertical stack of card steppers */
+.admin-cards-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.admin-cards-home {
+  align-items: flex-end;
+}
+.admin-cards-away {
+  align-items: flex-start;
+}
+
+/* Away side: stepper first, then icon — reverse order */
+.admin-cards-away .card-stepper {
+  flex-direction: row-reverse;
+}
+
+/* Center column */
+.admin-center-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Team names row */
 .admin-teams-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  margin-bottom: 0.35rem;
 }
 .admin-team-label {
   display: flex;
@@ -1662,34 +1695,7 @@ a { color: inherit; text-decoration: none; }
   font-weight: 500;
 }
 
-/* Controls row: home cards | score | away cards */
-.admin-main-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-/* Each team side */
-.admin-side {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  min-width: 0;
-}
-.admin-side-home { align-items: flex-end; }
-.admin-side-away { align-items: flex-start; }
-
-/* Cards row on each side */
-.admin-side-cards {
-  display: flex;
-  gap: 0.6rem;
-}
-.admin-side-home .admin-side-cards { justify-content: flex-end; }
-.admin-side-away .admin-side-cards { justify-content: flex-start; }
-
-/* Score center column */
+/* Score center */
 .admin-score-center {
   display: flex;
   align-items: center;
@@ -1703,9 +1709,10 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   gap: 0.25rem;
   background: var(--wc-bg);
-  border: 2px solid var(--wc-border);
+  border: 2px solid var(--wc-accent);
   border-radius: 0.5rem;
   padding: 0.35rem 0.5rem;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wc-accent) 15%, transparent);
 }
 .admin-score-separator {
   font-weight: 800;
@@ -1772,7 +1779,7 @@ a { color: inherit; text-decoration: none; }
   font-weight: 800;
 }
 
-/* Card Stepper: icon left, arrows+number right */
+/* Card Stepper: icon + arrows+number */
 .card-stepper {
   display: flex;
   align-items: center;
@@ -1783,19 +1790,42 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  width: 36px;
+}
+/* Home side: icon at right edge of its box */
+.admin-cards-home .card-stepper-icon {
+  justify-content: flex-end;
+}
+/* Away side: icon at left edge of its box */
+.admin-cards-away .card-stepper-icon {
+  justify-content: flex-start;
 }
 .card-icon {
   flex-shrink: 0;
 }
+/* Text label for card type — hidden on desktop, shown on mobile */
+.card-stepper-label {
+  display: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  min-width: 30px;
+  text-align: right;
+  white-space: nowrap;
+}
+/* Away side: label left-aligned */
+.admin-cards-away .card-stepper-label {
+  text-align: left;
+}
 
-/* Footer with status + save — centered */
+/* Footer with status + save — centered, tight to score box */
 .admin-match-footer {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  margin-top: 0.35rem;
+  margin-top: 0;
 }
 .admin-status-select {
   width: auto;
@@ -1807,64 +1837,68 @@ a { color: inherit; text-decoration: none; }
   min-width: 80px;
 }
 
-/* Mobile adjustments */
-@media (max-width: 575.98px) {
-  .admin-main-row {
-    gap: 0.25rem;
-  }
-  /* Cards stack vertically beside score on mobile */
-  .admin-side-cards {
-    flex-direction: column;
-    gap: 0.15rem;
+/* Tablet: tighter spacing */
+@media (max-width: 900px) {
+  .admin-grid {
+    gap: 0.4rem;
   }
   .admin-team-name {
     font-size: 1rem;
   }
+  .card-stepper-icon {
+    width: 30px;
+  }
+  .card-stepper .arrow-stepper-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+  .card-stepper .arrow-stepper-value {
+    min-width: 18px;
+    font-size: 0.95rem;
+  }
+}
 
-  /* Card steppers: arrows stacked vertically on one side of the number */
-  .card-stepper .arrow-stepper {
-    flex-direction: row;
+/* Mobile: compact layout */
+@media (max-width: 575.98px) {
+  .admin-match-card {
+    padding: 0.5rem;
+  }
+  .admin-grid {
+    gap: 0.1rem;
+  }
+  .admin-team-name {
+    font-size: 0.85rem;
+  }
+  .card-stepper-icon {
+    display: none;
+  }
+  /* Show text labels on mobile — left (home) side only */
+  .admin-cards-home .card-stepper-label {
+    display: block;
+  }
+  .card-stepper {
     gap: 0;
   }
   .card-stepper .arrow-stepper-btn {
-    width: 18px;
-    height: 14px;
-    font-size: 0.55rem;
+    width: 20px;
+    height: 20px;
+    font-size: 0.65rem;
   }
   .card-stepper .arrow-stepper-value {
     min-width: 14px;
     font-size: 0.85rem;
   }
-  /* Stack the two arrow buttons vertically */
-  .card-stepper .arrow-stepper {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: 1fr 1fr;
-    align-items: center;
-    gap: 0;
-  }
-  .card-stepper .arrow-stepper-value {
-    grid-column: 1;
-    grid-row: 1 / 3;
-  }
-  .card-stepper .arrow-stepper-btn {
-    grid-column: 2;
-  }
-  .card-stepper .card-icon {
-    transform: scale(0.75);
-  }
-  .card-stepper {
-    gap: 1px;
-  }
-
-  /* Score arrows stay bigger, horizontal */
   .arrow-stepper-big .arrow-stepper-btn {
-    width: 34px;
-    height: 34px;
-    font-size: 1rem;
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
   }
   .arrow-stepper-big .arrow-stepper-value {
-    min-width: 28px;
-    font-size: 1.6rem;
+    min-width: 22px;
+    font-size: 1.2rem;
+  }
+  .admin-score-box {
+    padding: 0.25rem 0.35rem;
   }
 }

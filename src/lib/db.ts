@@ -111,6 +111,8 @@ export async function initializeSchema(): Promise<void> {
     ALTER TABLE news_article ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
     ALTER TABLE match ADD COLUMN IF NOT EXISTS home_yc2 INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE match ADD COLUMN IF NOT EXISTS away_yc2 INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE match ADD COLUMN IF NOT EXISTS home_yc_rc INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE match ADD COLUMN IF NOT EXISTS away_yc_rc INTEGER NOT NULL DEFAULT 0;
 
     -- Admin whitelist
     CREATE TABLE IF NOT EXISTS admin_user (
