@@ -1,10 +1,30 @@
 'use client';
 
+import { useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import ScenarioSwitcher from './ScenarioSwitcher';
 
 export default function Navbar() {
+  const router = useRouter();
+  const offcanvasRef = useRef<HTMLDivElement>(null);
+
+  const navigateAndClose = useCallback(
+    (href: string) => (e: React.MouseEvent) => {
+      e.preventDefault();
+      // Close offcanvas via Bootstrap API
+      const el = offcanvasRef.current;
+      if (el) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const bsOffcanvas = (window as any).bootstrap?.Offcanvas?.getInstance(el);
+        bsOffcanvas?.hide();
+      }
+      router.push(href);
+    },
+    [router],
+  );
+
   return (
     <>
       <nav className="navbar navbar-wc sticky-top">
@@ -33,6 +53,7 @@ export default function Navbar() {
         className="offcanvas offcanvas-end offcanvas-wc"
         tabIndex={-1}
         id="navMenu"
+        ref={offcanvasRef}
         aria-labelledby="navMenuLabel"
       >
         <div className="offcanvas-header">
@@ -48,28 +69,28 @@ export default function Navbar() {
         </div>
         <div className="offcanvas-body">
           <nav className="nav flex-column gap-1">
-            <Link
+            <a
               href="/worldcup2026"
               className="nav-link offcanvas-nav-link"
-              data-bs-dismiss="offcanvas"
+              onClick={navigateAndClose('/worldcup2026')}
             >
               🏆 Groups
-            </Link>
-            <Link
+            </a>
+            <a
               href="/worldcup2026/best-third-placed"
               className="nav-link offcanvas-nav-link"
-              data-bs-dismiss="offcanvas"
+              onClick={navigateAndClose('/worldcup2026/best-third-placed')}
             >
               🥉 Best 3rd
-            </Link>
+            </a>
             <hr className="offcanvas-divider" />
-            <Link
+            <a
               href="/admin"
               className="nav-link offcanvas-nav-link"
-              data-bs-dismiss="offcanvas"
+              onClick={navigateAndClose('/admin')}
             >
               ⚙️ Administration
-            </Link>
+            </a>
           </nav>
           <hr className="offcanvas-divider" />
           <div className="d-flex align-items-center gap-2 px-2">
