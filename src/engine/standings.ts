@@ -31,6 +31,7 @@ function aggregateStandings(teams: Team[], matches: Match[]): TeamStanding[] {
       goalDifference: 0,
       points: 0,
       yellowCards: 0,
+      secondYellows: 0,
       redCardsDirect: 0,
       fairPlayPoints: 0,
       position: 0,
@@ -70,8 +71,10 @@ function aggregateStandings(teams: Team[], matches: Match[]): TeamStanding[] {
 
     // Disciplinary
     home.yellowCards += m.homeYc;
+    home.secondYellows += m.homeYc2;
     home.redCardsDirect += m.homeRcDirect;
     away.yellowCards += m.awayYc;
+    away.secondYellows += m.awayYc2;
     away.redCardsDirect += m.awayRcDirect;
   }
 
@@ -80,6 +83,7 @@ function aggregateStandings(teams: Team[], matches: Match[]): TeamStanding[] {
     s.goalDifference = s.goalsFor - s.goalsAgainst;
     s.fairPlayPoints = calculateFairPlayPoints({
       yellowCards: s.yellowCards,
+      secondYellows: s.secondYellows,
       redCardsDirect: s.redCardsDirect,
     });
   }

@@ -72,16 +72,18 @@ export async function writeMatchUpdates(updates: ParsedMatchUpdate[]): Promise<n
       await client.query(
         `UPDATE match
          SET home_goals = $1, away_goals = $2,
-             home_yc = $3, home_rc_direct = $4,
-             away_yc = $5, away_rc_direct = $6,
-             status = $7, last_scraped = NOW()
-         WHERE id = $8`,
+             home_yc = $3, home_yc2 = $4, home_rc_direct = $5,
+             away_yc = $6, away_yc2 = $7, away_rc_direct = $8,
+             status = $9, last_scraped = NOW()
+         WHERE id = $10`,
         [
           update.homeGoals,
           update.awayGoals,
           update.homeYc,
+          0, // home_yc2 — not available from scraper
           update.homeRcDirect,
           update.awayYc,
+          0, // away_yc2 — not available from scraper
           update.awayRcDirect,
           update.status,
           match.id,

@@ -3,6 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "flag-icons/css/flag-icons.min.css";
 import "./globals.css";
 import Navbar from "./components/Navbar";
+import RecalcIndicator from "./components/RecalcIndicator";
 import BootstrapClient from "./components/BootstrapClient";
 import CookieConsent from "./components/CookieConsent";
 
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="en" data-bs-theme="light">
       <body>
         <Navbar />
+        <RecalcIndicator />
         {children}
         <footer className="text-center py-4 mt-4" style={{ color: 'var(--wc-text-muted)', fontSize: '0.85rem' }}>
           <div className="container">

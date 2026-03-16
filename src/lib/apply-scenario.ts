@@ -10,8 +10,10 @@ interface ScenarioResult {
   home_goals: number;
   away_goals: number;
   home_yc: number;
+  home_yc2?: number;
   home_rc_direct: number;
   away_yc: number;
+  away_yc2?: number;
   away_rc_direct: number;
   status: string;
 }
@@ -30,8 +32,8 @@ export async function applyScenario(scenarioId: number): Promise<number> {
     await pool.query(`
       UPDATE match
       SET home_goals = NULL, away_goals = NULL,
-          home_yc = 0, home_rc_direct = 0,
-          away_yc = 0, away_rc_direct = 0,
+          home_yc = 0, home_yc2 = 0, home_rc_direct = 0,
+          away_yc = 0, away_yc2 = 0, away_rc_direct = 0,
           status = 'SCHEDULED', last_scraped = NULL
     `);
     fs.writeFileSync(flagPath, '0');
@@ -50,8 +52,8 @@ export async function applyScenario(scenarioId: number): Promise<number> {
   await pool.query(`
     UPDATE match
     SET home_goals = NULL, away_goals = NULL,
-        home_yc = 0, home_rc_direct = 0,
-        away_yc = 0, away_rc_direct = 0,
+        home_yc = 0, home_yc2 = 0, home_rc_direct = 0,
+        away_yc = 0, away_yc2 = 0, away_rc_direct = 0,
         status = 'SCHEDULED', last_scraped = NULL
   `);
 
@@ -64,14 +66,14 @@ export async function applyScenario(scenarioId: number): Promise<number> {
       await client.query(
         `UPDATE match
          SET home_goals = $1, away_goals = $2,
-             home_yc = $3, home_rc_direct = $4,
-             away_yc = $5, away_rc_direct = $6,
-             status = $7, last_scraped = NOW()
-         WHERE group_id = $8 AND round = $9 AND home_team_id = $10 AND away_team_id = $11`,
+             home_yc = $3, home_yc2 = $4, home_rc_direct = $5,
+             away_yc = $6, away_yc2 = $7, away_rc_direct = $8,
+             status = $9, last_scraped = NOW()
+         WHERE group_id = $10 AND round = $11 AND home_team_id = $12 AND away_team_id = $13`,
         [
           r.home_goals, r.away_goals,
-          r.home_yc ?? 0, r.home_rc_direct ?? 0,
-          r.away_yc ?? 0, r.away_rc_direct ?? 0,
+          r.home_yc ?? 0, r.home_yc2 ?? 0, r.home_rc_direct ?? 0,
+          r.away_yc ?? 0, r.away_yc2 ?? 0, r.away_rc_direct ?? 0,
           r.status ?? 'FINISHED',
           r.group_id, r.round, r.home_team_id, r.away_team_id,
         ]

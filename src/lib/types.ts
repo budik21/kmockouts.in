@@ -25,8 +25,10 @@ export interface Match {
   homeGoals: number | null; // null = not played
   awayGoals: number | null;
   homeYc: number;
+  homeYc2: number;          // second yellow → red incidents
   homeRcDirect: number;
   awayYc: number;
+  awayYc2: number;          // second yellow → red incidents
   awayRcDirect: number;
   venue: string;
   kickOff: string;         // ISO 8601
@@ -49,6 +51,7 @@ export interface TeamStanding {
   goalDifference: number;
   points: number;
   yellowCards: number;
+  secondYellows: number;
   redCardsDirect: number;
   fairPlayPoints: number;
   position: number;
@@ -124,8 +127,10 @@ export interface MatchRow {
   home_goals: number | null;
   away_goals: number | null;
   home_yc: number;
+  home_yc2: number;
   home_rc_direct: number;
   away_yc: number;
+  away_yc2: number;
   away_rc_direct: number;
   venue: string;
   kick_off: string;

@@ -109,6 +109,21 @@ export async function initializeSchema(): Promise<void> {
 
     -- Migrations for existing tables
     ALTER TABLE news_article ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+    ALTER TABLE match ADD COLUMN IF NOT EXISTS home_yc2 INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE match ADD COLUMN IF NOT EXISTS away_yc2 INTEGER NOT NULL DEFAULT 0;
+
+    -- Admin whitelist
+    CREATE TABLE IF NOT EXISTS admin_user (
+      email TEXT PRIMARY KEY
+    );
+    INSERT INTO admin_user (email) VALUES ('radek.budar@gmail.com') ON CONFLICT DO NOTHING;
+
+    -- Recalculation status tracking
+    CREATE TABLE IF NOT EXISTS recalc_status (
+      group_id TEXT PRIMARY KEY,
+      is_recalculating BOOLEAN NOT NULL DEFAULT false,
+      started_at TEXT
+    );
   `);
 }
 
