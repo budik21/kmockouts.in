@@ -135,7 +135,7 @@ function summarizePosition(
   // Merge branches
   const merged = mergeBranches(branches, ownMatchIndices, otherMatchIndices);
 
-  if (merged.length > 3) {
+  if (merged.length > 5) {
     return 'Multiple scenarios possible — see details below.';
   }
 
@@ -209,40 +209,310 @@ function mergeSingleOwnMatch(branches: Branch[], otherMatchIndices: number[]): B
   return result;
 }
 
+interface OwnTuple {
+  outcomes: TeamOutcome[];
+  minGoalDiffs: number[];
+}
+
 function mergeMultiOwnMatches(
   branches: Branch[],
   ownMatchIndices: number[],
-  otherMatchIndices: number[],
+  _otherMatchIndices: number[],
 ): Branch[] {
-  const allUnconstrained = branches.every(b =>
-    b.otherConstraints.every(c => c.outcomes.size === 3)
-  );
+  // Group branches by their other-constraints
+  const constraintGroups = new Map<string, Branch[]>();
+  for (const b of branches) {
+    const key = constraintKey(b);
+    if (!constraintGroups.has(key)) constraintGroups.set(key, []);
+    constraintGroups.get(key)!.push(b);
+  }
 
-  if (allUnconstrained) {
-    const perMatch = new Map<number, Set<string>>();
-    for (const idx of ownMatchIndices) perMatch.set(idx, new Set());
-    for (const b of branches) {
-      for (const oc of b.ownConditions) {
-        perMatch.get(oc.matchIdx)!.add(oc.outcome as string);
+  const allMerged: Branch[] = [];
+
+  for (const group of constraintGroups.values()) {
+    const otherConstraints = group[0].otherConstraints;
+
+    // Extract and deduplicate own-outcome tuples
+    const tupleMap = new Map<string, number[]>();
+    for (const b of group) {
+      const key = b.ownConditions.map(c => c.outcome).join('|');
+      if (!tupleMap.has(key)) {
+        tupleMap.set(key, b.ownConditions.map(c => c.minGoalDiff));
+      } else {
+        const existing = tupleMap.get(key)!;
+        for (let i = 0; i < existing.length; i++) {
+          existing[i] = Math.min(existing[i], b.ownConditions[i].minGoalDiff);
+        }
       }
     }
 
-    const allAny = Array.from(perMatch.values()).every(s =>
-      s.has('WIN') && s.has('DRAW') && s.has('LOSS')
-    );
-    if (allAny) {
-      return [{
-        ownConditions: ownMatchIndices.map(idx => ({ matchIdx: idx, outcome: 'ANY' as ExtOutcome, minGoalDiff: 0 })),
-        otherConstraints: branches[0].otherConstraints,
-      }];
+    const tuples: OwnTuple[] = Array.from(tupleMap.entries()).map(([key, diffs]) => ({
+      outcomes: key.split('|') as TeamOutcome[],
+      minGoalDiffs: diffs,
+    }));
+
+    const merged = mergeOwnTuples(tuples, ownMatchIndices, otherConstraints);
+    allMerged.push(...merged);
+  }
+
+  return allMerged;
+}
+
+function constraintKey(b: Branch): string {
+  return b.otherConstraints
+    .map(c => `${c.matchIdx}:${Array.from(c.outcomes).sort().join(',')}`)
+    .join('|');
+}
+
+/**
+ * Recursively merge own-outcome tuples by factoring across dimensions.
+ * For each dimension as "pivot", groups by that outcome, recursively
+ * merges remaining dimensions, then tries a second-pass merge across
+ * the pivot dimension.
+ */
+function mergeOwnTuples(
+  tuples: OwnTuple[],
+  ownMatchIndices: number[],
+  otherConstraints: Branch['otherConstraints'],
+): Branch[] {
+  if (tuples.length === 0) return [];
+
+  // Single tuple → single branch
+  if (tuples.length === 1) {
+    return [{
+      ownConditions: tuples[0].outcomes.map((outcome, i) => ({
+        matchIdx: ownMatchIndices[i],
+        outcome: outcome as ExtOutcome,
+        minGoalDiff: tuples[0].minGoalDiffs[i],
+      })),
+      otherConstraints,
+    }];
+  }
+
+  const numDims = ownMatchIndices.length;
+
+  // Fast path: all 3^n combinations present → everything is ANY
+  const allAny = ownMatchIndices.every((_, d) => {
+    const outcomes = new Set(tuples.map(t => t.outcomes[d]));
+    return outcomes.has('WIN') && outcomes.has('DRAW') && outcomes.has('LOSS');
+  });
+  if (allAny && tuples.length >= Math.pow(3, numDims)) {
+    return [{
+      ownConditions: ownMatchIndices.map(idx => ({
+        matchIdx: idx, outcome: 'ANY' as ExtOutcome, minGoalDiff: 0,
+      })),
+      otherConstraints,
+    }];
+  }
+
+  // Single dimension: direct merge (W+D→DRAW_OR_WIN, etc.)
+  if (numDims === 1) {
+    return mergeSingleDimTuples(tuples, ownMatchIndices[0], otherConstraints);
+  }
+
+  // Multi-dimension: try factoring by each dimension, pick best
+  let bestResult: Branch[] | null = null;
+
+  for (let pivotDim = 0; pivotDim < numDims; pivotDim++) {
+    const result = factorByDim(tuples, pivotDim, ownMatchIndices, otherConstraints);
+    if (!bestResult || result.length < bestResult.length) {
+      bestResult = result;
     }
   }
 
-  if (branches.length > 3) {
-    return branches.slice(0, 4); // will trigger complexity cap
+  // If factoring didn't reduce, return original tuples as branches
+  if (!bestResult || bestResult.length >= tuples.length) {
+    return tuples.map(t => ({
+      ownConditions: t.outcomes.map((outcome, i) => ({
+        matchIdx: ownMatchIndices[i],
+        outcome: outcome as ExtOutcome,
+        minGoalDiff: t.minGoalDiffs[i],
+      })),
+      otherConstraints,
+    }));
   }
 
-  return branches;
+  return bestResult;
+}
+
+/** Base case: merge outcomes for a single own match. */
+function mergeSingleDimTuples(
+  tuples: OwnTuple[],
+  matchIdx: number,
+  otherConstraints: Branch['otherConstraints'],
+): Branch[] {
+  const outcomes = new Set(tuples.map(t => t.outcomes[0]));
+  const minDiffByOutcome = new Map<TeamOutcome, number>();
+  for (const t of tuples) {
+    const current = minDiffByOutcome.get(t.outcomes[0]);
+    minDiffByOutcome.set(
+      t.outcomes[0],
+      current !== undefined ? Math.min(current, t.minGoalDiffs[0]) : t.minGoalDiffs[0],
+    );
+  }
+
+  // All three → ANY
+  if (outcomes.has('WIN') && outcomes.has('DRAW') && outcomes.has('LOSS')) {
+    return [{ ownConditions: [{ matchIdx, outcome: 'ANY', minGoalDiff: 0 }], otherConstraints }];
+  }
+
+  // WIN + DRAW → DRAW_OR_WIN (only if win minGoalDiff ≤ 1)
+  if (outcomes.has('WIN') && outcomes.has('DRAW') && !outcomes.has('LOSS')) {
+    if ((minDiffByOutcome.get('WIN') ?? 0) <= 1) {
+      return [{ ownConditions: [{ matchIdx, outcome: 'DRAW_OR_WIN', minGoalDiff: 0 }], otherConstraints }];
+    }
+  }
+
+  // DRAW + LOSS → DRAW_OR_LOSS
+  if (outcomes.has('DRAW') && outcomes.has('LOSS') && !outcomes.has('WIN')) {
+    if ((minDiffByOutcome.get('LOSS') ?? 0) <= 1) {
+      return [{ ownConditions: [{ matchIdx, outcome: 'DRAW_OR_LOSS', minGoalDiff: 0 }], otherConstraints }];
+    }
+  }
+
+  // No merge — return ordered: WIN, DRAW, LOSS
+  const order: TeamOutcome[] = ['WIN', 'DRAW', 'LOSS'];
+  return order
+    .filter(o => outcomes.has(o))
+    .map(o => ({
+      ownConditions: [{ matchIdx, outcome: o as ExtOutcome, minGoalDiff: minDiffByOutcome.get(o)! }],
+      otherConstraints,
+    }));
+}
+
+/** Factor tuples by one dimension, recursively merge remaining, then second-pass merge. */
+function factorByDim(
+  tuples: OwnTuple[],
+  pivotDim: number,
+  ownMatchIndices: number[],
+  otherConstraints: Branch['otherConstraints'],
+): Branch[] {
+  // Group by pivot outcome
+  const groups = new Map<TeamOutcome, OwnTuple[]>();
+  for (const t of tuples) {
+    const key = t.outcomes[pivotDim];
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(t);
+  }
+
+  // Remaining own-match indices (excluding pivot)
+  const remainingIndices = ownMatchIndices.filter((_, i) => i !== pivotDim);
+
+  // For each pivot group, recursively merge remaining dimensions
+  interface AnnotatedBranch extends Branch {
+    _pivotOutcome: TeamOutcome;
+    _pivotMinDiff: number;
+    _nonPivotKey: string;
+  }
+
+  const annotated: AnnotatedBranch[] = [];
+
+  for (const [pivotOutcome, subTuples] of groups) {
+    const pivotMinDiff = Math.min(...subTuples.map(t => t.minGoalDiffs[pivotDim]));
+
+    // Remove pivot dimension from tuples
+    const reducedTuples = deduplicateTuples(subTuples.map(t => ({
+      outcomes: t.outcomes.filter((_, i) => i !== pivotDim),
+      minGoalDiffs: t.minGoalDiffs.filter((_, i) => i !== pivotDim),
+    })));
+
+    // Recursively merge
+    const subBranches = remainingIndices.length > 0
+      ? mergeOwnTuples(reducedTuples, remainingIndices, otherConstraints)
+      : [{ ownConditions: [] as Branch['ownConditions'], otherConstraints }];
+
+    // Prepend pivot condition to each sub-branch
+    for (const sb of subBranches) {
+      const nonPivotKey = sb.ownConditions
+        .map(c => `${c.matchIdx}:${c.outcome}:${c.minGoalDiff}`)
+        .join('|');
+      annotated.push({
+        ownConditions: [
+          { matchIdx: ownMatchIndices[pivotDim], outcome: pivotOutcome as ExtOutcome, minGoalDiff: pivotMinDiff },
+          ...sb.ownConditions,
+        ],
+        otherConstraints,
+        _pivotOutcome: pivotOutcome,
+        _pivotMinDiff: pivotMinDiff,
+        _nonPivotKey: nonPivotKey,
+      });
+    }
+  }
+
+  // Second pass: merge across pivot outcomes when non-pivot conditions match
+  const nonPivotGroups = new Map<string, AnnotatedBranch[]>();
+  for (const b of annotated) {
+    if (!nonPivotGroups.has(b._nonPivotKey)) nonPivotGroups.set(b._nonPivotKey, []);
+    nonPivotGroups.get(b._nonPivotKey)!.push(b);
+  }
+
+  const result: Branch[] = [];
+  for (const group of nonPivotGroups.values()) {
+    if (group.length === 1) {
+      result.push(group[0]);
+      continue;
+    }
+
+    const pivotOutcomes = new Set(group.map(b => b._pivotOutcome));
+    const merged = tryMergePivotOutcomes(pivotOutcomes, group);
+
+    if (merged) {
+      result.push({
+        ownConditions: group[0].ownConditions.map(c =>
+          c.matchIdx === ownMatchIndices[pivotDim]
+            ? { ...c, outcome: merged.outcome, minGoalDiff: merged.minGoalDiff }
+            : c
+        ),
+        otherConstraints,
+      });
+    } else {
+      result.push(...group);
+    }
+  }
+
+  return result;
+}
+
+function tryMergePivotOutcomes(
+  outcomes: Set<TeamOutcome>,
+  branches: { _pivotMinDiff: number; _pivotOutcome: TeamOutcome }[],
+): { outcome: ExtOutcome; minGoalDiff: number } | null {
+  if (outcomes.has('WIN') && outcomes.has('DRAW') && outcomes.has('LOSS')) {
+    return { outcome: 'ANY', minGoalDiff: 0 };
+  }
+  if (outcomes.has('WIN') && outcomes.has('DRAW') && !outcomes.has('LOSS')) {
+    const winMinDiff = Math.min(
+      ...branches.filter(b => b._pivotOutcome === 'WIN').map(b => b._pivotMinDiff),
+    );
+    if (winMinDiff <= 1) {
+      return { outcome: 'DRAW_OR_WIN', minGoalDiff: 0 };
+    }
+  }
+  if (outcomes.has('DRAW') && outcomes.has('LOSS') && !outcomes.has('WIN')) {
+    const lossMinDiff = Math.min(
+      ...branches.filter(b => b._pivotOutcome === 'LOSS').map(b => b._pivotMinDiff),
+    );
+    if (lossMinDiff <= 1) {
+      return { outcome: 'DRAW_OR_LOSS', minGoalDiff: 0 };
+    }
+  }
+  return null;
+}
+
+function deduplicateTuples(tuples: OwnTuple[]): OwnTuple[] {
+  const map = new Map<string, OwnTuple>();
+  for (const t of tuples) {
+    const key = t.outcomes.join('|');
+    if (map.has(key)) {
+      const existing = map.get(key)!;
+      for (let i = 0; i < existing.minGoalDiffs.length; i++) {
+        existing.minGoalDiffs[i] = Math.min(existing.minGoalDiffs[i], t.minGoalDiffs[i]);
+      }
+    } else {
+      map.set(key, { outcomes: [...t.outcomes], minGoalDiffs: [...t.minGoalDiffs] });
+    }
+  }
+  return Array.from(map.values());
 }
 
 function sameOtherConstraints(a: Branch, b: Branch): boolean {
@@ -275,12 +545,16 @@ function buildSentence(
   for (const b of branches) {
     const conditions: string[] = [];
 
+    let isFirstOwn = true;
     for (const oc of b.ownConditions) {
       const m = remainingMatches[oc.matchIdx];
       const teamIsHome = m.homeTeamId === teamId;
       const opponent = teamIsHome ? m.awayTeamName : m.homeTeamName;
-      const desc = describeOwnOutcome(oc.outcome, oc.minGoalDiff, teamName, opponent);
-      if (desc) conditions.push(desc);
+      const desc = describeOwnOutcome(oc.outcome, oc.minGoalDiff, teamName, opponent, isFirstOwn);
+      if (desc) {
+        conditions.push(desc);
+        isFirstOwn = false;
+      }
     }
 
     for (const oc of b.otherConstraints) {
@@ -298,10 +572,14 @@ function buildSentence(
   }
 
   if (parts.length === 1) {
-    return capitalize(parts[0]) + '.';
+    return `<div class="scenario-path single">${capitalize(parts[0])}.</div>`;
   }
 
-  return parts.map((p, i) => i === 0 ? capitalize(p) : p).join('; or ') + '.';
+  // Multiple branches → numbered items with circle markers
+  const items = parts.map((p, i) =>
+    `<div class="scenario-path"><span class="scenario-path-num">${i + 1}</span><span class="scenario-path-text">${capitalize(p)}</span></div>`
+  ).join('');
+  return `<div class="scenario-paths">${items}</div>`;
 }
 
 function describeOwnOutcome(
@@ -309,29 +587,30 @@ function describeOwnOutcome(
   minGoalDiff: number,
   teamName: string,
   opponent: string,
+  includeTeamName = true,
 ): string | null {
-  const team = `<strong>${teamName}</strong>`;
+  const team = includeTeamName ? `<strong>${teamName}</strong> ` : '';
   const opp = `<strong>${opponent}</strong>`;
 
   switch (outcome) {
     case 'ANY':
       return null;
     case 'DRAW_OR_WIN':
-      return `${team} at least draws with ${opp}`;
+      return `${team}at least draws with ${opp}`;
     case 'DRAW_OR_LOSS':
-      return `${team} draws with or loses to ${opp}`;
+      return `${team}draws with or loses to ${opp}`;
     case 'WIN':
       if (minGoalDiff > 1) {
-        return `${team} beats ${opp} by at least ${minGoalDiff} goals`;
+        return `${team}beats ${opp} by at least ${minGoalDiff} goals`;
       }
-      return `${team} beats ${opp}`;
+      return `${team}beats ${opp}`;
     case 'DRAW':
-      return `${team} draws with ${opp}`;
+      return `${team}draws with ${opp}`;
     case 'LOSS':
       if (minGoalDiff > 1) {
-        return `${team} loses to ${opp} by at least ${minGoalDiff} goals`;
+        return `${team}loses to ${opp} by at least ${minGoalDiff} goals`;
       }
-      return `${team} loses to ${opp}`;
+      return `${team}loses to ${opp}`;
     default:
       return null;
   }

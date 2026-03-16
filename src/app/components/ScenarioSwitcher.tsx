@@ -74,7 +74,7 @@ export default function ScenarioSwitcher() {
           </>
         )}
       </button>
-      <ul className="dropdown-menu dropdown-menu-end" style={{ minWidth: '280px' }}>
+      <ul className="dropdown-menu dropdown-menu-end scenario-dropdown">
         <li>
           <h6 className="dropdown-header">Test Scenarios</h6>
         </li>
