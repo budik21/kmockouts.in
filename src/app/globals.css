@@ -356,6 +356,53 @@ a { color: inherit; text-decoration: none; }
   padding: 0.5rem 1rem 0;
 }
 
+/* Card badges in match results — row below the score */
+.match-item-wrap {
+  border-bottom: 1px solid var(--wc-border);
+}
+.match-item-wrap:last-child {
+  border-bottom: none;
+}
+.match-item-wrap .match-item {
+  border-bottom: none;
+}
+.match-cards-row {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem 0.4rem;
+  gap: 0.5rem;
+}
+.match-cards-home {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+.match-cards-spacer {
+  min-width: 60px;
+  flex-shrink: 0;
+}
+.match-cards-away {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+}
+.match-cards {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.match-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+.match-card-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  line-height: 1;
+}
+
 /* ============================================================
    Theme Toggle
    ============================================================ */
@@ -1567,6 +1614,12 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
   padding: 0.15rem 0.5rem;
   border-radius: 0.25rem;
+  text-decoration: none;
+  transition: filter 0.15s;
+}
+.admin-group-badge:hover {
+  filter: brightness(1.3);
+  color: white;
 }
 
 .admin-match-meta {
@@ -1574,11 +1627,46 @@ a { color: inherit; text-decoration: none; }
   color: var(--wc-text-muted);
 }
 
-/* Main row: home | score | away */
+/* Team names row — centered above controls */
+.admin-teams-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.admin-team-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  color: var(--wc-text);
+  transition: color 0.15s;
+}
+.admin-team-label:hover {
+  color: var(--wc-accent);
+}
+.admin-team-label:hover .admin-team-name {
+  color: var(--wc-accent);
+}
+.admin-team-name {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--wc-text);
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.admin-teams-vs {
+  font-size: 0.8rem;
+  color: var(--wc-text-muted);
+  font-weight: 500;
+}
+
+/* Controls row: home cards | score | away cards */
 .admin-main-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-bottom: 0.5rem;
 }
 
@@ -1587,30 +1675,16 @@ a { color: inherit; text-decoration: none; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
   min-width: 0;
 }
 .admin-side-home { align-items: flex-end; }
 .admin-side-away { align-items: flex-start; }
 
-.admin-side-team {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.admin-team-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--wc-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* Cards row on each side */
 .admin-side-cards {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 .admin-side-home .admin-side-cards { justify-content: flex-end; }
 .admin-side-away .admin-side-cards { justify-content: flex-start; }
@@ -1619,36 +1693,46 @@ a { color: inherit; text-decoration: none; }
 .admin-score-center {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  justify-content: center;
   flex-shrink: 0;
 }
+
+/* Score box wrapper */
+.admin-score-box {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--wc-bg);
+  border: 2px solid var(--wc-border);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.5rem;
+}
 .admin-score-separator {
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-weight: 800;
+  font-size: 1.5rem;
   color: var(--wc-text);
-  margin: 0 0.1rem;
+  margin: 0 0.15rem;
 }
 
-/* Arrow Stepper — vertical ▲ value ▼ */
+/* Arrow Stepper — horizontal: ▼ [value] ▲ */
 .arrow-stepper {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
 }
 .arrow-stepper-btn {
-  width: 36px;
-  height: 26px;
-  border: 1px solid var(--wc-border);
-  background: var(--wc-surface);
-  color: var(--wc-text);
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  color: var(--wc-accent);
   border-radius: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s;
+  transition: color 0.15s, transform 0.1s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
@@ -1656,42 +1740,62 @@ a { color: inherit; text-decoration: none; }
   padding: 0;
 }
 .arrow-stepper-btn:hover:not(:disabled) {
-  background: var(--wc-bg);
+  color: #e8c46a;
+  transform: scale(1.15);
 }
 .arrow-stepper-btn:active:not(:disabled) {
-  background: var(--wc-border);
+  transform: scale(0.95);
 }
 .arrow-stepper-btn:disabled {
-  opacity: 0.25;
+  opacity: 0.2;
   cursor: default;
 }
 .arrow-stepper-value {
-  min-width: 36px;
+  min-width: 22px;
   text-align: center;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.1rem;
   color: var(--wc-text);
-  line-height: 1.3;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-/* Card Stepper: icon + arrow stepper side by side */
+/* Big variant for score */
+.arrow-stepper-big .arrow-stepper-btn {
+  width: 32px;
+  height: 32px;
+  font-size: 1rem;
+}
+.arrow-stepper-big .arrow-stepper-value {
+  min-width: 28px;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+/* Card Stepper: icon left, arrows+number right */
 .card-stepper {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+}
+.card-stepper-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .card-icon {
   flex-shrink: 0;
 }
 
-/* Footer with status + save */
+/* Footer with status + save — centered */
 .admin-match-footer {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
 }
 .admin-status-select {
   width: auto;
@@ -1700,34 +1804,67 @@ a { color: inherit; text-decoration: none; }
   padding: 0.25rem 0.5rem;
 }
 .admin-save-btn {
-  margin-left: auto;
   min-width: 80px;
 }
 
 /* Mobile adjustments */
 @media (max-width: 575.98px) {
   .admin-main-row {
+    gap: 0.25rem;
+  }
+  /* Cards stack vertically beside score on mobile */
+  .admin-side-cards {
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.15rem;
   }
-  .admin-side-home,
-  .admin-side-away {
+  .admin-team-name {
+    font-size: 1rem;
+  }
+
+  /* Card steppers: arrows stacked vertically on one side of the number */
+  .card-stepper .arrow-stepper {
+    flex-direction: row;
+    gap: 0;
+  }
+  .card-stepper .arrow-stepper-btn {
+    width: 18px;
+    height: 14px;
+    font-size: 0.55rem;
+  }
+  .card-stepper .arrow-stepper-value {
+    min-width: 14px;
+    font-size: 0.85rem;
+  }
+  /* Stack the two arrow buttons vertically */
+  .card-stepper .arrow-stepper {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: 1fr 1fr;
     align-items: center;
+    gap: 0;
   }
-  .admin-side-home .admin-side-cards,
-  .admin-side-away .admin-side-cards {
-    justify-content: center;
+  .card-stepper .arrow-stepper-value {
+    grid-column: 1;
+    grid-row: 1 / 3;
   }
-  .admin-score-center {
-    order: -1;
+  .card-stepper .arrow-stepper-btn {
+    grid-column: 2;
   }
-  .arrow-stepper-btn {
-    width: 44px;
+  .card-stepper .card-icon {
+    transform: scale(0.75);
+  }
+  .card-stepper {
+    gap: 1px;
+  }
+
+  /* Score arrows stay bigger, horizontal */
+  .arrow-stepper-big .arrow-stepper-btn {
+    width: 34px;
     height: 34px;
-    font-size: 0.9rem;
+    font-size: 1rem;
   }
-  .arrow-stepper-value {
-    min-width: 44px;
-    font-size: 1.15rem;
+  .arrow-stepper-big .arrow-stepper-value {
+    min-width: 28px;
+    font-size: 1.6rem;
   }
 }

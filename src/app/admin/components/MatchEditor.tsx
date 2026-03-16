@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import type { AdminMatch } from '../page';
+import { YellowCardIcon, SecondYellowIcon, RedCardIcon } from '@/app/components/CardIcons';
 
 interface MatchState {
   homeGoals: number | null;
@@ -25,32 +27,44 @@ function FlagIcon({ code, size = 'sm' }: { code: string; size?: string }) {
   return <span className={`${cls} ${sizeClass}`} />;
 }
 
-/** Vertical arrow stepper: ▲ on top, value in middle, ▼ on bottom */
+/** Format kick-off time in user's local timezone */
+function formatKickOff(kickOff: string): string {
+  try {
+    const d = new Date(kickOff);
+    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
+/** Horizontal arrow stepper: ▲ [value] ▼ */
 function ArrowStepper({
   value,
   onChange,
   min = 0,
   max = 99,
   nullable = false,
+  big = false,
 }: {
   value: number | null;
   onChange: (v: number | null) => void;
   min?: number;
   max?: number;
   nullable?: boolean;
+  big?: boolean;
 }) {
   const display = value === null ? '–' : value;
   const canDec = value !== null && value > min;
   const canInc = value === null || value < max;
 
   return (
-    <div className="arrow-stepper">
+    <div className={`arrow-stepper ${big ? 'arrow-stepper-big' : ''}`}>
       <button
         type="button"
         className="arrow-stepper-btn"
         disabled={!canInc}
         onClick={() => {
-          if (value === null) onChange(nullable ? 0 : 0);
+          if (value === null) onChange(0);
           else if (value < max) onChange(value + 1);
         }}
       >
@@ -71,33 +85,7 @@ function ArrowStepper({
   );
 }
 
-/** Card icon SVG components */
-function YellowCardIcon() {
-  return (
-    <svg width="14" height="18" viewBox="0 0 14 18" className="card-icon">
-      <rect x="1" y="1" width="12" height="16" rx="1.5" fill="#ffc107" stroke="#b8860b" strokeWidth="1" />
-    </svg>
-  );
-}
-
-function SecondYellowIcon() {
-  return (
-    <svg width="20" height="18" viewBox="0 0 20 18" className="card-icon">
-      <rect x="1" y="1" width="12" height="16" rx="1.5" fill="#ffc107" stroke="#b8860b" strokeWidth="1" />
-      <rect x="7" y="1" width="12" height="16" rx="1.5" fill="#dc3545" stroke="#a71d2a" strokeWidth="1" />
-    </svg>
-  );
-}
-
-function RedCardIcon() {
-  return (
-    <svg width="14" height="18" viewBox="0 0 14 18" className="card-icon">
-      <rect x="1" y="1" width="12" height="16" rx="1.5" fill="#dc3545" stroke="#a71d2a" strokeWidth="1" />
-    </svg>
-  );
-}
-
-/** Card stepper with icon + ▲▼ arrows */
+/** Card stepper: icon on left, arrows+number on right */
 function CardStepper({
   value,
   onChange,
@@ -109,7 +97,7 @@ function CardStepper({
 }) {
   return (
     <div className="card-stepper">
-      {icon}
+      <div className="card-stepper-icon">{icon}</div>
       <ArrowStepper value={value} onChange={(v) => onChange(v ?? 0)} />
     </div>
   );
@@ -137,24 +125,39 @@ function MatchCard({
     state.awayRcDirect !== match.awayRcDirect ||
     state.status !== match.status;
 
+  const kickOffTime = useMemo(() => formatKickOff(match.kickOff), [match.kickOff]);
+  const groupUrl = `/worldcup2026/${match.groupId}`;
+  const homeTeamUrl = `/worldcup2026/${match.groupId}/team/${match.homeTeamId}`;
+  const awayTeamUrl = `/worldcup2026/${match.groupId}/team/${match.awayTeamId}`;
+
   return (
     <div className={`admin-match-card ${state.saved ? 'admin-match-saved' : ''}`}>
-      {/* Group badge + venue */}
+      {/* Group badge + kick-off + venue */}
       <div className="admin-match-header">
-        <span className="admin-group-badge">Group {match.groupId}</span>
+        <Link href={groupUrl} className="admin-group-badge">Group {match.groupId}</Link>
         <span className="admin-match-meta">
+          {kickOffTime && <>{kickOffTime} &middot; </>}
           R{match.round} &middot; {match.venue}
         </span>
       </div>
 
-      {/* Main row: home side | score | away side */}
+      {/* Team names row — centered above score */}
+      <div className="admin-teams-row">
+        <Link href={homeTeamUrl} className="admin-team-label admin-team-label-home">
+          <FlagIcon code={match.homeTeam.countryCode} size="md" />
+          <span className="admin-team-name">{match.homeTeam.shortName}</span>
+        </Link>
+        <span className="admin-teams-vs">vs</span>
+        <Link href={awayTeamUrl} className="admin-team-label admin-team-label-away">
+          <span className="admin-team-name">{match.awayTeam.shortName}</span>
+          <FlagIcon code={match.awayTeam.countryCode} size="md" />
+        </Link>
+      </div>
+
+      {/* Controls row: home cards | score | away cards */}
       <div className="admin-main-row">
-        {/* Home side */}
+        {/* Home cards */}
         <div className="admin-side admin-side-home">
-          <div className="admin-side-team">
-            <FlagIcon code={match.homeTeam.countryCode} size="md" />
-            <span className="admin-team-name">{match.homeTeam.shortName}</span>
-          </div>
           <div className="admin-side-cards">
             <CardStepper icon={<YellowCardIcon />} value={state.homeYc} onChange={(v) => onUpdate({ homeYc: v })} />
             <CardStepper icon={<SecondYellowIcon />} value={state.homeYc2} onChange={(v) => onUpdate({ homeYc2: v })} />
@@ -164,35 +167,35 @@ function MatchCard({
 
         {/* Score center */}
         <div className="admin-score-center">
-          <ArrowStepper
-            value={state.homeGoals}
-            onChange={(v) => {
-              const patch: Partial<MatchState> = { homeGoals: v };
-              if (v !== null && state.awayGoals === null) patch.awayGoals = 0;
-              if (v !== null && state.status === 'SCHEDULED') patch.status = 'FINISHED';
-              onUpdate(patch);
-            }}
-            nullable
-          />
-          <span className="admin-score-separator">:</span>
-          <ArrowStepper
-            value={state.awayGoals}
-            onChange={(v) => {
-              const patch: Partial<MatchState> = { awayGoals: v };
-              if (v !== null && state.homeGoals === null) patch.homeGoals = 0;
-              if (v !== null && state.status === 'SCHEDULED') patch.status = 'FINISHED';
-              onUpdate(patch);
-            }}
-            nullable
-          />
+          <div className="admin-score-box">
+            <ArrowStepper
+              value={state.homeGoals}
+              onChange={(v) => {
+                const patch: Partial<MatchState> = { homeGoals: v };
+                if (v !== null && state.awayGoals === null) patch.awayGoals = 0;
+                if (v !== null && state.status === 'SCHEDULED') patch.status = 'FINISHED';
+                onUpdate(patch);
+              }}
+              nullable
+              big
+            />
+            <span className="admin-score-separator">:</span>
+            <ArrowStepper
+              value={state.awayGoals}
+              onChange={(v) => {
+                const patch: Partial<MatchState> = { awayGoals: v };
+                if (v !== null && state.homeGoals === null) patch.homeGoals = 0;
+                if (v !== null && state.status === 'SCHEDULED') patch.status = 'FINISHED';
+                onUpdate(patch);
+              }}
+              nullable
+              big
+            />
+          </div>
         </div>
 
-        {/* Away side */}
+        {/* Away cards */}
         <div className="admin-side admin-side-away">
-          <div className="admin-side-team">
-            <span className="admin-team-name">{match.awayTeam.shortName}</span>
-            <FlagIcon code={match.awayTeam.countryCode} size="md" />
-          </div>
           <div className="admin-side-cards">
             <CardStepper icon={<YellowCardIcon />} value={state.awayYc} onChange={(v) => onUpdate({ awayYc: v })} />
             <CardStepper icon={<SecondYellowIcon />} value={state.awayYc2} onChange={(v) => onUpdate({ awayYc2: v })} />
@@ -201,7 +204,7 @@ function MatchCard({
         </div>
       </div>
 
-      {/* Status + Save */}
+      {/* Status + Save — centered below score */}
       <div className="admin-match-footer">
         <select
           className="form-select form-select-sm admin-status-select"
@@ -226,7 +229,7 @@ function MatchCard({
           ) : state.saved && !isDirty ? (
             '✓ Saved'
           ) : (
-            '💾 Save'
+            'Save'
           )}
         </button>
 
