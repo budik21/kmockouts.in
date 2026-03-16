@@ -18,15 +18,16 @@ export default async function AdminLayout({
     session = null;
   }
 
-  // DEV BYPASS: skip auth when Google credentials not configured
+  // DEV BYPASS: skip auth in development or when Google credentials not configured
+  const isDev = process.env.NODE_ENV === 'development';
   const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-  if (googleConfigured) {
+  if (googleConfigured && !isDev) {
     if (!session) {
       redirect('/api/auth/signin?callbackUrl=/admin');
     }
   }
 
-  if (googleConfigured && !session?.isAdmin) {
+  if (googleConfigured && !isDev && !session?.isAdmin) {
     return (
       <div className="container py-5">
         <div className="row justify-content-center">

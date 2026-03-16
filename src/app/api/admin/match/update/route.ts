@@ -18,9 +18,10 @@ interface UpdateBody {
 }
 
 export async function POST(request: NextRequest) {
-  // Auth check (skip when Google OAuth not configured — dev mode)
+  // Auth check (skip in development)
+  const isDev = process.env.NODE_ENV === 'development';
   const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-  if (googleConfigured) {
+  if (googleConfigured && !isDev) {
     const session = await auth();
     if (!session?.isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
