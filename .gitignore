@@ -54,3 +54,8 @@ data/*.db-shm
 /.idea/php.xml
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
+/.idea/dataSources.xml
+/.idea/db-forest-config.xml
+/.idea/deployment.xml
+/identifier.sqlite
+/.claude/settings.local.json
