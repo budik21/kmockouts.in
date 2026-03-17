@@ -1244,10 +1244,12 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 
 .match-name-short { display: none; }
+.match-ranking { font-size: 0.75em; color: #6c757d; margin-left: 0.25em; cursor: default; }
 
 @media (max-width: 576px) {
   .match-name-full { display: none; }
   .match-name-short { display: inline; }
+  .match-ranking { display: none; }
 }
 
 /* ============================================================

@@ -20,6 +20,7 @@ function rowToTeam(row: TeamRow): Team {
     id: row.id, name: row.name, shortName: row.short_name,
     countryCode: row.country_code, groupId: row.group_id as GroupId,
     isPlaceholder: row.is_placeholder, externalId: row.external_id ?? undefined,
+    fifaRanking: row.fifa_ranking ?? undefined,
   };
 }
 
@@ -82,7 +83,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
     return <main className="container py-4"><h2>Team not found</h2></main>;
   }
 
-  const teamMap = new Map(teams.map((t) => [t.id, { id: t.id, name: t.name, shortName: t.shortName, countryCode: t.countryCode }]));
+  const teamMap = new Map(teams.map((t) => [t.id, { id: t.id, name: t.name, shortName: t.shortName, countryCode: t.countryCode, fifaRanking: t.fifaRanking }]));
 
   // Calculate standings
   const standings = calculateStandings({ teams, matches: played });
@@ -190,10 +191,17 @@ export default async function TeamDetailPage({ params }: PageProps) {
     <main className="container py-4">
       {/* Header: team name left, breadcrumb right */}
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-        <h2 className="mb-0">
-          <TeamFlag countryCode={team.countryCode} size="md" className="me-2" />
-          {team.name}
-        </h2>
+        <div>
+          <h2 className="mb-0">
+            <TeamFlag countryCode={team.countryCode} size="md" className="me-2" />
+            {team.name}
+          </h2>
+          {team.fifaRanking && (
+            <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.15rem' }}>
+              FIFA Ranking: {team.fifaRanking}
+            </div>
+          )}
+        </div>
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
           <Link href="/worldcup2026">Groups</Link>
           <span className="breadcrumb-sep">/</span>
@@ -256,12 +264,14 @@ export default async function TeamDetailPage({ params }: PageProps) {
               name: teamMap.get(m.homeTeamId)?.name ?? '?',
               shortName: teamMap.get(m.homeTeamId)?.shortName ?? '?',
               countryCode: teamMap.get(m.homeTeamId)?.countryCode ?? '',
+              fifaRanking: teamMap.get(m.homeTeamId)?.fifaRanking,
             },
             awayTeam: {
               id: m.awayTeamId,
               name: teamMap.get(m.awayTeamId)?.name ?? '?',
               shortName: teamMap.get(m.awayTeamId)?.shortName ?? '?',
               countryCode: teamMap.get(m.awayTeamId)?.countryCode ?? '',
+              fifaRanking: teamMap.get(m.awayTeamId)?.fifaRanking,
             },
             homeGoals: m.homeGoals,
             awayGoals: m.awayGoals,

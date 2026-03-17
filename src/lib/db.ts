@@ -120,6 +120,9 @@ export async function initializeSchema(): Promise<void> {
     );
     INSERT INTO admin_user (email) VALUES ('radek.budar@gmail.com') ON CONFLICT DO NOTHING;
 
+    -- FIFA World Ranking
+    ALTER TABLE team ADD COLUMN IF NOT EXISTS fifa_ranking INTEGER;
+
     -- Recalculation status tracking
     CREATE TABLE IF NOT EXISTS recalc_status (
       group_id TEXT PRIMARY KEY,

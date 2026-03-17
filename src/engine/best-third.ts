@@ -39,6 +39,10 @@ export function compareThirdPlaced(a: TeamStanding, b: TeamStanding): number {
   if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
   // Fair play (higher = better, less negative)
   if (b.fairPlayPoints !== a.fairPlayPoints) return b.fairPlayPoints - a.fairPlayPoints;
+  // FIFA World Ranking (lower rank number = better)
+  const aRank = a.team.fifaRanking ?? 9999;
+  const bRank = b.team.fifaRanking ?? 9999;
+  if (aRank !== bRank) return aRank - bRank;
   // Equal
   return 0;
 }

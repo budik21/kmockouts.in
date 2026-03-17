@@ -11,6 +11,7 @@ import { fetchFifaMatchResults } from './fifa-client';
 import { parseFifaResults } from './parser';
 import { writeMatchUpdates } from './writer';
 import { scrapeFlashscoreNews, writeNewsArticles } from './flashscore-news';
+import { scrapeFifaRankings } from './fifa-ranking';
 
 // ============================================================
 // Scraper job definitions
@@ -74,6 +75,11 @@ const jobs: ScraperJob[] = [
     name: 'Flashscore News',
     schedule: '0 * * * *',    // every hour at :00
     run: scrapeNews,
+  },
+  {
+    name: 'FIFA Rankings',
+    schedule: '0 23 * * *',    // once daily at 23:00 UTC
+    run: scrapeFifaRankings,
   },
   // Add more scrapers here:
   // {

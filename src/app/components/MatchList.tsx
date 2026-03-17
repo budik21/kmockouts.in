@@ -6,8 +6,8 @@ import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } f
 interface MatchData {
   id: number;
   round: number;
-  homeTeam: { id: number; name: string; shortName: string; countryCode: string };
-  awayTeam: { id: number; name: string; shortName: string; countryCode: string };
+  homeTeam: { id: number; name: string; shortName: string; countryCode: string; fifaRanking?: number };
+  awayTeam: { id: number; name: string; shortName: string; countryCode: string; fifaRanking?: number };
   homeGoals: number | null;
   awayGoals: number | null;
   homeYc?: number;
@@ -100,6 +100,11 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
                         <span className="match-name-short">{m.homeTeam.shortName}</span>
                       </>
                     )}
+                    {m.homeTeam.fifaRanking && (
+                      <span className="match-ranking" title={`FIFA Ranking: ${m.homeTeam.fifaRanking}`}>
+                        ({m.homeTeam.fifaRanking})
+                      </span>
+                    )}
                     <TeamFlag countryCode={m.homeTeam.countryCode} className="ms-2" />
                   </div>
                   <div className={`match-score ${m.status === 'SCHEDULED' ? 'scheduled' : ''}`}>
@@ -116,6 +121,11 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
                         <span className="match-name-full">{m.awayTeam.name}</span>
                         <span className="match-name-short">{m.awayTeam.shortName}</span>
                       </>
+                    )}
+                    {m.awayTeam.fifaRanking && (
+                      <span className="match-ranking" title={`FIFA Ranking: ${m.awayTeam.fifaRanking}`}>
+                        ({m.awayTeam.fifaRanking})
+                      </span>
                     )}
                   </div>
                 </div>

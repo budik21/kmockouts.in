@@ -14,6 +14,7 @@ export interface Team {
   groupId: GroupId;
   isPlaceholder: boolean;  // TBD playoff teams
   externalId?: string;
+  fifaRanking?: number;    // FIFA/Coca-Cola Men's World Ranking
 }
 
 export interface Match {
@@ -119,6 +120,7 @@ export interface TeamRow {
   group_id: string;
   is_placeholder: boolean;
   external_id: string | null;
+  fifa_ranking: number | null;
 }
 
 export interface MatchRow {

@@ -1,24 +1,32 @@
 /**
  * FIFA World Cup 2026 — Article 13 Tiebreaker Rules
  *
- * When two or more teams are equal on points, the following
- * criteria are applied IN ORDER:
+ * When two or more teams in the same group are equal on points,
+ * the following criteria are applied IN ORDER:
  *
- * 1. Goal difference (overall)
- * 2. Goals scored (overall)
- * 3. Points in head-to-head matches (among tied teams)
- * 4. Goal difference in head-to-head matches
- * 5. Goals scored in head-to-head matches
- * 6. Fair play points (YC=-1, 2×YC=-3, direct RC=-4, YC+direct RC=-5)
- * 7. Drawing of lots (not implemented — we treat as equal)
+ * Step 1 (head-to-head among concerned teams):
+ *   a) greatest number of points in H2H matches
+ *   b) superior goal difference in H2H matches
+ *   c) greatest number of goals scored in H2H matches
  *
- * KEY DIFFERENCE from UCL: FIFA uses overall GD first, then H2H.
- * UCL uses H2H first, then overall GD.
+ * Step 2 (if still tied after Step 1):
+ *   Re-apply criteria a)–c) to matches between remaining teams only.
+ *   If that doesn't fully resolve, apply:
+ *   d) superior goal difference in all group matches
+ *   e) greatest number of goals scored in all group matches
+ *   f) highest team conduct score (fair play points)
+ *
+ *   When a criterion from d)–f) separates some but not all teams,
+ *   the remaining teams continue from the next criterion (no restart).
+ *
+ * Step 3:
+ *   g) FIFA/Coca-Cola Men's World Ranking (most recent)
+ *   h) FIFA/Coca-Cola Men's World Ranking (previous edition)
+ *      — not implemented (fallback: treat as equal)
  */
 
 import { Match, TeamStanding } from '../lib/types';
 import { getHeadToHeadMatches } from './standings';
-import { calculateFairPlayPoints } from './fair-play';
 
 /**
  * Sort standings by FIFA WC2026 tiebreaker rules.
@@ -47,8 +55,8 @@ export function sortByTiebreaker(
     if (group.length === 1) {
       result.push(group[0]);
     } else {
-      // Resolve tie among group
-      const resolved = resolveTie(group, allMatches);
+      // Resolve tie among group using Step 1
+      const resolved = resolveStep1(group, allMatches);
       result.push(...resolved);
     }
 
@@ -58,111 +66,212 @@ export function sortByTiebreaker(
   return result;
 }
 
-/**
- * Resolve a tie among teams with equal points using FIFA criteria 1-7.
- */
-function resolveTie(
+// ============================================================
+// Step 1: Head-to-head among concerned teams (a, b, c)
+// ============================================================
+
+function resolveStep1(
   tiedTeams: TeamStanding[],
   allMatches: Match[]
 ): TeamStanding[] {
-  // Criterion 1: Goal difference (overall)
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  const teamIds = new Set(tiedTeams.map((s) => s.team.id));
+  const h2hMatches = getHeadToHeadMatches(teamIds, allMatches);
+  const h2h = calculateH2HStats(tiedTeams, h2hMatches);
+
+  // a) H2H points
+  const byH2HPts = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.points);
+  const ptsGroups = groupByValue(byH2HPts, (s) => h2h.get(s.team.id)!.points);
+  if (ptsGroups.length > 1) {
+    return ptsGroups.flatMap((g) =>
+      g.length === 1 ? g : resolveStep1_b(g, h2h, allMatches)
+    );
+  }
+
+  return resolveStep1_b(tiedTeams, h2h, allMatches);
+}
+
+function resolveStep1_b(
+  tiedTeams: TeamStanding[],
+  h2h: Map<number, H2HStats>,
+  allMatches: Match[]
+): TeamStanding[] {
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  // b) H2H goal difference
+  const byH2HGD = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.goalDifference);
+  const gdGroups = groupByValue(byH2HGD, (s) => h2h.get(s.team.id)!.goalDifference);
+  if (gdGroups.length > 1) {
+    return gdGroups.flatMap((g) =>
+      g.length === 1 ? g : resolveStep1_c(g, h2h, allMatches)
+    );
+  }
+
+  return resolveStep1_c(tiedTeams, h2h, allMatches);
+}
+
+function resolveStep1_c(
+  tiedTeams: TeamStanding[],
+  h2h: Map<number, H2HStats>,
+  allMatches: Match[]
+): TeamStanding[] {
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  // c) H2H goals scored
+  const byH2HGF = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.goalsFor);
+  const gfGroups = groupByValue(byH2HGF, (s) => h2h.get(s.team.id)!.goalsFor);
+  if (gfGroups.length > 1) {
+    return gfGroups.flatMap((g) =>
+      g.length === 1 ? g : resolveStep2(g, allMatches)
+    );
+  }
+
+  return resolveStep2(tiedTeams, allMatches);
+}
+
+// ============================================================
+// Step 2: Re-apply H2H to remaining subset, then overall stats
+// ============================================================
+
+function resolveStep2(
+  tiedTeams: TeamStanding[],
+  allMatches: Match[]
+): TeamStanding[] {
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  // Step 2 preamble: re-apply a)–c) to matches between remaining teams only.
+  // This is different from Step 1 only when the original tied group was > 2
+  // and Step 1 partially resolved it, leaving a subset.
+  // We recalculate H2H for the remaining subset.
+  const teamIds = new Set(tiedTeams.map((s) => s.team.id));
+  const h2hMatches = getHeadToHeadMatches(teamIds, allMatches);
+  const h2h = calculateH2HStats(tiedTeams, h2hMatches);
+
+  // a) H2H points (among remaining)
+  const byH2HPts = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.points);
+  const ptsGroups = groupByValue(byH2HPts, (s) => h2h.get(s.team.id)!.points);
+  if (ptsGroups.length > 1) {
+    return ptsGroups.flatMap((g) =>
+      g.length === 1 ? g : resolveStep2_b(g, h2h, allMatches)
+    );
+  }
+
+  return resolveStep2_b(tiedTeams, h2h, allMatches);
+}
+
+function resolveStep2_b(
+  tiedTeams: TeamStanding[],
+  h2h: Map<number, H2HStats>,
+  allMatches: Match[]
+): TeamStanding[] {
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  // b) H2H GD (among remaining)
+  const byH2HGD = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.goalDifference);
+  const gdGroups = groupByValue(byH2HGD, (s) => h2h.get(s.team.id)!.goalDifference);
+  if (gdGroups.length > 1) {
+    return gdGroups.flatMap((g) =>
+      g.length === 1 ? g : resolveStep2_c(g, h2h, allMatches)
+    );
+  }
+
+  return resolveStep2_c(tiedTeams, h2h, allMatches);
+}
+
+function resolveStep2_c(
+  tiedTeams: TeamStanding[],
+  h2h: Map<number, H2HStats>,
+  allMatches: Match[]
+): TeamStanding[] {
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  // c) H2H goals scored (among remaining)
+  const byH2HGF = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.goalsFor);
+  const gfGroups = groupByValue(byH2HGF, (s) => h2h.get(s.team.id)!.goalsFor);
+  if (gfGroups.length > 1) {
+    return gfGroups.flatMap((g) =>
+      g.length === 1 ? g : resolveStep2_d(g, allMatches)
+    );
+  }
+
+  return resolveStep2_d(tiedTeams, allMatches);
+}
+
+function resolveStep2_d(
+  tiedTeams: TeamStanding[],
+  allMatches: Match[]
+): TeamStanding[] {
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  // d) Overall goal difference
   const byGD = stableSortDesc(tiedTeams, (s) => s.goalDifference);
   const gdGroups = groupByValue(byGD, (s) => s.goalDifference);
   if (gdGroups.length > 1) {
     return gdGroups.flatMap((g) =>
-      g.length === 1 ? g : resolveTieFromCriterion2(g, allMatches)
+      g.length === 1 ? g : resolveStep2_e(g, allMatches)
     );
   }
 
-  return resolveTieFromCriterion2(tiedTeams, allMatches);
+  return resolveStep2_e(tiedTeams, allMatches);
 }
 
-function resolveTieFromCriterion2(
+function resolveStep2_e(
   tiedTeams: TeamStanding[],
   allMatches: Match[]
 ): TeamStanding[] {
-  // Criterion 2: Goals scored (overall)
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  // e) Overall goals scored
   const byGF = stableSortDesc(tiedTeams, (s) => s.goalsFor);
   const gfGroups = groupByValue(byGF, (s) => s.goalsFor);
   if (gfGroups.length > 1) {
     return gfGroups.flatMap((g) =>
-      g.length === 1 ? g : resolveTieFromCriterion3(g, allMatches)
+      g.length === 1 ? g : resolveStep2_f(g, allMatches)
     );
   }
 
-  return resolveTieFromCriterion3(tiedTeams, allMatches);
+  return resolveStep2_f(tiedTeams, allMatches);
 }
 
-function resolveTieFromCriterion3(
+function resolveStep2_f(
   tiedTeams: TeamStanding[],
-  allMatches: Match[]
+  _allMatches: Match[]
 ): TeamStanding[] {
-  // Criteria 3-5: Head-to-head among tied teams
-  const teamIds = new Set(tiedTeams.map((s) => s.team.id));
-  const h2hMatches = getHeadToHeadMatches(teamIds, allMatches);
+  if (tiedTeams.length <= 1) return tiedTeams;
 
-  // Calculate H2H mini-table
-  const h2h = calculateH2HStats(tiedTeams, h2hMatches);
-
-  // Criterion 3: H2H points
-  const byH2HPts = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.points);
-  const h2hPtsGroups = groupByValue(byH2HPts, (s) => h2h.get(s.team.id)!.points);
-  if (h2hPtsGroups.length > 1) {
-    return h2hPtsGroups.flatMap((g) =>
-      g.length === 1 ? g : resolveTieFromCriterion4(g, allMatches, h2h)
-    );
-  }
-
-  return resolveTieFromCriterion4(tiedTeams, allMatches, h2h);
-}
-
-function resolveTieFromCriterion4(
-  tiedTeams: TeamStanding[],
-  allMatches: Match[],
-  h2h: Map<number, H2HStats>
-): TeamStanding[] {
-  // Criterion 4: H2H goal difference
-  const byH2HGD = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.goalDifference);
-  const h2hGDGroups = groupByValue(byH2HGD, (s) => h2h.get(s.team.id)!.goalDifference);
-  if (h2hGDGroups.length > 1) {
-    return h2hGDGroups.flatMap((g) =>
-      g.length === 1 ? g : resolveTieFromCriterion5(g, allMatches, h2h)
-    );
-  }
-
-  return resolveTieFromCriterion5(tiedTeams, allMatches, h2h);
-}
-
-function resolveTieFromCriterion5(
-  tiedTeams: TeamStanding[],
-  _allMatches: Match[],
-  h2h: Map<number, H2HStats>
-): TeamStanding[] {
-  // Criterion 5: H2H goals scored
-  const byH2HGF = stableSortDesc(tiedTeams, (s) => h2h.get(s.team.id)!.goalsFor);
-  const h2hGFGroups = groupByValue(byH2HGF, (s) => h2h.get(s.team.id)!.goalsFor);
-  if (h2hGFGroups.length > 1) {
-    return h2hGFGroups.flatMap((g) =>
-      g.length === 1 ? g : resolveTieFromCriterion6(g)
-    );
-  }
-
-  return resolveTieFromCriterion6(tiedTeams);
-}
-
-function resolveTieFromCriterion6(
-  tiedTeams: TeamStanding[]
-): TeamStanding[] {
-  // Criterion 6: Fair play points (higher = better, all are negative or 0)
+  // f) Fair play points (higher = better)
   const byFP = stableSortDesc(tiedTeams, (s) => s.fairPlayPoints);
   const fpGroups = groupByValue(byFP, (s) => s.fairPlayPoints);
   if (fpGroups.length > 1) {
     return fpGroups.flatMap((g) =>
-      g.length === 1 ? g : g // Criterion 7: drawing of lots — keep as-is
+      g.length === 1 ? g : resolveStep3(g)
     );
   }
 
-  // Criterion 7: Drawing of lots — cannot resolve programmatically
+  return resolveStep3(tiedTeams);
+}
+
+// ============================================================
+// Step 3: FIFA World Ranking
+// ============================================================
+
+function resolveStep3(
+  tiedTeams: TeamStanding[]
+): TeamStanding[] {
+  if (tiedTeams.length <= 1) return tiedTeams;
+
+  // g) FIFA/Coca-Cola Men's World Ranking (lower rank number = better)
+  const getRank = (s: TeamStanding) => -(s.team.fifaRanking ?? 9999); // negate so higher = better for stableSortDesc
+  const byRank = stableSortDesc(tiedTeams, getRank);
+  const rankGroups = groupByValue(byRank, getRank);
+  if (rankGroups.length > 1) {
+    return rankGroups.flatMap((g) =>
+      g.length === 1 ? g : g // h) Previous ranking — not implemented, treat as equal
+    );
+  }
+
+  // Cannot resolve — drawing of lots (not implemented)
   return tiedTeams;
 }
 

@@ -13,6 +13,7 @@ function rowToTeam(row: TeamRow): Team {
     id: row.id, name: row.name, shortName: row.short_name,
     countryCode: row.country_code, groupId: row.group_id as GroupId,
     isPlaceholder: row.is_placeholder, externalId: row.external_id ?? undefined,
+    fifaRanking: row.fifa_ranking ?? undefined,
   };
 }
 
@@ -80,8 +81,8 @@ export default async function GroupDetailPage({ params }: PageProps) {
   const matchesForDisplay = allMatches.map((m) => ({
     id: m.id,
     round: m.round,
-    homeTeam: { id: m.homeTeamId, name: teamMap.get(m.homeTeamId)?.name ?? '?', shortName: teamMap.get(m.homeTeamId)?.shortName ?? '?', countryCode: teamMap.get(m.homeTeamId)?.countryCode ?? '' },
-    awayTeam: { id: m.awayTeamId, name: teamMap.get(m.awayTeamId)?.name ?? '?', shortName: teamMap.get(m.awayTeamId)?.shortName ?? '?', countryCode: teamMap.get(m.awayTeamId)?.countryCode ?? '' },
+    homeTeam: { id: m.homeTeamId, name: teamMap.get(m.homeTeamId)?.name ?? '?', shortName: teamMap.get(m.homeTeamId)?.shortName ?? '?', countryCode: teamMap.get(m.homeTeamId)?.countryCode ?? '', fifaRanking: teamMap.get(m.homeTeamId)?.fifaRanking },
+    awayTeam: { id: m.awayTeamId, name: teamMap.get(m.awayTeamId)?.name ?? '?', shortName: teamMap.get(m.awayTeamId)?.shortName ?? '?', countryCode: teamMap.get(m.awayTeamId)?.countryCode ?? '', fifaRanking: teamMap.get(m.awayTeamId)?.fifaRanking },
     homeGoals: m.homeGoals,
     awayGoals: m.awayGoals,
     homeYc: m.homeYc,

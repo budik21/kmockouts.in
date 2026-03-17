@@ -13,6 +13,7 @@ function rowToTeam(row: TeamRow): Team {
     groupId: row.group_id as GroupId,
     isPlaceholder: row.is_placeholder,
     externalId: row.external_id ?? undefined,
+    fifaRanking: row.fifa_ranking ?? undefined,
   };
 }
 

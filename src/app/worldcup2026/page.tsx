@@ -13,6 +13,7 @@ function rowToTeam(row: TeamRow): Team {
     id: row.id, name: row.name, shortName: row.short_name,
     countryCode: row.country_code, groupId: row.group_id as GroupId,
     isPlaceholder: row.is_placeholder, externalId: row.external_id ?? undefined,
+    fifaRanking: row.fifa_ranking ?? undefined,
   };
 }
 
