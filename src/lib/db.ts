@@ -138,8 +138,12 @@ export async function initializeSchema(): Promise<void> {
       message     TEXT NOT NULL,
       page_url    TEXT NOT NULL DEFAULT '',
       user_agent  TEXT NOT NULL DEFAULT '',
+      metadata    JSONB NOT NULL DEFAULT '{}',
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    -- Add metadata column if table already existed without it
+    ALTER TABLE feedback ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}';
   `);
 }
 
