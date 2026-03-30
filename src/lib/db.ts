@@ -129,6 +129,17 @@ export async function initializeSchema(): Promise<void> {
       is_recalculating BOOLEAN NOT NULL DEFAULT false,
       started_at TEXT
     );
+
+    -- User feedback
+    CREATE TABLE IF NOT EXISTS feedback (
+      id          SERIAL PRIMARY KEY,
+      user_name   TEXT NOT NULL DEFAULT '',
+      user_email  TEXT NOT NULL DEFAULT '',
+      message     TEXT NOT NULL,
+      page_url    TEXT NOT NULL DEFAULT '',
+      user_agent  TEXT NOT NULL DEFAULT '',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 }
 
