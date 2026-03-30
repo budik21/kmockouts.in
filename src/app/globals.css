@@ -1904,3 +1904,176 @@ a { color: inherit; text-decoration: none; }
     padding: 0.25rem 0.35rem;
   }
 }
+
+/* ============================================================
+   Simulation Mode
+   ============================================================ */
+
+/* iOS-style toggle */
+.sim-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sim-toggle-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.sim-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.sim-toggle-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.sim-toggle-input:checked + .sim-toggle-track {
+  background: #451a03;
+}
+
+.sim-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.sim-toggle-input:checked + .sim-toggle-track .sim-toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* Active simulation card styling */
+.group-card.sim-active {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 1px #f59e0b;
+}
+
+.group-card.sim-active .group-card-header {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #451a03;
+}
+
+/* Simulation badge in headers */
+.sim-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(69, 26, 3, 0.15);
+  color: #451a03;
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* Info banner inside standings card */
+.sim-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #fde68a;
+}
+
+[data-bs-theme="dark"] .sim-banner {
+  background: #451a03;
+  color: #fbbf24;
+  border-bottom-color: #78350f;
+}
+
+/* Simulated table indicator */
+.sim-table {
+  border-top: 3px solid #f59e0b;
+}
+
+/* Editable scheduled matches in simulation */
+.sim-match-editable {
+  background: rgba(245, 158, 11, 0.05);
+  border-left: 3px solid #f59e0b;
+}
+
+[data-bs-theme="dark"] .sim-match-editable {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+/* Score edit area in simulation */
+.sim-score-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sim-score-separator {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0 0.15rem;
+}
+
+/* Reset button row */
+.sim-match-reset-row {
+  display: flex;
+  justify-content: center;
+  padding: 0 0 0.25rem;
+}
+
+.sim-reset-btn {
+  font-size: 0.7rem;
+  color: #d97706;
+  text-decoration: none;
+  padding: 0 0.5rem;
+}
+
+.sim-reset-btn:hover {
+  color: #92400e;
+}
+
+/* Responsive adjustments for simulation */
+@media (max-width: 576px) {
+  .sim-score-edit .arrow-stepper-big .arrow-stepper-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+  .sim-score-edit .arrow-stepper-big .arrow-stepper-value {
+    min-width: 20px;
+    font-size: 1rem;
+  }
+  .sim-toggle-label {
+    font-size: 0.7rem;
+  }
+  .sim-toggle-track {
+    width: 36px;
+    height: 20px;
+  }
+  .sim-toggle-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  .sim-toggle-input:checked + .sim-toggle-track .sim-toggle-thumb {
+    transform: translateX(16px);
+  }
+}

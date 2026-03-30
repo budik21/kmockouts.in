@@ -37,6 +37,8 @@ interface GroupStandingsProps {
   groupId?: string;
   /** Record<teamId, probabilities> — shows probability circles when provided */
   probabilities?: Record<number, TeamProbData>;
+  /** When true, adds visual simulation indicator to the table */
+  isSimulated?: boolean;
 }
 
 function TeamNameContent({ team }: { team: TeamStandingData['team'] }) {
@@ -49,7 +51,7 @@ function TeamNameContent({ team }: { team: TeamStandingData['team'] }) {
   );
 }
 
-export default function GroupStandings({ standings, compact = false, groupId, probabilities }: GroupStandingsProps) {
+export default function GroupStandings({ standings, compact = false, groupId, probabilities, isSimulated = false }: GroupStandingsProps) {
   const router = useRouter();
 
   const handleRowClick = groupId
@@ -115,7 +117,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
 
   return (
     <div className="table-responsive">
-      <table className="standings-table table table-sm mb-0">
+      <table className={`standings-table table table-sm mb-0 ${isSimulated ? 'sim-table' : ''}`}>
         <thead>
           <tr>
             <th>#</th>
