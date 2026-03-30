@@ -1,14 +1,16 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import ScenarioSwitcher from './ScenarioSwitcher';
+import FeedbackWidget from './FeedbackWidget';
 
 export default function Navbar() {
   const router = useRouter();
   const offcanvasRef = useRef<HTMLDivElement>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const closeOffcanvas = useCallback(() => {
     const el = offcanvasRef.current;
@@ -97,6 +99,17 @@ export default function Navbar() {
             >
               🥉 Best 3rd
             </a>
+            <a
+              href="#"
+              className="nav-link offcanvas-nav-link"
+              onClick={(e) => {
+                e.preventDefault();
+                closeOffcanvas();
+                setFeedbackOpen(true);
+              }}
+            >
+              💬 Feedback
+            </a>
             <hr className="offcanvas-divider" />
             <a
               href="/admin"
@@ -113,6 +126,8 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+
+      <FeedbackWidget open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </>
   );
 }
