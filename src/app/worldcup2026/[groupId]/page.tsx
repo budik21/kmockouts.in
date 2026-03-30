@@ -3,8 +3,7 @@ import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
 import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probability-cache';
-import GroupStandings from '@/app/components/GroupStandings';
-import MatchList from '@/app/components/MatchList';
+import GroupDetailClient from './GroupDetailClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
@@ -146,32 +145,16 @@ export default async function GroupDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Standings */}
-      <div className="group-card mb-4">
-        <div className="group-card-header">
-          <span>Standings</span>
-          <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-            {finishedMatches.length} of {allMatches.length} matches played
-          </span>
-        </div>
-        <div className="group-card-body">
-          <GroupStandings standings={standingsForDisplay} groupId={groupId} probabilities={probabilities} />
-        </div>
-      </div>
-
-      {/* Qualification info */}
-      <div className="alert alert-info mb-4" role="alert" style={{ fontSize: '0.85rem' }}>
-        <strong>Qualification:</strong> Top 2 teams qualify automatically.
-        3rd-placed team may qualify as one of the 8 best third-placed teams across all 12 groups.
-      </div>
-
-      {/* Matches */}
-      <div className="group-card">
-        <div className="group-card-header">Matches</div>
-        <div className="group-card-body">
-          <MatchList matches={matchesForDisplay} />
-        </div>
-      </div>
+      <GroupDetailClient
+        groupId={groupId}
+        standings={standingsForDisplay}
+        matches={matchesForDisplay}
+        probabilities={probabilities}
+        teams={teams}
+        fullMatches={allMatches}
+        finishedCount={finishedMatches.length}
+        totalCount={allMatches.length}
+      />
 
       {/* SEO text */}
       <p className="text-muted mt-4" style={{ fontSize: '0.9rem' }}>
