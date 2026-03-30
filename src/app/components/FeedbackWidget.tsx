@@ -6,6 +6,31 @@ type FeedbackState = 'idle' | 'sending' | 'success' | 'error';
 
 const SEND_TIMEOUT_MS = 10_000;
 
+/** Collect client-side metadata that can only be read from the browser. */
+function collectClientMetadata() {
+  return {
+    screenWidth: screen.width,
+    screenHeight: screen.height,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezoneOffset: new Date().getTimezoneOffset(),
+    languages: navigator.languages ? [...navigator.languages] : [navigator.language],
+    platform: navigator.platform,
+    maxTouchPoints: navigator.maxTouchPoints,
+    cookieEnabled: navigator.cookieEnabled,
+    online: navigator.onLine,
+    referrer: document.referrer || '',
+    colorDepth: screen.colorDepth,
+    hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+    // @ts-expect-error — deviceMemory is not in all browsers
+    deviceMemory: navigator.deviceMemory ?? null,
+    // @ts-expect-error — connection API is not in all browsers
+    connectionType: navigator.connection?.effectiveType ?? null,
+  };
+}
+
 interface FeedbackWidgetProps {
   open: boolean;
   onClose: () => void;
@@ -31,6 +56,8 @@ export default function FeedbackWidget({ open, onClose }: FeedbackWidgetProps) {
     const timeout = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
 
     try {
+      const clientMeta = collectClientMetadata();
+
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,6 +66,7 @@ export default function FeedbackWidget({ open, onClose }: FeedbackWidgetProps) {
           email: emailRef.current?.value ?? '',
           message,
           pageUrl: window.location.href,
+          clientMeta,
         }),
         signal: controller.signal,
       });
