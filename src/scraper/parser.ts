@@ -41,12 +41,14 @@ const TEAM_NAME_ALIASES: Record<string, string> = {
   'argentina': 'ARG', 'algeria': 'ALG', 'austria': 'AUT', 'jordan': 'JOR',
   'portugal': 'POR', 'uzbekistan': 'UZB', 'colombia': 'COL',
   'england': 'ENG', 'croatia': 'CRO', 'ghana': 'GHA', 'panama': 'PAN',
-  // Playoff teams - will be updated when known
-  'italy': 'EPA', 'northern ireland': 'EPA', 'wales': 'EPA', 'bosnia and herzegovina': 'EPA',
-  'turkey': 'EPC', 'türkiye': 'EPC', 'romania': 'EPC', 'slovakia': 'EPC', 'kosovo': 'EPC',
-  'ukraine': 'EPB', 'sweden': 'EPB', 'poland': 'EPB', 'albania': 'EPB',
-  'denmark': 'EPD', 'north macedonia': 'EPD', 'czechia': 'EPD', 'czech republic': 'EPD',
-  'ireland': 'EPD', 'republic of ireland': 'EPD',
+  // Confirmed playoff qualifiers
+  'czech republic': 'CZE', 'czechia': 'CZE',
+  'bosnia and herzegovina': 'BIH', 'bosnia-herzegovina': 'BIH', 'bosnia': 'BIH',
+  'turkey': 'TUR', 'türkiye': 'TUR',
+  'sweden': 'SWE',
+  'iraq': 'IRQ',
+  'congo dr': 'COD', 'dr congo': 'COD', 'democratic republic of the congo': 'COD',
+  'dem. rep. congo': 'COD', 'congo': 'COD', 'rép. dém. du congo': 'COD',
 };
 
 /**

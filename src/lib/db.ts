@@ -91,8 +91,12 @@ export async function initializeSchema(): Promise<void> {
       source          TEXT,
       matches_updated INTEGER NOT NULL DEFAULT 0,
       status          TEXT NOT NULL,
-      error_message   TEXT
+      error_message   TEXT,
+      source_date     TEXT
     );
+
+    -- Add source_date column if table already existed without it
+    ALTER TABLE scrape_log ADD COLUMN IF NOT EXISTS source_date TEXT;
 
     CREATE TABLE IF NOT EXISTS news_article (
       id            SERIAL PRIMARY KEY,
@@ -144,6 +148,24 @@ export async function initializeSchema(): Promise<void> {
 
     -- Add metadata column if table already existed without it
     ALTER TABLE feedback ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}';
+  `);
+
+  // ---- One-time data migrations ----
+
+  // Replace playoff placeholders with confirmed teams
+  await pool.query(`
+    UPDATE team SET name = 'Czech Republic',    short_name = 'CZE', country_code = 'CZ', is_placeholder = false WHERE id = 4  AND is_placeholder = true;
+    UPDATE team SET name = 'Bosnia-Herzegovina', short_name = 'BIH', country_code = 'BA', is_placeholder = false WHERE id = 6  AND is_placeholder = true;
+    UPDATE team SET name = 'Türkiye',            short_name = 'TUR', country_code = 'TR', is_placeholder = false WHERE id = 16 AND is_placeholder = true;
+    UPDATE team SET name = 'Sweden',             short_name = 'SWE', country_code = 'SE', is_placeholder = false WHERE id = 23 AND is_placeholder = true;
+    UPDATE team SET name = 'Iraq',               short_name = 'IRQ', country_code = 'IQ', is_placeholder = false WHERE id = 35 AND is_placeholder = true;
+    UPDATE team SET name = 'Congo DR',           short_name = 'COD', country_code = 'CD', is_placeholder = false WHERE id = 42 AND is_placeholder = true;
+  `);
+
+  // Clear probability cache for affected groups so it gets recalculated
+  await pool.query(`
+    DELETE FROM probability_cache WHERE group_id IN ('A','B','D','F','I','K')
+      AND EXISTS (SELECT 1 FROM team WHERE id IN (4,6,16,23,35,42) AND is_placeholder = false AND short_name IN ('CZE','BIH','TUR','SWE','IRQ','COD'));
   `);
 }
 

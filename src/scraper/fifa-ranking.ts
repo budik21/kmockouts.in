@@ -1,22 +1,20 @@
 /**
  * FIFA World Ranking scraper.
  *
- * Fetches the current FIFA/Coca-Cola Men's World Ranking
- * and updates the `team.fifa_ranking` column in the database.
- *
- * Primary source: inside.fifa.com API
- * Fallback source: football-ranking.com (parsed HTML)
+ * Fetches the current FIFA/Coca-Cola Men's World Ranking from
+ * football-ranking.com and updates the `team.fifa_ranking` column
+ * in the database.
  */
 
 import { getPool } from '../lib/db';
 
 interface RankingEntry {
-  name: string;   // team name as it appears on the ranking source
+  name: string;   // team name as it appears on the source
   rank: number;
 }
 
 // ============================================================
-// Team name normalization (ranking source name → our DB short_name)
+// Team name normalization (source name → our DB short_name)
 // ============================================================
 
 const RANKING_NAME_TO_SHORT: Record<string, string> = {
@@ -37,12 +35,14 @@ const RANKING_NAME_TO_SHORT: Record<string, string> = {
   'argentina': 'ARG', 'algeria': 'ALG', 'austria': 'AUT', 'jordan': 'JOR',
   'portugal': 'POR', 'uzbekistan': 'UZB', 'colombia': 'COL',
   'england': 'ENG', 'croatia': 'CRO', 'ghana': 'GHA', 'panama': 'PAN',
-  // Playoff teams
-  'italy': 'EPA', 'northern ireland': 'EPA', 'wales': 'EPA', 'bosnia and herzegovina': 'EPA',
-  'turkey': 'EPC', 'türkiye': 'EPC', 'romania': 'EPC', 'slovakia': 'EPC', 'kosovo': 'EPC',
-  'ukraine': 'EPB', 'sweden': 'EPB', 'poland': 'EPB', 'albania': 'EPB',
-  'denmark': 'EPD', 'north macedonia': 'EPD', 'czechia': 'EPD', 'czech republic': 'EPD',
-  'ireland': 'EPD', 'republic of ireland': 'EPD',
+  // Confirmed playoff qualifiers
+  'czech republic': 'CZE', 'czechia': 'CZE',
+  'bosnia and herzegovina': 'BIH', 'bosnia-herzegovina': 'BIH', 'bosnia': 'BIH',
+  'turkey': 'TUR', 'türkiye': 'TUR',
+  'sweden': 'SWE',
+  'iraq': 'IRQ',
+  'congo dr': 'COD', 'dr congo': 'COD', 'democratic republic of the congo': 'COD',
+  'dem. rep. congo': 'COD', 'congo': 'COD', 'rép. dém. du congo': 'COD',
 };
 
 function normalizeRankingName(name: string): string | null {
@@ -50,51 +50,23 @@ function normalizeRankingName(name: string): string | null {
 }
 
 // ============================================================
-// Source: inside.fifa.com API
+// Source: football-ranking.com
 // ============================================================
 
-async function fetchFromFifaApi(): Promise<RankingEntry[]> {
-  // Try the inside.fifa.com ranking API
-  const response = await fetch(
-    'https://inside.fifa.com/api/ranking-overview?locale=en',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'KnockoutsIn/1.0',
-      },
-      signal: AbortSignal.timeout(15000),
-    }
-  );
+const BASE_URL = 'https://football-ranking.com/fifa-world-rankings';
+const MAX_PAGES = 5;
 
-  if (!response.ok) {
-    throw new Error(`FIFA ranking API returned ${response.status}`);
-  }
-
-  const data = await response.json();
-  const rankings = data?.rankings ?? [];
-
-  if (!Array.isArray(rankings) || rankings.length === 0) {
-    throw new Error('FIFA ranking API returned empty rankings');
-  }
-
-  return rankings.map((r: { rankingItem?: { name?: string; rank?: number }; name?: string; rank?: number }) => ({
-    name: r.rankingItem?.name ?? r.name ?? '',
-    rank: r.rankingItem?.rank ?? r.rank ?? 0,
-  })).filter((r: RankingEntry) => r.name && r.rank > 0);
+interface ScrapeResult {
+  entries: RankingEntry[];
+  rankingDate: string | null;  // e.g. "01 April 2026"
 }
 
-// ============================================================
-// Source: football-ranking.com (fallback)
-// ============================================================
-
-async function fetchFromFootballRanking(): Promise<RankingEntry[]> {
+async function fetchRankings(): Promise<ScrapeResult> {
   const entries: RankingEntry[] = [];
+  let rankingDate: string | null = null;
 
-  // Fetch first 3 pages (150 teams — more than enough to cover all 48 WC teams)
-  for (let page = 1; page <= 3; page++) {
-    const url = page === 1
-      ? 'https://football-ranking.com/fifa-world-rankings'
-      : `https://football-ranking.com/fifa-world-rankings?page=${page}`;
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const url = page === 1 ? BASE_URL : `${BASE_URL}?page=${page}`;
 
     const response = await fetch(url, {
       headers: {
@@ -110,29 +82,49 @@ async function fetchFromFootballRanking(): Promise<RankingEntry[]> {
     }
 
     const html = await response.text();
-    const pageEntries = parseFootballRankingHtml(html);
+
+    // Extract ranking date from first page
+    if (page === 1 && !rankingDate) {
+      rankingDate = extractRankingDate(html);
+    }
+
+    const pageEntries = parseHtml(html);
     entries.push(...pageEntries);
 
     if (pageEntries.length === 0) break;
   }
 
-  return entries;
+  return { entries, rankingDate };
 }
 
-function parseFootballRankingHtml(html: string): RankingEntry[] {
+/**
+ * Extract the ranking publish date from the page.
+ * Looks for patterns like "01 April 2026" in the heading area.
+ */
+function extractRankingDate(html: string): string | null {
+  const match = html.match(/(\d{1,2}\s+\w+\s+\d{4})/);
+  return match?.[1] ?? null;
+}
+
+/**
+ * Parse ranking rows from the HTML.
+ *
+ * Actual row structure (after whitespace collapse):
+ *   <tr>
+ *     <td style="text-align: left">1&nbsp; ... </td>
+ *     <td><span><img .../>&nbsp;&nbsp;Spain <span ...>(ESP)</span></span></td>
+ *     ...
+ *   </tr>
+ */
+function parseHtml(html: string): RankingEntry[] {
   const entries: RankingEntry[] = [];
 
-  // Actual HTML structure (multiline, with &nbsp;):
-  //   <td style="text-align: left">1&nbsp;\n</td>
-  //   <td><span><img .../>&nbsp;&nbsp;Spain <span ...>(ESP)</span></span></td>
-  //
-  // Strategy: normalize HTML first, then use a simple regex.
   const normalized = html
-    .replace(/&nbsp;/g, ' ')   // replace &nbsp; with space
-    .replace(/\s+/g, ' ');     // collapse all whitespace
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ');
 
-  // Match: <td...>RANK </td> ... <td><span><img...> TeamName <span...>(CODE)</span></span></td>
-  const rowPattern = /<td[^>]*>\s*(\d{1,3})\s*<\/td>\s*<td[^>]*><span>(?:<img[^>]*\/?>)\s*([^<]+?)\s*(?:<span[^>]*>\([A-Z]{3}\)<\/span>)?\s*<\/span><\/td>/gi;
+  // Match: <td...> RANK (with optional arrow/link after) </td> ... <td><span><img.../> TeamName <span...>(CODE)</span></span></td>
+  const rowPattern = /<td[^>]*>\s*(\d{1,3})\s*(?:<a[^>]*>.*?<\/a>)?\s*<\/td>\s*<td[^>]*><span>(?:<img[^>]*\/?>)\s*([^<]+?)\s*(?:<span[^>]*>\([A-Z]{3}\)<\/span>)?\s*<\/span><\/td>/gi;
 
   let match;
   while ((match = rowPattern.exec(normalized)) !== null) {
@@ -151,31 +143,11 @@ function parseFootballRankingHtml(html: string): RankingEntry[] {
 // ============================================================
 
 export async function scrapeFifaRankings(): Promise<void> {
-  let entries: RankingEntry[] = [];
-
-  // Try FIFA API first
-  try {
-    entries = await fetchFromFifaApi();
-    if (entries.length > 0) {
-      console.log(`  Fetched ${entries.length} rankings from FIFA API`);
-    }
-  } catch (err) {
-    console.warn('  FIFA API failed, trying fallback:', err);
-  }
-
-  // Fallback to football-ranking.com
-  if (entries.length === 0) {
-    try {
-      entries = await fetchFromFootballRanking();
-      console.log(`  Fetched ${entries.length} rankings from football-ranking.com`);
-    } catch (err) {
-      console.error('  Fallback ranking source also failed:', err);
-      throw new Error('Could not fetch FIFA rankings from any source');
-    }
-  }
+  const { entries, rankingDate } = await fetchRankings();
+  console.log(`  Fetched ${entries.length} rankings from football-ranking.com (date: ${rankingDate ?? 'unknown'})`);
 
   if (entries.length === 0) {
-    console.warn('  No ranking entries found from any source');
+    console.warn('  No ranking entries found');
     return;
   }
 
@@ -186,6 +158,8 @@ export async function scrapeFifaRankings(): Promise<void> {
   );
 
   let updated = 0;
+  const missing: string[] = [];
+
   for (const entry of entries) {
     const shortName = normalizeRankingName(entry.name);
     if (!shortName) continue;
@@ -200,12 +174,21 @@ export async function scrapeFifaRankings(): Promise<void> {
     updated++;
   }
 
+  // Report teams we couldn't match
+  for (const team of teams) {
+    const matched = entries.some((e) => normalizeRankingName(e.name) === team.short_name);
+    if (!matched) missing.push(`${team.name} (${team.short_name})`);
+  }
+  if (missing.length > 0) {
+    console.warn(`  Could not match rankings for: ${missing.join(', ')}`);
+  }
+
   console.log(`  Updated FIFA ranking for ${updated}/${teams.length} teams`);
 
-  // Log to scrape_log
+  // Log to scrape_log with source_date
   await pool.query(
-    `INSERT INTO scrape_log (source, matches_updated, status)
-     VALUES ('fifa-ranking', $1, 'OK')`,
-    [updated]
+    `INSERT INTO scrape_log (source, matches_updated, status, source_date)
+     VALUES ('fifa-ranking', $1, 'OK', $2)`,
+    [updated, rankingDate ?? null]
   );
 }

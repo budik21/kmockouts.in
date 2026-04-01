@@ -2,10 +2,10 @@
   {"id": 1, "name": "Mexico", "short_name": "MEX", "country_code": "MX", "group_id": "A", "is_placeholder": 0},
   {"id": 2, "name": "South Africa", "short_name": "RSA", "country_code": "ZA", "group_id": "A", "is_placeholder": 0},
   {"id": 3, "name": "South Korea", "short_name": "KOR", "country_code": "KR", "group_id": "A", "is_placeholder": 0},
-  {"id": 4, "name": "TBD (Euro Playoff D)", "short_name": "EPD", "country_code": "", "group_id": "A", "is_placeholder": 1},
+  {"id": 4, "name": "Czech Republic", "short_name": "CZE", "country_code": "CZ", "group_id": "A", "is_placeholder": 0},
 
   {"id": 5, "name": "Canada", "short_name": "CAN", "country_code": "CA", "group_id": "B", "is_placeholder": 0},
-  {"id": 6, "name": "TBD (Euro Playoff A)", "short_name": "EPA", "country_code": "", "group_id": "B", "is_placeholder": 1},
+  {"id": 6, "name": "Bosnia-Herzegovina", "short_name": "BIH", "country_code": "BA", "group_id": "B", "is_placeholder": 0},
   {"id": 7, "name": "Qatar", "short_name": "QAT", "country_code": "QA", "group_id": "B", "is_placeholder": 0},
   {"id": 8, "name": "Switzerland", "short_name": "SUI", "country_code": "CH", "group_id": "B", "is_placeholder": 0},
 
@@ -17,7 +17,7 @@
   {"id": 13, "name": "United States", "short_name": "USA", "country_code": "US", "group_id": "D", "is_placeholder": 0},
   {"id": 14, "name": "Paraguay", "short_name": "PAR", "country_code": "PY", "group_id": "D", "is_placeholder": 0},
   {"id": 15, "name": "Australia", "short_name": "AUS", "country_code": "AU", "group_id": "D", "is_placeholder": 0},
-  {"id": 16, "name": "TBD (Euro Playoff C)", "short_name": "EPC", "country_code": "", "group_id": "D", "is_placeholder": 1},
+  {"id": 16, "name": "Türkiye", "short_name": "TUR", "country_code": "TR", "group_id": "D", "is_placeholder": 0},
 
   {"id": 17, "name": "Germany", "short_name": "GER", "country_code": "DE", "group_id": "E", "is_placeholder": 0},
   {"id": 18, "name": "Curaçao", "short_name": "CUW", "country_code": "CW", "group_id": "E", "is_placeholder": 0},
@@ -26,7 +26,7 @@
 
   {"id": 21, "name": "Netherlands", "short_name": "NED", "country_code": "NL", "group_id": "F", "is_placeholder": 0},
   {"id": 22, "name": "Japan", "short_name": "JPN", "country_code": "JP", "group_id": "F", "is_placeholder": 0},
-  {"id": 23, "name": "TBD (Euro Playoff B)", "short_name": "EPB", "country_code": "", "group_id": "F", "is_placeholder": 1},
+  {"id": 23, "name": "Sweden", "short_name": "SWE", "country_code": "SE", "group_id": "F", "is_placeholder": 0},
   {"id": 24, "name": "Tunisia", "short_name": "TUN", "country_code": "TN", "group_id": "F", "is_placeholder": 0},
 
   {"id": 25, "name": "Belgium", "short_name": "BEL", "country_code": "BE", "group_id": "G", "is_placeholder": 0},
@@ -41,7 +41,7 @@
 
   {"id": 33, "name": "France", "short_name": "FRA", "country_code": "FR", "group_id": "I", "is_placeholder": 0},
   {"id": 34, "name": "Senegal", "short_name": "SEN", "country_code": "SN", "group_id": "I", "is_placeholder": 0},
-  {"id": 35, "name": "TBD (IC Playoff 2)", "short_name": "IP2", "country_code": "", "group_id": "I", "is_placeholder": 1},
+  {"id": 35, "name": "Iraq", "short_name": "IRQ", "country_code": "IQ", "group_id": "I", "is_placeholder": 0},
   {"id": 36, "name": "Norway", "short_name": "NOR", "country_code": "NO", "group_id": "I", "is_placeholder": 0},
 
   {"id": 37, "name": "Argentina", "short_name": "ARG", "country_code": "AR", "group_id": "J", "is_placeholder": 0},
@@ -50,7 +50,7 @@
   {"id": 40, "name": "Jordan", "short_name": "JOR", "country_code": "JO", "group_id": "J", "is_placeholder": 0},
 
   {"id": 41, "name": "Portugal", "short_name": "POR", "country_code": "PT", "group_id": "K", "is_placeholder": 0},
-  {"id": 42, "name": "TBD (IC Playoff 1)", "short_name": "IP1", "country_code": "", "group_id": "K", "is_placeholder": 1},
+  {"id": 42, "name": "Congo DR", "short_name": "COD", "country_code": "CD", "group_id": "K", "is_placeholder": 0},
   {"id": 43, "name": "Uzbekistan", "short_name": "UZB", "country_code": "UZ", "group_id": "K", "is_placeholder": 0},
   {"id": 44, "name": "Colombia", "short_name": "COL", "country_code": "CO", "group_id": "K", "is_placeholder": 0},
 
