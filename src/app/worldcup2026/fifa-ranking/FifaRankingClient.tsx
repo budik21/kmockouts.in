@@ -114,14 +114,14 @@ function GapAndRow({
         <td className="ranking-col-team">
           <div className="ranking-team-inner">
             <TeamFlag countryCode={team.countryCode} size="md" />
-            <a href={`/worldcup2026/${team.groupId}`} className="ranking-team-name">
+            <a href={`/worldcup2026/group-${team.groupId.toLowerCase()}`} className="ranking-team-name">
               {team.name}
             </a>
             <span className="ranking-team-code">{team.shortName}</span>
           </div>
         </td>
         <td className="ranking-col-group">
-          <a href={`/worldcup2026/${team.groupId}`} className="ranking-group-link">
+          <a href={`/worldcup2026/group-${team.groupId.toLowerCase()}`} className="ranking-group-link">
             {team.groupId}
           </a>
         </td>
