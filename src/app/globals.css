@@ -2408,3 +2408,165 @@ a { color: inherit; text-decoration: none; }
 .paypal-donate-button:active {
   transform: translateY(0);
 }
+
+/* ============================================================
+   FIFA Ranking Page
+   ============================================================ */
+.ranking-page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--wc-text);
+  margin-bottom: 0.25rem;
+}
+
+.ranking-page-subtitle {
+  font-size: 0.85rem;
+  color: var(--wc-text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.ranking-date {
+  opacity: 0.7;
+}
+
+.ranking-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  max-width: 540px;
+}
+
+.ranking-filter-pill {
+  background: var(--wc-surface);
+  color: var(--wc-text-muted);
+  border: 1px solid var(--wc-border);
+  border-radius: 16px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+
+.ranking-filter-pill:hover {
+  border-color: var(--wc-primary);
+  color: var(--wc-primary);
+}
+
+.ranking-filter-pill.active {
+  background: var(--wc-primary);
+  color: #fff;
+  border-color: var(--wc-primary);
+}
+
+.ranking-table-wrapper {
+  max-width: 540px;
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ranking-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--wc-text-muted);
+  padding: 0.4rem 0.5rem;
+  border-bottom: 2px solid var(--wc-border);
+  font-weight: 600;
+}
+
+.ranking-col-rank {
+  width: 48px;
+  text-align: center;
+}
+
+.ranking-col-group {
+  width: 52px;
+  text-align: center;
+}
+
+.ranking-team-row td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid var(--wc-border);
+  vertical-align: middle;
+}
+
+.ranking-rank-badge {
+  display: inline-block;
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--wc-text);
+}
+
+.ranking-team-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+a.ranking-team-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--wc-text);
+  text-decoration: none;
+}
+
+a.ranking-team-name:hover {
+  color: var(--wc-accent);
+  text-decoration: underline;
+}
+
+.ranking-team-code {
+  font-size: 0.72rem;
+  color: var(--wc-text-muted);
+  opacity: 0.7;
+}
+
+.ranking-group-link {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  border-radius: 50%;
+  background: var(--wc-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.ranking-group-link:hover {
+  opacity: 0.8;
+}
+
+/* Gap indicator */
+.ranking-gap-row td {
+  padding: 0.15rem 0.5rem;
+  border: none;
+}
+
+
+.ranking-gap-dots {
+  display: block;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--wc-text-muted);
+  opacity: 0.45;
+  text-align: center;
+}
+
+.ranking-gap-label {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--wc-text-muted);
+  opacity: 0.55;
+}

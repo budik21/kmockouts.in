@@ -100,6 +100,13 @@ export default function Navbar() {
               🥉 Best 3rd
             </a>
             <a
+              href="/worldcup2026/fifa-ranking"
+              className="nav-link offcanvas-nav-link"
+              onClick={navigateAndClose('/worldcup2026/fifa-ranking')}
+            >
+              📊 FIFA Ranking
+            </a>
+            <a
               href="#"
               className="nav-link offcanvas-nav-link"
               onClick={(e) => {

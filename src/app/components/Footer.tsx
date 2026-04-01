@@ -23,6 +23,10 @@ export default function Footer() {
               How to Clinch a Play-Off Spot
             </a>
             <span className="footer-sep">&middot;</span>
+            <a href="/worldcup2026/fifa-ranking">
+              FIFA Ranking
+            </a>
+            <span className="footer-sep">&middot;</span>
             <a
               href="#"
               onClick={(e) => {
