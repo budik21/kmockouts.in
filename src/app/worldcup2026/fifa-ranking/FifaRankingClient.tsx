@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import TeamFlag from '@/app/components/TeamFlag';
+import { slugify } from '@/lib/slugify';
 
 interface RankingTeam {
   id: number;
@@ -114,7 +115,7 @@ function GapAndRow({
         <td className="ranking-col-team">
           <div className="ranking-team-inner">
             <TeamFlag countryCode={team.countryCode} size="md" />
-            <a href={`/worldcup2026/group-${team.groupId.toLowerCase()}`} className="ranking-team-name">
+            <a href={`/worldcup2026/group-${team.groupId.toLowerCase()}/team/${slugify(team.name)}`} className="ranking-team-name">
               {team.name}
             </a>
             <span className="ranking-team-code">{team.shortName}</span>
