@@ -257,10 +257,12 @@ a { color: inherit; text-decoration: none; }
 }
 
 .standings-table .team-short { display: none; }
+.standings-ranking { font-size: 0.75em; color: #6c757d; margin-left: 0.25em; cursor: default; }
 
 @media (max-width: 576px) {
   .standings-table .team-name-full { display: none; }
   .standings-table .team-short { display: inline; }
+  .standings-ranking { display: none; }
 }
 
 .pos-1, .pos-2 { border-left: 3px solid var(--badge-qualified); }
@@ -768,6 +770,12 @@ a { color: inherit; text-decoration: none; }
   font-weight: 400;
   opacity: 0.9;
   margin-top: 0.15rem;
+}
+.clinch-infobox-third {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 400;
+  margin-top: 0.25rem;
 }
 
 /* ============================================================

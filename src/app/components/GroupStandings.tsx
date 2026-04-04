@@ -13,6 +13,7 @@ interface TeamStandingData {
     shortName: string;
     countryCode: string;
     isPlaceholder: boolean;
+    fifaRanking?: number;
   };
   matchesPlayed: number;
   wins: number;
@@ -46,7 +47,10 @@ function TeamNameContent({ team }: { team: TeamStandingData['team'] }) {
     <>
       <TeamFlag countryCode={team.countryCode} />
       <span className="team-name-full">{team.name}</span>
-      <span className="team-short">{team.shortName}</span>
+      <span className="team-short" title={team.name}>{team.shortName}</span>
+      {team.fifaRanking && (
+        <span className="standings-ranking" title="FIFA Ranking">({team.fifaRanking})</span>
+      )}
     </>
   );
 }
@@ -98,7 +102,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                   <td className="text-center">
                     {prob && (
                       <ProbabilityCircle
-                        qualifyProb={prob.probFirst + prob.probSecond + prob.probThird}
+                        qualifyProb={prob.probFirst + prob.probSecond}
                         probFirst={prob.probFirst}
                         probSecond={prob.probSecond}
                         probThird={prob.probThird}
@@ -154,7 +158,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                   <td className="text-center">
                     {prob && (
                       <ProbabilityCircle
-                        qualifyProb={prob.probFirst + prob.probSecond + prob.probThird}
+                        qualifyProb={prob.probFirst + prob.probSecond}
                         probFirst={prob.probFirst}
                         probSecond={prob.probSecond}
                         probThird={prob.probThird}

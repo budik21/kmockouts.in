@@ -93,11 +93,11 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
                 <div className="match-item">
                   <div className="match-team home">
                     {compact ? (
-                      m.homeTeam.shortName
+                      <span title={m.homeTeam.name}>{m.homeTeam.shortName}</span>
                     ) : (
                       <>
                         <span className="match-name-full">{m.homeTeam.name}</span>
-                        <span className="match-name-short">{m.homeTeam.shortName}</span>
+                        <span className="match-name-short" title={m.homeTeam.name}>{m.homeTeam.shortName}</span>
                       </>
                     )}
                     {m.homeTeam.fifaRanking && (
@@ -115,11 +115,11 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
                   <div className="match-team away">
                     <TeamFlag countryCode={m.awayTeam.countryCode} className="me-2" />
                     {compact ? (
-                      m.awayTeam.shortName
+                      <span title={m.awayTeam.name}>{m.awayTeam.shortName}</span>
                     ) : (
                       <>
                         <span className="match-name-full">{m.awayTeam.name}</span>
-                        <span className="match-name-short">{m.awayTeam.shortName}</span>
+                        <span className="match-name-short" title={m.awayTeam.name}>{m.awayTeam.shortName}</span>
                       </>
                     )}
                     {m.awayTeam.fifaRanking && (

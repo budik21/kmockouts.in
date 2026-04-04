@@ -67,12 +67,16 @@ export default function QualifyWidgets({
     );
   }
 
-  // 100% clinched play-off (0% chance of 4th place)
-  const clinched = prob4th === 0 && matchesRemaining > 0;
+  // 100% clinched play-off (guaranteed 1st or 2nd — no chance of 3rd or 4th)
+  const clinched = prob4th === 0 && prob3rd === 0 && matchesRemaining > 0;
   // 100% eliminated (100% chance of 4th place)
   const eliminated = prob4th === 100 && matchesRemaining > 0;
 
   if (clinched) {
+    const detailParts = [];
+    if (prob1st > 0) detailParts.push(`1st: ${fmt(prob1st)}%`);
+    if (prob2nd > 0) detailParts.push(`2nd: ${fmt(prob2nd)}%`);
+    if (prob3rd > 0) detailParts.push(`3rd: ${fmt(prob3rd)}%`);
     return (
       <div className="row g-3 mb-4">
         <div className="col-12">
@@ -81,8 +85,20 @@ export default function QualifyWidgets({
             <div className="clinch-infobox-text">
               <strong>{teamName}</strong> has clinched play-off!
               <span className="clinch-infobox-detail">
-                (1st: {fmt(prob1st)}% · 2nd: {fmt(prob2nd)}%)
+                ({detailParts.join(' · ')})
               </span>
+              {prob3rd > 0 && (
+                <span className="clinch-infobox-third">
+                  If 3rd &mdash;{' '}
+                  {bestThirdRank !== null
+                    ? <>currently {ordinal(bestThirdRank)} in{' '}</>
+                    : <>see{' '}</>
+                  }
+                  <Link href="/worldcup2026/best-third-placed" className="best-third-infobox-link">
+                    best 3rd-placed table
+                  </Link>
+                </span>
+              )}
             </div>
           </div>
         </div>

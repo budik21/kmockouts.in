@@ -118,7 +118,7 @@ function GapAndRow({
             <a href={`/worldcup2026/group-${team.groupId.toLowerCase()}/team/${slugify(team.name)}`} className="ranking-team-name">
               {team.name}
             </a>
-            <span className="ranking-team-code">{team.shortName}</span>
+            <span className="ranking-team-code" title={team.name}>{team.shortName}</span>
           </div>
         </td>
         <td className="ranking-col-group">

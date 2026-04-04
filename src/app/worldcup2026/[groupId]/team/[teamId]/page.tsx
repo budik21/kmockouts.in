@@ -14,6 +14,7 @@ import QualifyWidgets from '@/app/components/QualifyWidgets';
 import ScenariosAccordion from '@/app/components/ScenariosAccordion';
 import GroupStandings from '@/app/components/GroupStandings';
 import MatchList from '@/app/components/MatchList';
+import NextMatchDate from '@/app/components/NextMatchDate';
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -89,7 +90,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
   const standings = calculateStandings({ teams, matches: played });
   const standingsForDisplay = standings.map((s) => ({
     ...s,
-    team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder },
+    team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder, fifaRanking: s.team.fifaRanking },
   }));
 
   // Calculate scenarios
@@ -186,7 +187,14 @@ export default async function TeamDetailPage({ params }: PageProps) {
   );
 
   const groupSlug = `group-${groupId.toLowerCase()}`;
-  const teamRemainingMatches = remaining.filter((m) => m.homeTeamId === team.id || m.awayTeamId === team.id).length;
+  const teamRemaining = remaining
+    .filter((m) => m.homeTeamId === team.id || m.awayTeamId === team.id)
+    .sort((a, b) => a.kickOff.localeCompare(b.kickOff));
+  const teamRemainingMatches = teamRemaining.length;
+  const nextMatch = teamRemaining.length > 0 ? teamRemaining[0] : null;
+  const nextOpponent = nextMatch
+    ? teamMap.get(nextMatch.homeTeamId === team.id ? nextMatch.awayTeamId : nextMatch.homeTeamId)
+    : null;
 
   return (
     <main className="container py-4">
@@ -201,6 +209,14 @@ export default async function TeamDetailPage({ params }: PageProps) {
             {team.fifaRanking && <>FIFA Ranking: {team.fifaRanking} | </>}
             Group {groupId} | {currentPosition ? `${currentPosition}. place` : '–'} | {teamRemainingMatches} {teamRemainingMatches === 1 ? 'match' : 'matches'} left
           </div>
+          {nextMatch && nextOpponent && (
+            <div className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.15rem' }}>
+              Next: vs{' '}
+              <TeamFlag countryCode={nextOpponent.countryCode} />
+              {' '}{nextOpponent.name}
+              {' · '}<NextMatchDate kickOff={nextMatch.kickOff} venue={nextMatch.venue} />
+            </div>
+          )}
         </div>
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
           <Link href="/worldcup2026">Home</Link>

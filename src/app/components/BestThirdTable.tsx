@@ -61,10 +61,10 @@ export default function BestThirdTable({ teams }: BestThirdTableProps) {
                 <Link href={`/worldcup2026/group-${t.groupId.toLowerCase()}/team/${slugify(t.team.name)}`} className="best-third-team-link" onClick={(e) => e.stopPropagation()}>
                   <TeamFlag countryCode={t.team.countryCode} />
                   <span className="team-name-full">{t.team.name}</span>
-                  <span className="team-short">{t.team.shortName}</span>
+                  <span className="team-short" title={t.team.name}>{t.team.shortName}</span>
                 </Link>
                 {t.team.fifaRanking && (
-                  <span className="text-muted ms-1" style={{ fontSize: '0.75rem' }}>({t.team.fifaRanking})</span>
+                  <span className="standings-ranking" title="FIFA Ranking">({t.team.fifaRanking})</span>
                 )}
               </td>
               <td className="text-center d-none d-sm-table-cell">{t.groupId}</td>

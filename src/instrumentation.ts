@@ -14,6 +14,15 @@ export async function register() {
       return;
     }
 
+    // Sync kick_off and venue from seed data (ensures DB matches latest schedule)
+    const { syncMatchSchedule } = await import('./lib/sync-schedule');
+    try {
+      const synced = await syncMatchSchedule();
+      console.log(`[instrumentation] Synced schedule for ${synced} matches`);
+    } catch (e) {
+      console.error('[instrumentation] Failed to sync match schedule:', e);
+    }
+
     // Apply the active scenario so the homepage shows data immediately (default: scenario 2)
     const { readActiveScenarioId, applyScenario } = await import('./lib/apply-scenario');
     const { recalculateAllProbabilities } = await import('./lib/probability-cache');

@@ -3,6 +3,7 @@
 import TeamFlag from './TeamFlag';
 
 interface MatchInfo {
+  opponentName: string;
   opponentShort: string;
   opponentCode: string;
   isHome: boolean;
@@ -18,6 +19,7 @@ interface TeamWithMatches {
   rank: number;
   groupId: string;
   team: {
+    name: string;
     shortName: string;
     countryCode: string;
   };
@@ -45,7 +47,7 @@ export default function ThirdPlacedMatchesGrid({ teams }: ThirdPlacedMatchesGrid
               <div className="group-card-header" style={{ padding: '0.5rem 0.75rem', fontSize: '0.95rem' }}>
                 <span>
                   <TeamFlag countryCode={t.team.countryCode} />
-                  {' '}{t.team.shortName}
+                  {' '}<span title={t.team.name}>{t.team.shortName}</span>
                 </span>
                 <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
                   Group {t.groupId} · #{t.rank}
@@ -69,7 +71,7 @@ export default function ThirdPlacedMatchesGrid({ teams }: ThirdPlacedMatchesGrid
                         <div className="d-flex align-items-center gap-1">
                           <span className="text-muted" style={{ fontSize: '0.75rem' }}>vs</span>
                           <TeamFlag countryCode={m.opponentCode} />
-                          <span>{m.opponentShort}</span>
+                          <span title={m.opponentName}>{m.opponentShort}</span>
                           <span className="text-muted" style={{ fontSize: '0.75rem' }}>
                             ({m.isHome ? 'H' : 'A'})
                           </span>

@@ -34,7 +34,7 @@ interface MatchForDisplay {
 
 interface StandingForDisplay {
   position: number;
-  team: { id: number; name: string; shortName: string; countryCode: string; isPlaceholder: boolean };
+  team: { id: number; name: string; shortName: string; countryCode: string; isPlaceholder: boolean; fifaRanking?: number };
   matchesPlayed: number;
   wins: number;
   draws: number;
@@ -300,7 +300,7 @@ export default function GroupDetailClient({
 
     return standings.map((s) => ({
       ...s,
-      team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder },
+      team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder, fifaRanking: s.team.fifaRanking },
     }));
   })();
 

@@ -87,7 +87,7 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
       groupId: gid,
       standings: standings.map((s) => ({
         position: s.position,
-        team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder },
+        team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder, fifaRanking: s.team.fifaRanking },
         matchesPlayed: s.matchesPlayed,
         wins: s.wins,
         draws: s.draws,

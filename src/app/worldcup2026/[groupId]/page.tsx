@@ -99,7 +99,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
   const standingsForDisplay = standings.map((s) => ({
     ...s,
-    team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder },
+    team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder, fifaRanking: s.team.fifaRanking },
   }));
 
   // Read cached probabilities (compute if missing)
