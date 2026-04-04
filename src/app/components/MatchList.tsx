@@ -129,6 +129,9 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
                     )}
                   </div>
                 </div>
+                {!isPlayed && m.venue && (
+                  <div className="match-venue">{m.venue}</div>
+                )}
                 {hasCards && (
                   <div className="match-cards-row">
                     <div className="match-cards-home">

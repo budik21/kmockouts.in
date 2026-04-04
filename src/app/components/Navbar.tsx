@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
 import ScenarioSwitcher from './ScenarioSwitcher';
 import FeedbackWidget from './FeedbackWidget';
+import TeamSearch from './TeamSearch';
 
 export default function Navbar() {
   const router = useRouter();
@@ -49,6 +50,7 @@ export default function Navbar() {
             Knockouts.in
           </Link>
           <div className="d-flex align-items-center gap-2">
+            <TeamSearch />
             <ScenarioSwitcher />
             <button
               className="navbar-hamburger"
