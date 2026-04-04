@@ -6,6 +6,7 @@ import { enumerateGroupScenarios } from '@/engine/scenarios';
 import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probability-cache';
 import { compareThirdPlaced } from '@/engine/best-third';
 import { generateScenarioSummaries } from '@/engine/scenario-summary';
+import { generateAiScenarioSummaries } from '@/engine/scenario-summary-ai';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { slugify } from '@/lib/slugify';
@@ -170,7 +171,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
     }));
   }
 
-  // Generate scenario summaries
+  // Generate scenario summaries (AI-powered with deterministic fallback)
   const remainingMatchesInfo = remaining.map((m, i) => ({
     matchIndex: i,
     homeTeamId: m.homeTeamId,
@@ -178,13 +179,45 @@ export default async function TeamDetailPage({ params }: PageProps) {
     homeTeamName: teamMap.get(m.homeTeamId)?.name ?? '?',
     awayTeamName: teamMap.get(m.awayTeamId)?.name ?? '?',
   }));
-  const scenarioSummaries = generateScenarioSummaries(
+  const deterministicSummaries = generateScenarioSummaries(
     team.id,
     team.name,
     teamSummary.outcomePatternsByPosition,
     remainingMatchesInfo,
     probs,
   );
+
+  let scenarioSummaries = deterministicSummaries;
+  // AI summaries only when every team in the group has played at least one match
+  const allTeamsPlayed = teams.every(t => played.some(m => m.homeTeamId === t.id || m.awayTeamId === t.id));
+  if (remaining.length > 0 && allTeamsPlayed && process.env.ANTHROPIC_API_KEY) {
+    try {
+      const currentStandings = standings.map(s => ({
+        teamName: s.team.name,
+        points: s.points,
+        gd: s.goalsFor - s.goalsAgainst,
+        position: s.position,
+      }));
+      const aiSummaries = await generateAiScenarioSummaries({
+        teamId: team.id,
+        teamName: team.name,
+        groupId: groupId,
+        outcomePatternsByPosition: teamSummary.outcomePatternsByPosition,
+        probabilities: probs,
+        remainingMatches: remainingMatchesInfo,
+        currentStandings,
+      });
+      // Merge: use AI where available, fall back to deterministic
+      scenarioSummaries = { ...deterministicSummaries };
+      for (const pos of [1, 2, 3, 4]) {
+        if (aiSummaries[pos]) {
+          scenarioSummaries[pos] = aiSummaries[pos];
+        }
+      }
+    } catch (err) {
+      console.error('AI scenario summaries failed, using deterministic fallback:', err);
+    }
+  }
 
   const groupSlug = `group-${groupId.toLowerCase()}`;
   const teamRemaining = remaining

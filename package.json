@@ -11,6 +11,7 @@
     "scraper": "node --env-file=.env --import tsx src/scraper/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
     "@auth/core": "^0.41.0",
     "bootstrap": "^5.3.8",
     "flag-icons": "^7.5.0",

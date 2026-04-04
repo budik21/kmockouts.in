@@ -850,6 +850,14 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.5;
 }
 
+.scenario-summary-box p {
+  margin: 0 0 0.35rem 0;
+}
+
+.scenario-summary-box p:last-child {
+  margin-bottom: 0;
+}
+
 /* Grid: 2 columns on wide screens */
 .scenario-paths {
   display: grid;
@@ -873,6 +881,7 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.45;
 }
 .scenario-path.single {
+  display: block;
   background: none;
   padding: 0;
 }

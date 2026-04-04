@@ -148,6 +148,17 @@ export async function initializeSchema(): Promise<void> {
 
     -- Add metadata column if table already existed without it
     ALTER TABLE feedback ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}';
+
+    -- AI-generated scenario summaries cache
+    CREATE TABLE IF NOT EXISTS ai_summary_cache (
+      group_id      TEXT NOT NULL,
+      team_id       INTEGER NOT NULL,
+      position      INTEGER NOT NULL,
+      summary_html  TEXT NOT NULL,
+      patterns_hash TEXT NOT NULL DEFAULT '',
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (group_id, team_id, position)
+    );
   `);
 
   // ---- One-time data migrations ----
