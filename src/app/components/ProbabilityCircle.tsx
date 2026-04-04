@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 
 interface ProbabilityCircleProps {
   qualifyProb: number; // 1st + 2nd combined (direct qualification)
@@ -8,6 +8,7 @@ interface ProbabilityCircleProps {
   probSecond: number;
   probThird: number;
   probOut: number;
+  disabled?: boolean; // show grey "?" instead of probability
 }
 
 export default function ProbabilityCircle({
@@ -16,16 +17,29 @@ export default function ProbabilityCircle({
   probSecond,
   probThird,
   probOut,
+  disabled = false,
 }: ProbabilityCircleProps) {
+  if (disabled) {
+    return (
+      <span className="prob-circle" style={{ background: '#6c757d' }} aria-label="Not enough data yet">
+        ?
+      </span>
+    );
+  }
+
   const ref = useRef<HTMLSpanElement>(null);
-  const tooltipRef = useRef<{ dispose: () => void } | null>(null);
+  const tooltipRef = useRef<{ dispose: () => void; show: () => void; hide: () => void } | null>(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   const initTooltip = useCallback(async () => {
     if (!ref.current || typeof window === 'undefined') return;
     const bs = await import('bootstrap/dist/js/bootstrap.bundle.min.js');
     if (!ref.current) return;
 
-    // Dispose existing
     const existing = bs.Tooltip.getInstance(ref.current);
     if (existing) existing.dispose();
 
@@ -45,44 +59,47 @@ export default function ProbabilityCircle({
     };
   }, [qualifyProb, probFirst, probSecond, probThird, probOut, initTooltip]);
 
-  // Close tooltip when clicking outside
+  // Close tooltip when clicking outside (for touch devices)
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        tooltipRef.current?.dispose();
-        initTooltip();
+        tooltipRef.current?.hide();
       }
     }
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [initTooltip]);
+  }, []);
 
+  // Desktop: show on hover
+  const handleMouseEnter = () => {
+    if (!isTouchDevice) {
+      tooltipRef.current?.show();
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isTouchDevice) {
+      tooltipRef.current?.hide();
+    }
+  };
+
+  // Mobile: toggle on tap
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (tooltipRef.current) {
-      // Toggle: check if tooltip is currently shown
-      const el = ref.current;
-      if (el) {
-        import('bootstrap/dist/js/bootstrap.bundle.min.js').then((bs) => {
-          const instance = bs.Tooltip.getInstance(el);
-          if (instance) {
-            // Check if visible by looking for aria-describedby
-            if (el.getAttribute('aria-describedby')) {
-              instance.hide();
-            } else {
-              instance.show();
-            }
-          }
-        });
+    if (!isTouchDevice) return;
+    const el = ref.current;
+    if (el) {
+      if (el.getAttribute('aria-describedby')) {
+        tooltipRef.current?.hide();
+      } else {
+        tooltipRef.current?.show();
       }
     }
   };
 
-  // Display qualify probability (1st + 2nd only — 3rd place qualification is uncertain)
   const displayProb = Math.round(qualifyProb);
 
-  // Color: green shades for qualify, red shades for eliminate
   let bgColor: string;
   if (qualifyProb >= 75) bgColor = '#198754';
   else if (qualifyProb >= 50) bgColor = '#5cb85c';
@@ -106,8 +123,10 @@ export default function ProbabilityCircle({
       data-bs-toggle="tooltip"
       data-bs-title={tooltipContent}
       role="button"
-      aria-label={`${displayProb}% qualify — click for details`}
+      aria-label={`${displayProb}% qualify — hover for details`}
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {displayProb}
     </span>

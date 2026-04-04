@@ -72,6 +72,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
       : {};
 
   const hasProbs = probabilities && Object.keys(probabilities).length > 0;
+  const allTeamsPlayed = standings.every((s) => s.matchesPlayed > 0);
 
   if (compact) {
     return (
@@ -107,6 +108,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                         probSecond={prob.probSecond}
                         probThird={prob.probThird}
                         probOut={prob.probOut}
+                        disabled={!allTeamsPlayed}
                       />
                     )}
                   </td>
@@ -163,6 +165,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                         probSecond={prob.probSecond}
                         probThird={prob.probThird}
                         probOut={prob.probOut}
+                        disabled={!allTeamsPlayed}
                       />
                     )}
                   </td>
