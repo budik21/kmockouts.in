@@ -211,7 +211,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
           </div>
           {nextMatch && nextOpponent && (
             <div className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.15rem' }}>
-              Next: vs{' '}
+              Next Match: vs{' '}
               <TeamFlag countryCode={nextOpponent.countryCode} />
               {' '}{nextOpponent.name}
               {' · '}<NextMatchDate kickOff={nextMatch.kickOff} venue={nextMatch.venue} />
