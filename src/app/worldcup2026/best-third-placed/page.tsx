@@ -36,7 +36,7 @@ function rowToMatch(row: MatchRow): Match {
 
 export default async function BestThirdPlacedPage() {
   // Collect third-placed team from each group + their matches
-  const thirdPlaced: { groupId: GroupId; standing: TeamStanding; teamMatches: { homeShort: string; homeCode: string; awayShort: string; awayCode: string; homeGoals: number | null; awayGoals: number | null; status: string; round: number }[] }[] = [];
+  const thirdPlaced: { groupId: GroupId; standing: TeamStanding; teamMatches: { opponentShort: string; opponentCode: string; isHome: boolean; homeGoals: number | null; awayGoals: number | null; status: string; round: number; venue: string; kickOff: string }[] }[] = [];
   let groupsWithMatches = 0;
 
   for (const gid of ALL_GROUPS) {
