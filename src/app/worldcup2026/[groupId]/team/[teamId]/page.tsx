@@ -186,6 +186,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
   );
 
   const groupSlug = `group-${groupId.toLowerCase()}`;
+  const teamRemainingMatches = remaining.filter((m) => m.homeTeamId === team.id || m.awayTeamId === team.id).length;
 
   return (
     <main className="container py-4">
@@ -196,14 +197,13 @@ export default async function TeamDetailPage({ params }: PageProps) {
             <TeamFlag countryCode={team.countryCode} size="md" className="me-2" />
             {team.name}
           </h2>
-          {team.fifaRanking && (
-            <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.15rem' }}>
-              FIFA Ranking: {team.fifaRanking}
-            </div>
-          )}
+          <div className="text-muted" style={{ fontSize: '0.95rem', marginTop: '0.25rem' }}>
+            {team.fifaRanking && <>FIFA Ranking: {team.fifaRanking} | </>}
+            Group {groupId} | {currentPosition ? `${currentPosition}. place` : '–'} | {teamRemainingMatches} {teamRemainingMatches === 1 ? 'match' : 'matches'} left
+          </div>
         </div>
         <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-          <Link href="/worldcup2026">Groups</Link>
+          <Link href="/worldcup2026">Home</Link>
           <span className="breadcrumb-sep">/</span>
           <Link href={`/worldcup2026/${groupSlug}`}>Group {groupId}</Link>
           <span className="breadcrumb-sep">/</span>

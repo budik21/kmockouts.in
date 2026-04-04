@@ -2,9 +2,11 @@ import { query } from '@/lib/db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
+import { compareThirdPlaced } from '@/engine/best-third';
 import { getAllCachedProbsOrCompute } from '@/lib/probability-cache';
 import Link from 'next/link';
 import GroupOverview from '@/app/components/GroupOverview';
+import BestThirdTable from '@/app/components/BestThirdTable';
 import NewsWidget from '@/app/components/NewsWidget';
 import Countdown from '@/app/components/Countdown';
 
@@ -30,9 +32,25 @@ function rowToMatch(row: MatchRow): Match {
 
 export const dynamic = 'force-dynamic';
 
+interface ThirdPlacedTeam {
+  rank: number;
+  groupId: string;
+  team: { id: number; name: string; shortName: string; countryCode: string; isPlaceholder: boolean };
+  matchesPlayed: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+  fairPlayPoints: number;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function buildGroupsData(): Promise<Record<string, any>> {
+async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPlacedTeams: ThirdPlacedTeam[] }> {
   const groups: Record<string, unknown> = {};
+  const thirdPlaced: { groupId: GroupId; standing: ReturnType<typeof calculateStandings>[number] }[] = [];
 
   // Read cached probabilities (computes any missing groups on first load)
   const cachedProbs = await getAllCachedProbsOrCompute();
@@ -43,6 +61,12 @@ async function buildGroupsData(): Promise<Record<string, any>> {
     const teams = teamRows.map(rowToTeam);
     const matches = matchRows.map(rowToMatch);
     const standings = calculateStandings({ teams, matches });
+
+    // Collect third-placed team
+    const third = standings.find((s) => s.position === 3);
+    if (third) {
+      thirdPlaced.push({ groupId: gid, standing: third });
+    }
 
     // Build probability map for this group from cache
     const groupCache = cachedProbs.get(gid);
@@ -77,7 +101,32 @@ async function buildGroupsData(): Promise<Record<string, any>> {
     };
   }
 
-  return groups;
+  // Sort third-placed teams by FIFA criteria
+  thirdPlaced.sort((a, b) => compareThirdPlaced(a.standing, b.standing));
+
+  const thirdPlacedTeams = thirdPlaced.map((tp, i) => ({
+    rank: i + 1,
+    groupId: tp.groupId,
+    team: {
+      id: tp.standing.team.id,
+      name: tp.standing.team.name,
+      shortName: tp.standing.team.shortName,
+      countryCode: tp.standing.team.countryCode,
+      isPlaceholder: tp.standing.team.isPlaceholder,
+      fifaRanking: tp.standing.team.fifaRanking,
+    },
+    matchesPlayed: tp.standing.matchesPlayed,
+    wins: tp.standing.wins,
+    draws: tp.standing.draws,
+    losses: tp.standing.losses,
+    goalsFor: tp.standing.goalsFor,
+    goalsAgainst: tp.standing.goalsAgainst,
+    goalDifference: tp.standing.goalDifference,
+    points: tp.standing.points,
+    fairPlayPoints: tp.standing.fairPlayPoints,
+  }));
+
+  return { groups, thirdPlacedTeams };
 }
 
 interface NewsRow {
@@ -105,7 +154,7 @@ async function getNewsArticles() {
 }
 
 export default async function HomePage() {
-  const [groups, articles] = await Promise.all([buildGroupsData(), getNewsArticles()]);
+  const [{ groups, thirdPlacedTeams }, articles] = await Promise.all([buildGroupsData(), getNewsArticles()]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hasMatchesPlayed = Object.values(groups).some((g: any) =>
@@ -117,7 +166,7 @@ export default async function HomePage() {
       <section className="hero">
         <div className="container">
           <h1>Who Clinches a World Cup Play-Off?</h1>
-          <p className="subtitle">Be the first to know who qualifies for the FIFA World Cup knockout phase</p>
+          <p className="subtitle">Be the first to know who qualifies for the FIFA World Cup knockout phase. Even before it happens.</p>
           <Countdown />
           <Link href="/worldcup2026/how-to-clinch-play-off-worldcup2026" className="hero-clinch-link">
             How to Clinch a Play-Off Spot &rarr;
@@ -127,20 +176,25 @@ export default async function HomePage() {
 
       <main className="container">
         <NewsWidget articles={articles} />
-        {hasMatchesPlayed && (
-          <Link href="/worldcup2026/best-third-placed" className="best-third-banner mb-3 d-block">
-            <div className="d-flex align-items-center justify-content-between">
-              <div>
-                <strong>Best Third-Placed Teams</strong>
-                <span className="d-none d-sm-inline text-muted ms-2">
-                  &mdash; 8 of 12 third-placed teams qualify for Round of 32
-                </span>
-              </div>
-              <span className="best-third-banner-arrow">&rarr;</span>
-            </div>
-          </Link>
-        )}
         <GroupOverview groups={groups} />
+
+        {hasMatchesPlayed && (
+          <div className="mt-3">
+            <Link href="/worldcup2026/best-third-placed" style={{ textDecoration: 'none' }}>
+              <div className="group-card">
+                <div className="group-card-header">
+                  <span>Best Third-Placed Teams</span>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
+                    8 of 12 qualify for Round of 32
+                  </span>
+                </div>
+                <div className="group-card-body">
+                  <BestThirdTable teams={thirdPlacedTeams} />
+                </div>
+              </div>
+            </Link>
+          </div>
+        )}
 
         <div className="paypal-donate-section">
           <p className="paypal-donate-heading">Support us</p>

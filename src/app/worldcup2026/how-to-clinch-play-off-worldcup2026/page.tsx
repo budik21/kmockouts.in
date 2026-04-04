@@ -17,7 +17,7 @@ export default function HowToQualifyPage() {
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
-            <Link href="/worldcup2026">Groups</Link>
+            <Link href="/worldcup2026">Home</Link>
           </li>
           <li className="breadcrumb-item active" aria-current="page">
             How to Clinch a Play-Off Spot

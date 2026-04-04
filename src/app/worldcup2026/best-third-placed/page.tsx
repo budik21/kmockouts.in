@@ -4,6 +4,7 @@ import { GroupId, TeamRow, MatchRow, Team, Match, TeamStanding } from '@/lib/typ
 import { calculateStandings } from '@/engine/standings';
 import { compareThirdPlaced } from '@/engine/best-third';
 import BestThirdTable from '@/app/components/BestThirdTable';
+import ThirdPlacedMatchesGrid from '@/app/components/ThirdPlacedMatchesGrid';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -34,27 +35,52 @@ function rowToMatch(row: MatchRow): Match {
 }
 
 export default async function BestThirdPlacedPage() {
-  // Collect third-placed team from each group
-  const thirdPlaced: { groupId: GroupId; standing: TeamStanding }[] = [];
+  // Collect third-placed team from each group + their matches
+  const thirdPlaced: { groupId: GroupId; standing: TeamStanding; teamMatches: { homeShort: string; homeCode: string; awayShort: string; awayCode: string; homeGoals: number | null; awayGoals: number | null; status: string; round: number }[] }[] = [];
   let groupsWithMatches = 0;
 
   for (const gid of ALL_GROUPS) {
     const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
-    const matchRows = await query<MatchRow>(
+    const finishedRows = await query<MatchRow>(
       "SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round",
       [gid],
     );
+    const allMatchRows = await query<MatchRow>(
+      'SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off',
+      [gid],
+    );
     const teams = teamRows.map(rowToTeam);
-    const matches = matchRows.map(rowToMatch);
+    const finishedMatches = finishedRows.map(rowToMatch);
+    const allMatches = allMatchRows.map(rowToMatch);
 
-    if (matches.length > 0) {
+    if (finishedMatches.length > 0) {
       groupsWithMatches++;
     }
 
-    const standings = calculateStandings({ teams, matches });
+    const teamMap = new Map(teams.map((t) => [t.id, t]));
+    const standings = calculateStandings({ teams, matches: finishedMatches });
     const third = standings.find((s) => s.position === 3);
     if (third) {
-      thirdPlaced.push({ groupId: gid, standing: third });
+      const teamId = third.team.id;
+      const teamMatches = allMatches
+        .filter((m) => m.homeTeamId === teamId || m.awayTeamId === teamId)
+        .map((m) => {
+          const isHome = m.homeTeamId === teamId;
+          const opponentId = isHome ? m.awayTeamId : m.homeTeamId;
+          const opponent = teamMap.get(opponentId);
+          return {
+            opponentShort: opponent?.shortName ?? '?',
+            opponentCode: opponent?.countryCode ?? '',
+            isHome,
+            homeGoals: m.homeGoals,
+            awayGoals: m.awayGoals,
+            status: m.status,
+            round: m.round,
+            venue: m.venue,
+            kickOff: m.kickOff,
+          };
+        });
+      thirdPlaced.push({ groupId: gid, standing: third, teamMatches });
     }
   }
 
@@ -72,6 +98,7 @@ export default async function BestThirdPlacedPage() {
       shortName: tp.standing.team.shortName,
       countryCode: tp.standing.team.countryCode,
       isPlaceholder: tp.standing.team.isPlaceholder,
+      fifaRanking: tp.standing.team.fifaRanking,
     },
     matchesPlayed: tp.standing.matchesPlayed,
     wins: tp.standing.wins,
@@ -84,12 +111,22 @@ export default async function BestThirdPlacedPage() {
     fairPlayPoints: tp.standing.fairPlayPoints,
   }));
 
+  const matchesGridData = thirdPlaced.map((tp, i) => ({
+    rank: i + 1,
+    groupId: tp.groupId,
+    team: {
+      shortName: tp.standing.team.shortName,
+      countryCode: tp.standing.team.countryCode,
+    },
+    matches: tp.teamMatches,
+  }));
+
   return (
     <main className="container py-4">
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
-            <Link href="/worldcup2026">Groups</Link>
+            <Link href="/worldcup2026">Home</Link>
           </li>
           <li className="breadcrumb-item active" aria-current="page">
             Best Third-Placed Teams
@@ -123,6 +160,10 @@ export default async function BestThirdPlacedPage() {
             {groupsWithMatches}/12 groups have results so far.
           </p>
         </div>
+      )}
+
+      {showTable && (
+        <ThirdPlacedMatchesGrid teams={matchesGridData} />
       )}
     </main>
   );

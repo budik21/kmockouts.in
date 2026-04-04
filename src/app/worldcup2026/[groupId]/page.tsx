@@ -138,7 +138,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
             ))}
           </nav>
           <nav className="breadcrumb-nav" aria-label="Breadcrumb">
-            <Link href="/worldcup2026">Groups</Link>
+            <Link href="/worldcup2026">Home</Link>
             <span className="breadcrumb-sep">/</span>
             <span className="breadcrumb-current">Group {groupId}</span>
           </nav>

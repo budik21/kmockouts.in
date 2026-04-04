@@ -1239,6 +1239,18 @@ a { color: inherit; text-decoration: none; }
 .best-third-legend-qualify { background: var(--badge-qualified); }
 .best-third-legend-out { background: var(--badge-eliminated); }
 
+.best-third-team-link {
+  color: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+}
+.best-third-team-link:hover {
+  text-decoration: underline;
+  color: var(--wc-accent);
+}
+
 /* ============================================================
    Match List Responsive Names
    ============================================================ */

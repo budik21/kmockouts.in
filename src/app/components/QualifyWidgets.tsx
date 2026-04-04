@@ -126,10 +126,10 @@ export default function QualifyWidgets({
 
   return (
     <div className="row g-3 mb-4">
-      {/* Best-3rd infobox when team has a chance of finishing 3rd */}
-      {has3rdChance && (
+      {/* Best-3rd infobox — only shown when team is currently in 3rd place */}
+      {has3rdChance && bestThirdRank !== null && (
         <div className="col-12">
-          <div className={`best-third-infobox ${bestThirdRank !== null ? (bestThirdQualifies ? 'best-third-infobox--in' : 'best-third-infobox--out') : 'best-third-infobox--out'}`}>
+          <div className={`best-third-infobox ${bestThirdQualifies ? 'best-third-infobox--in' : 'best-third-infobox--out'}`}>
             <div className="best-third-infobox-content">
               {onlyViaThird ? (
                 <>
@@ -146,20 +146,14 @@ export default function QualifyWidgets({
                   </Link>.
                 </>
               )}
-              {bestThirdRank !== null ? (
-                <span className="best-third-infobox-rank">
-                  Currently {ordinal(bestThirdRank)} place &mdash;{' '}
-                  {bestThirdQualifies ? (
-                    <span className="best-third-infobox-status best-third-infobox-status--in">currently qualifies</span>
-                  ) : (
-                    <span className="best-third-infobox-status best-third-infobox-status--out">currently does not qualify</span>
-                  )}
-                </span>
-              ) : (
-                <span className="best-third-infobox-rank">
-                  <span className="best-third-infobox-status best-third-infobox-status--out">Currently not in the table (not 3rd in group)</span>
-                </span>
-              )}
+              <span className="best-third-infobox-rank">
+                Currently {ordinal(bestThirdRank)} place &mdash;{' '}
+                {bestThirdQualifies ? (
+                  <span className="best-third-infobox-status best-third-infobox-status--in">currently qualifies</span>
+                ) : (
+                  <span className="best-third-infobox-status best-third-infobox-status--out">currently does not qualify</span>
+                )}
+              </span>
             </div>
           </div>
         </div>
