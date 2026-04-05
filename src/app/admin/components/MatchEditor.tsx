@@ -206,6 +206,18 @@ export default function MatchEditor({
 }: {
   initialMatches: AdminMatch[];
 }) {
+  const [groupFilter, setGroupFilter] = useState<string>('ALL');
+
+  const groups = useMemo(() => {
+    const ids = Array.from(new Set(initialMatches.map((m) => m.groupId))).sort();
+    return ids;
+  }, [initialMatches]);
+
+  const filteredMatches = useMemo(
+    () => (groupFilter === 'ALL' ? initialMatches : initialMatches.filter((m) => m.groupId === groupFilter)),
+    [initialMatches, groupFilter],
+  );
+
   const [states, setStates] = useState<Record<number, MatchState>>(() => {
     const init: Record<number, MatchState> = {};
     for (const m of initialMatches) {
@@ -297,7 +309,7 @@ export default function MatchEditor({
 
   // Group matches by date
   const matchesByDate = new Map<string, AdminMatch[]>();
-  for (const m of initialMatches) {
+  for (const m of filteredMatches) {
     const date = m.kickOff.slice(0, 10);
     if (!matchesByDate.has(date)) matchesByDate.set(date, []);
     matchesByDate.get(date)!.push(m);
@@ -307,6 +319,23 @@ export default function MatchEditor({
 
   return (
     <div className="admin-match-list">
+      <div className="admin-group-filter">
+        <button
+          className={`btn btn-sm ${groupFilter === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'}`}
+          onClick={() => setGroupFilter('ALL')}
+        >
+          All
+        </button>
+        {groups.map((g) => (
+          <button
+            key={g}
+            className={`btn btn-sm ${groupFilter === g ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setGroupFilter(g)}
+          >
+            Group {g}
+          </button>
+        ))}
+      </div>
       {sortedDates.map((date) => {
         const dayMatches = matchesByDate.get(date)!;
         const dateObj = new Date(date + 'T12:00:00');
