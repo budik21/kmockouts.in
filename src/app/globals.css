@@ -2174,6 +2174,13 @@ a { color: inherit; text-decoration: none; }
 .admin-match-list {
 }
 
+.admin-group-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
 .admin-day-group {
   margin-bottom: 1.5rem;
 }
