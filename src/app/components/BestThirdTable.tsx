@@ -28,9 +28,21 @@ interface ThirdPlacedTeam {
 
 interface BestThirdTableProps {
   teams: ThirdPlacedTeam[];
+  /** Per-group qualification probability (e.g. { A: 72.5, B: 45.1, ... }). Shown only when provided. */
+  groupProbabilities?: { [groupId: string]: number };
 }
 
-export default function BestThirdTable({ teams }: BestThirdTableProps) {
+function probStyle(prob: number): { background: string; color: string } {
+  if (prob <= 0) return { background: '#a31b1b', color: '#ffffff' };
+  if (prob >= 80) return { background: '#0a5c2f', color: '#ffffff' };
+  if (prob >= 60) return { background: '#1a7a3a', color: '#ffffff' };
+  if (prob >= 40) return { background: '#2e9e4e', color: '#ffffff' };
+  if (prob >= 20) return { background: '#4db86a', color: '#1a3a1a' };
+  return { background: '#7ed69a', color: '#1a3a1a' };
+}
+
+export default function BestThirdTable({ teams, groupProbabilities }: BestThirdTableProps) {
+  const showProb = !!groupProbabilities;
   return (
     <div className="table-responsive">
       <table className="standings-table table table-sm mb-0">
@@ -48,6 +60,7 @@ export default function BestThirdTable({ teams }: BestThirdTableProps) {
             <th className="text-center">GD</th>
             <th className="text-center">Pts</th>
             <th className="text-center d-none d-sm-table-cell">FP</th>
+            {showProb && <th className="text-center">%</th>}
           </tr>
         </thead>
         <tbody>
@@ -67,7 +80,11 @@ export default function BestThirdTable({ teams }: BestThirdTableProps) {
                   <span className="standings-ranking" title="FIFA Ranking">({t.team.fifaRanking})</span>
                 )}
               </td>
-              <td className="text-center d-none d-sm-table-cell">{t.groupId}</td>
+              <td className="text-center d-none d-sm-table-cell">
+                <Link href={`/worldcup2026/group-${t.groupId.toLowerCase()}`} className="group-link" onClick={(e) => e.stopPropagation()}>
+                  {t.groupId}
+                </Link>
+              </td>
               <td className="text-center">{t.matchesPlayed}</td>
               <td className="text-center d-none d-sm-table-cell">{t.wins}</td>
               <td className="text-center d-none d-sm-table-cell">{t.draws}</td>
@@ -79,6 +96,20 @@ export default function BestThirdTable({ teams }: BestThirdTableProps) {
               </td>
               <td className="text-center fw-bold">{t.points}</td>
               <td className="text-center d-none d-sm-table-cell">{t.fairPlayPoints}</td>
+              {showProb && (
+                <td className="text-center">
+                  <span
+                    className="badge"
+                    style={{
+                      ...probStyle(groupProbabilities![t.groupId] ?? 0),
+                      minWidth: '48px',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    {(groupProbabilities![t.groupId] ?? 0).toFixed(1)}
+                  </span>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

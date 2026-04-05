@@ -149,6 +149,13 @@ export async function initializeSchema(): Promise<void> {
     -- Add metadata column if table already existed without it
     ALTER TABLE feedback ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}';
 
+    -- Best-third qualification probabilities (per-group)
+    CREATE TABLE IF NOT EXISTS best_third_cache (
+      group_id          TEXT PRIMARY KEY,
+      qual_probability  DOUBLE PRECISION NOT NULL DEFAULT 0,
+      calculated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     -- AI-generated scenario summaries cache
     CREATE TABLE IF NOT EXISTS ai_summary_cache (
       group_id      TEXT NOT NULL,

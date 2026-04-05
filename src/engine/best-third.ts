@@ -20,6 +20,8 @@ export interface GroupData {
 export interface BestThirdResult {
   /** For each group, probability that the third-placed team qualifies */
   groupProbabilities: Map<GroupId, number>;
+  /** For each team (by id), probability they finish 3rd AND qualify as best-third */
+  teamProbabilities: Map<number, number>;
 }
 
 /**
@@ -62,6 +64,9 @@ export function calculateBestThirdProbabilities(
     qualifyCount.set(g, 0);
   }
 
+  // Count how often each specific team qualifies as best-third
+  const teamQualifyCount = new Map<number, number>();
+
   for (let iter = 0; iter < iterations; iter++) {
     // For each group, simulate remaining matches and get standings
     const thirdPlaced: { groupId: GroupId; standing: TeamStanding }[] = [];
@@ -95,6 +100,9 @@ export function calculateBestThirdProbabilities(
     const qualifiers = thirdPlaced.slice(0, QUALIFY_BEST_THIRD);
     for (const q of qualifiers) {
       qualifyCount.set(q.groupId, (qualifyCount.get(q.groupId) ?? 0) + 1);
+      // Track per-team qualification
+      const teamId = q.standing.team.id;
+      teamQualifyCount.set(teamId, (teamQualifyCount.get(teamId) ?? 0) + 1);
     }
   }
 
@@ -105,5 +113,10 @@ export function calculateBestThirdProbabilities(
     groupProbabilities.set(g, Math.round((count / iterations) * 10000) / 100);
   }
 
-  return { groupProbabilities };
+  const teamProbabilities = new Map<number, number>();
+  for (const [teamId, count] of teamQualifyCount) {
+    teamProbabilities.set(teamId, Math.round((count / iterations) * 10000) / 100);
+  }
+
+  return { groupProbabilities, teamProbabilities };
 }

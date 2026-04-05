@@ -19,6 +19,10 @@ export default function Footer() {
             Canada, Mexico &amp; USA &bull; June 11 &ndash; July 19, 2026
           </p>
           <nav className="footer-links">
+            <a href="/worldcup2026/fixtures">
+              Fixtures
+            </a>
+            <span className="footer-sep">&middot;</span>
             <a href="/worldcup2026/how-to-clinch-play-off-worldcup2026">
               How to Clinch a Play-Off Spot
             </a>
