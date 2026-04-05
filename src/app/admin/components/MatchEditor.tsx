@@ -86,7 +86,7 @@ function MatchCard({
     state.status !== match.status;
 
   const kickOffTime = useMemo(() => formatKickOff(match.kickOff), [match.kickOff]);
-  const groupUrl = `/worldcup2026/${match.groupId}`;
+  const groupUrl = `/worldcup2026/group-${match.groupId.toLowerCase()}`;
   const homeTeamUrl = `/worldcup2026/${match.groupId}/team/${match.homeTeamId}`;
   const awayTeamUrl = `/worldcup2026/${match.groupId}/team/${match.awayTeamId}`;
 

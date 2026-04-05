@@ -385,6 +385,7 @@ a { color: inherit; text-decoration: none; }
   flex: 1;
   display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
 }
 .match-cards-spacer {
   min-width: 60px;
@@ -394,22 +395,34 @@ a { color: inherit; text-decoration: none; }
   flex: 1;
   display: flex;
   justify-content: flex-start;
+  gap: 0.5rem;
 }
 .match-cards {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
 }
 .match-card-badge {
   display: inline-flex;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
 }
 .match-card-count {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--wc-text-muted);
   line-height: 1;
+}
+.match-fpp-label {
+  font-size: 0.9rem;
+  color: var(--wc-text-muted);
+  white-space: nowrap;
+}
+.match-fpp-label strong {
+  font-weight: 700;
+}
+.match-fpp-text-short {
+  display: none;
 }
 
 /* ============================================================
@@ -1734,6 +1747,8 @@ a { color: inherit; text-decoration: none; }
   .match-name-full { display: none; }
   .match-name-short { display: inline; }
   .match-ranking { display: none; }
+  .match-fpp-text-full { display: none; }
+  .match-fpp-text-short { display: inline; }
 }
 
 /* ============================================================
