@@ -46,7 +46,7 @@
 
 html, body {
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -1273,6 +1273,281 @@ a { color: inherit; text-decoration: none; }
 .best-third-team-link:hover {
   text-decoration: underline;
   color: var(--wc-accent);
+}
+
+/* Best-third qualification outlook accordion */
+.b3-accordion {
+  border-top: 1px solid var(--wc-border);
+}
+
+.b3-accordion-item {
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.b3-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--wc-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.b3-accordion-header:hover {
+  background: var(--wc-surface);
+}
+
+.b3-accordion-name {
+  white-space: nowrap;
+}
+
+.b3-accordion-group {
+  color: var(--wc-text-muted);
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.b3-accordion-chevron {
+  margin-left: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--wc-text-muted);
+  transition: transform 0.2s;
+}
+
+.b3-chevron-open {
+  transform: rotate(180deg);
+}
+
+.b3-accordion-body {
+  padding: 0.4rem 0.75rem 0.65rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  border-top: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+}
+
+.b3-accordion-body p {
+  margin: 0 0 0.3rem 0;
+}
+
+.b3-accordion-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   Fixtures Calendar
+   ============================================================ */
+
+/* Sticky date navigation bar */
+.fixtures-date-nav {
+  position: sticky;
+  top: 56px; /* below navbar */
+  z-index: 100;
+  background: var(--wc-bg);
+  border-bottom: 1px solid var(--wc-border);
+  padding: 0.5rem 0;
+  margin-bottom: 1.5rem;
+}
+
+.fixtures-date-nav-scroll {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0 0.25rem;
+}
+
+.fixtures-date-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.fixtures-date-pill {
+  flex-shrink: 0;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  padding: 0.3rem 0.7rem;
+  border-radius: 2rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.fixtures-date-pill:hover {
+  border-color: var(--wc-primary);
+  color: var(--wc-primary);
+}
+
+.fixtures-date-pill.active {
+  background: var(--wc-primary);
+  color: white;
+  border-color: var(--wc-primary);
+}
+
+/* Day sections */
+.fixtures-day-section {
+  margin-bottom: 2rem;
+  scroll-margin-top: 110px; /* navbar ~56px + date-nav ~43px + 11px breathing room */
+}
+
+.fixtures-day-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--wc-text);
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--wc-primary);
+  margin-bottom: 0.75rem;
+}
+
+.fixtures-day-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Individual fixture card */
+.fixture-card {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: box-shadow 0.15s;
+}
+
+.fixture-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.fixture-live {
+  border-color: #dc3545;
+  border-width: 2px;
+}
+
+.fixture-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+  color: var(--wc-text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.group-link {
+  color: var(--wc-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.group-link:hover {
+  text-decoration: underline;
+  color: var(--wc-accent);
+}
+
+.fixture-group-link {
+  font-weight: 600;
+  color: var(--wc-primary);
+  opacity: 0.8;
+  text-decoration: none;
+}
+
+.fixture-group-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.fixture-venue {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 60%;
+  text-align: right;
+}
+
+.fixture-card-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Team columns */
+.fixture-team {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.fixture-team-home {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.fixture-team-away {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.fixture-team-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fixture-team-short {
+  display: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Score / time centre box */
+.fixture-score-box {
+  flex-shrink: 0;
+  min-width: 56px;
+  text-align: center;
+}
+
+.fixture-score {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+}
+
+.fixture-score-live {
+  color: #dc3545;
+  animation: fixture-pulse 1.5s infinite;
+}
+
+@keyframes fixture-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.fixture-time {
+  font-size: 0.85rem;
+  color: var(--wc-text-muted);
+  font-weight: 500;
+}
+
+/* Responsive: on small screens, show short names */
+@media (max-width: 576px) {
+  .fixture-team-name { display: none; }
+  .fixture-team-short { display: inline; }
+  .fixture-venue { display: none; }
+  .fixture-date-pill { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
+  .fixture-card { padding: 0.4rem 0.5rem; }
+  .fixture-score-box { min-width: 44px; }
 }
 
 /* ============================================================

@@ -7,7 +7,7 @@
 import { query } from './db';
 import { GroupId } from './types';
 import { ALL_GROUPS } from './constants';
-import { calculateGroupProbabilities, cacheProbabilities } from '../engine/probability';
+import { calculateGroupProbabilities, calculateAllProbabilities, cacheProbabilities, cacheBestThirdProbabilities } from '../engine/probability';
 
 export interface CachedTeamProb {
   teamId: number;
@@ -105,13 +105,19 @@ export async function getAllCachedProbsOrCompute(): Promise<Map<string, Map<numb
 
 /**
  * Recalculate and cache probabilities for all groups.
+ * Uses full cross-group calculation (includes best-third Monte Carlo).
  * Called after match results change (scraper, scenario apply, etc.)
  */
 export async function recalculateAllProbabilities(): Promise<void> {
+  const { results, bestThird } = await calculateAllProbabilities();
+
   for (const groupId of ALL_GROUPS) {
-    const summaries = await calculateGroupProbabilities(groupId as GroupId);
+    const summaries = results.get(groupId)!;
     await cacheProbabilities(groupId as GroupId, summaries);
   }
+
+  // Cache per-group best-third probabilities for the best-third page
+  await cacheBestThirdProbabilities(bestThird.groupProbabilities);
 }
 
 /**

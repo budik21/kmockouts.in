@@ -54,7 +54,8 @@ FORMATTING:
   <div class="scenario-paths"><div class="scenario-path"><span class="scenario-path-num">1</span><span class="scenario-path-text">Path here (1-2 sentences max)</span></div><div class="scenario-path"><span class="scenario-path-num">2</span><span class="scenario-path-text">Path here (1-2 sentences max)</span></div></div>
 - For a single path: <div class="scenario-path single">Description here.</div>
 - Position labels: 1st = group winner, 2nd = runner-up (both auto-qualify), 3rd = may qualify as best third-placed, 4th = eliminated
-- IMPORTANT: Cover all key scenarios but be brief — do not repeat yourself`;
+- IMPORTANT: Cover all key scenarios but be brief — do not repeat yourself
+- IMPORTANT: This is a tournament — all matches are played at neutral venues. Never say "home" or "away". Just say "plays against" or "faces".`;
 
 interface AiSummaryInput {
   teamId: number;

@@ -95,6 +95,13 @@ export default function Navbar() {
               🏆 Groups
             </a>
             <a
+              href="/worldcup2026/fixtures"
+              className="nav-link offcanvas-nav-link"
+              onClick={navigateAndClose('/worldcup2026/fixtures')}
+            >
+              📅 Fixtures
+            </a>
+            <a
               href="/worldcup2026/best-third-placed"
               className="nav-link offcanvas-nav-link"
               onClick={navigateAndClose('/worldcup2026/best-third-placed')}

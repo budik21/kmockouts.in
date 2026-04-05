@@ -7,7 +7,7 @@ import { query, getPool } from '../lib/db';
 import { ALL_GROUPS } from '../lib/constants';
 import { GroupId, Team, Match, TeamRow, MatchRow } from '../lib/types';
 import { enumerateGroupScenarios, TeamScenarioSummary } from './scenarios';
-import { calculateBestThirdProbabilities, GroupData } from './best-third';
+import { calculateBestThirdProbabilities, GroupData, BestThirdResult } from './best-third';
 
 // ============================================================
 // Data access helpers
@@ -79,7 +79,7 @@ export async function calculateGroupProbabilities(groupId: GroupId): Promise<Tea
 /**
  * Calculate probabilities for ALL groups and include best-third qualification.
  */
-export async function calculateAllProbabilities(): Promise<Map<GroupId, TeamScenarioSummary[]>> {
+export async function calculateAllProbabilities(): Promise<{ results: Map<GroupId, TeamScenarioSummary[]>; bestThird: BestThirdResult }> {
   const allGroupData: GroupData[] = [];
   const allResults = new Map<GroupId, TeamScenarioSummary[]>();
 
@@ -98,17 +98,61 @@ export async function calculateAllProbabilities(): Promise<Map<GroupId, TeamScen
   const bestThird = calculateBestThirdProbabilities(allGroupData);
 
   // Step 3: Merge best-third probability into team summaries
+  // Use per-team probability (more accurate than group-level × position probability)
   for (const groupId of ALL_GROUPS) {
     const summaries = allResults.get(groupId)!;
-    const thirdQualProb = bestThird.groupProbabilities.get(groupId) ?? 0;
 
     for (const summary of summaries) {
-      (summary as TeamScenarioSummary & { probThirdQualified?: number }).probThirdQualified =
-        Math.round(summary.positionProbabilities[3] * thirdQualProb) / 100;
+      const teamProb = bestThird.teamProbabilities.get(summary.teamId) ?? 0;
+      (summary as TeamScenarioSummary & { probThirdQualified?: number }).probThirdQualified = teamProb;
     }
   }
 
-  return allResults;
+  return { results: allResults, bestThird };
+}
+
+/**
+ * Save per-group best-third qualification probabilities.
+ */
+export async function cacheBestThirdProbabilities(
+  groupProbabilities: Map<GroupId, number>
+): Promise<void> {
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const [groupId, prob] of groupProbabilities) {
+      await client.query(
+        `INSERT INTO best_third_cache (group_id, qual_probability, calculated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT(group_id) DO UPDATE SET
+           qual_probability = EXCLUDED.qual_probability,
+           calculated_at = EXCLUDED.calculated_at`,
+        [groupId, prob],
+      );
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Read cached best-third probabilities for all groups.
+ */
+export async function getCachedBestThirdProbabilities(): Promise<Map<GroupId, number> | null> {
+  const rows = await query<{ group_id: string; qual_probability: number }>(
+    'SELECT group_id, qual_probability FROM best_third_cache',
+  );
+  if (rows.length === 0) return null;
+  const map = new Map<GroupId, number>();
+  for (const r of rows) {
+    map.set(r.group_id as GroupId, r.qual_probability);
+  }
+  return map;
 }
 
 /**

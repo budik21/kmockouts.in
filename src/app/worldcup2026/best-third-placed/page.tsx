@@ -3,8 +3,11 @@ import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match, TeamStanding } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
 import { compareThirdPlaced } from '@/engine/best-third';
+import { getCachedBestThirdProbabilities } from '@/engine/probability';
 import BestThirdTable from '@/app/components/BestThirdTable';
+import BestThirdSummaries from '@/app/components/BestThirdSummaries';
 import ThirdPlacedMatchesGrid from '@/app/components/ThirdPlacedMatchesGrid';
+import { generateBestThirdSummaries, BestThirdTeamContext } from '@/engine/best-third-summary-ai';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +41,7 @@ export default async function BestThirdPlacedPage() {
   // Collect third-placed team from each group + their matches
   const thirdPlaced: { groupId: GroupId; standing: TeamStanding; teamMatches: { opponentName: string; opponentShort: string; opponentCode: string; isHome: boolean; homeGoals: number | null; awayGoals: number | null; status: string; round: number; venue: string; kickOff: string }[] }[] = [];
   let groupsWithMatches = 0;
+  let allTeamsPlayedTwo = true; // Track if every team across all groups has ≥2 matches
 
   for (const gid of ALL_GROUPS) {
     const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
@@ -55,6 +59,17 @@ export default async function BestThirdPlacedPage() {
 
     if (finishedMatches.length > 0) {
       groupsWithMatches++;
+    }
+
+    // Check if every team in this group has played at least 2 matches
+    if (allTeamsPlayedTwo) {
+      for (const t of teams) {
+        const teamMatchCount = finishedMatches.filter(m => m.homeTeamId === t.id || m.awayTeamId === t.id).length;
+        if (teamMatchCount < 2) {
+          allTeamsPlayedTwo = false;
+          break;
+        }
+      }
     }
 
     const teamMap = new Map(teams.map((t) => [t.id, t]));
@@ -90,6 +105,16 @@ export default async function BestThirdPlacedPage() {
 
   const showTable = groupsWithMatches >= 12;
 
+  // Load per-group best-third probabilities (only shown when all teams have ≥2 matches)
+  let bestThirdProbs: Map<string, number> | null = null;
+  if (allTeamsPlayedTwo) {
+    try {
+      bestThirdProbs = await getCachedBestThirdProbabilities();
+    } catch {
+      // Table might not exist yet
+    }
+  }
+
   const tableData = thirdPlaced.map((tp, i) => ({
     rank: i + 1,
     groupId: tp.groupId,
@@ -123,6 +148,46 @@ export default async function BestThirdPlacedPage() {
     matches: tp.teamMatches,
   }));
 
+  // Generate AI summaries for best-third teams (only when probabilities are available)
+  let summariesData: { teamId: number; teamName: string; teamShort: string; countryCode: string; groupId: string; qualProbability: number; summaryHtml: string }[] = [];
+  if (showTable && bestThirdProbs && allTeamsPlayedTwo) {
+    const aiTeams: BestThirdTeamContext[] = thirdPlaced.map((tp, i) => {
+      const remaining = tp.teamMatches.find(m => m.status !== 'FINISHED');
+      return {
+        teamName: tp.standing.team.name,
+        teamId: tp.standing.team.id,
+        groupId: tp.groupId,
+        currentRank: i + 1,
+        points: tp.standing.points,
+        goalDifference: tp.standing.goalDifference,
+        goalsFor: tp.standing.goalsFor,
+        qualProbability: bestThirdProbs.get(tp.groupId) ?? 0,
+        remainingMatch: remaining ? { opponent: remaining.opponentName } : null,
+      };
+    });
+
+    try {
+      const aiSummaries = await generateBestThirdSummaries(aiTeams);
+      summariesData = thirdPlaced
+        .map((tp, i) => {
+          const html = aiSummaries.get(tp.standing.team.id);
+          if (!html) return null;
+          return {
+            teamId: tp.standing.team.id,
+            teamName: tp.standing.team.name,
+            teamShort: tp.standing.team.shortName,
+            countryCode: tp.standing.team.countryCode,
+            groupId: tp.groupId,
+            qualProbability: bestThirdProbs!.get(tp.groupId) ?? 0,
+            summaryHtml: html,
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
+    } catch (err) {
+      console.error('Best-third AI summaries failed:', err);
+    }
+  }
+
   return (
     <main className="container py-4">
       <nav aria-label="breadcrumb" className="mb-3">
@@ -150,7 +215,10 @@ export default async function BestThirdPlacedPage() {
             </span>
           </div>
           <div className="group-card-body">
-            <BestThirdTable teams={tableData} />
+            <BestThirdTable
+              teams={tableData}
+              groupProbabilities={bestThirdProbs ? Object.fromEntries(bestThirdProbs) : undefined}
+            />
           </div>
         </div>
       ) : (
@@ -162,6 +230,10 @@ export default async function BestThirdPlacedPage() {
             {groupsWithMatches}/12 groups have results so far.
           </p>
         </div>
+      )}
+
+      {summariesData.length > 0 && (
+        <BestThirdSummaries teams={summariesData} />
       )}
 
       {showTable && (
