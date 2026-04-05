@@ -19,14 +19,14 @@ Your job: given a team's computed qualification scenarios, write a clear summary
 STRUCTURE — VERY IMPORTANT:
 1. FIRST SENTENCE: Start with the shortest possible verdict. One sentence that tells the reader what must happen. Examples:
    - "A win against Japan is enough."
-   - "Mexico needs to beat South Korea and hope Czech Republic does not win."
+   - "Mexico needs to beat South Korea and hope Czech Republic draws or loses."
    - "Only a very specific combination of results can save them."
    - "Already safe — any result will do."
 2. SECOND SENTENCE: Probability context — is this likely or unlikely? Compare to other positions. One sentence only.
-3. THEN (only if needed): A short explanation of the key edge condition or alternative path.
+3. THEN: Cover ALL remaining outcome combinations. Every distinct path in the data must be mentioned — do not skip any, even unlikely ones.
 
 LENGTH — VERY IMPORTANT:
-- The TOTAL output must be 3–6 sentences. Never more than 6 sentences.
+- The TOTAL output must be 3–8 sentences. Never more than 8 sentences.
 - Break the text into short paragraphs. Each paragraph has at most 2 sentences.
 - Wrap each paragraph in <p> tags. Do NOT use <br> or <br><br> for paragraph breaks.
 - Do NOT write long blocks of text. Keep it short and scannable.
@@ -37,12 +37,16 @@ LANGUAGE & STYLE:
 - Be direct. Like explaining to a friend.
 - Do NOT use labels like "Probability assessment:", "What X needs:", "In short:", "Bottom line:" — just write the content directly
 - No filler words
+- NEVER use negations like "does not lose", "does not beat", "fails to win". Instead use positive phrasing: "wins or draws", "draws or loses". Negations are harder to parse for non-native speakers. Always prefer the simplest, most direct phrasing.
 
-CONTENT:
-- Focus on EDGE CONDITIONS: what is the minimum the team needs? Or the maximum that is not enough?
+CONTENT — VERY IMPORTANT:
+- You are given ALL distinct outcome combinations that lead to this position. Do not omit any path, even if it requires a large goal difference or seems unlikely.
+- When a combination requires a specific minimum goal difference (shown as "by X+ goals"), always state this threshold explicitly. These are the most interesting edge cases for the reader.
+- SIMPLIFY AGGRESSIVELY: If all combinations share the same condition for the analyzed team (e.g. the team loses in all of them), just state that one condition. Do NOT list what happens in the other match separately for each variant — say "regardless of the other result" or omit the other match entirely. Only mention the other match when its result actually matters (i.e. some outcomes of the other match lead to this position and others do not).
+- Never list multiple numbered paths that differ only in an irrelevant match result. Merge them into one statement.
 - If a team qualifies no matter what, say so
 - If a team is eliminated no matter what, say so
-- When other matches matter, name them (e.g. "…if Germany do not beat Japan")
+- When other matches matter, name them (e.g. "…if Germany draws or loses to Japan")
 - Mention probability in one sentence — is this the most likely outcome, or a long shot?
 
 FORMATTING:
@@ -84,10 +88,10 @@ async function generateAiSummary(input: AiSummaryInput): Promise<string> {
     .map((m, i) => `  Match ${i}: ${m.homeTeam} vs ${m.awayTeam}${m.isTeamMatch ? ' (team\'s own match)' : ''}`)
     .join('\n');
 
-  // Decode patterns into human-readable form for the prompt
-  const patternExplanation = input.outcomePatterns.length <= 200
-    ? input.outcomePatterns.map(p => decodePattern(p, input.remainingMatches)).join('\n')
-    : summarizePatterns(input.outcomePatterns, input.remainingMatches);
+  // Reduce patterns to unique W/D/L combinations with min GD thresholds
+  const { text: patternExplanation, reducedCount } = reduceAndDecodePatterns(
+    input.outcomePatterns, input.remainingMatches,
+  );
 
   const standingsContext = input.currentStandings
     .map(s => `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}`)
@@ -111,9 +115,9 @@ ${standingsContext}
 Remaining matches in the group:
 ${matchList}
 
-There are ${input.outcomePatterns.length} distinct result combinations (with goal differences) that lead to ${input.teamName} finishing ${input.position}${posLabel(input.position)}.
+There are ${reducedCount} distinct outcome combinations (reduced from ${input.outcomePatterns.length} goal-difference variants) that lead to ${input.teamName} finishing ${input.position}${posLabel(input.position)}.
 
-${input.outcomePatterns.length <= 200 ? 'All combinations decoded:' : 'Pattern summary (too many to list individually):'}
+All outcome combinations (with minimum required goal differences where relevant):
 ${patternExplanation}
 
 Write the scenario summary for this position. Start with a probability assessment — is this likely, possible, or a long shot? How does it compare to the other positions?`;
@@ -140,64 +144,52 @@ function posLabel(pos: number): string {
 }
 
 /**
- * Decode a pattern like "H3|D0|A2" into readable text using match info.
+ * Reduce outcome patterns to unique W/D/L combinations with min goal-difference
+ * thresholds, producing a concise prompt instead of hundreds of GD variants.
+ *
+ * Patterns use team-specific format: own match → outcome+GD (e.g. "H2"),
+ * other matches → outcome only ("H", "D", "A").
  */
-function decodePattern(
-  pattern: string,
-  matches: { homeTeam: string; awayTeam: string; isTeamMatch: boolean }[],
-): string {
-  const parts = pattern.split('|');
-  const decoded = parts.map((part, i) => {
-    const outcome = part.charAt(0);
-    const gd = parseInt(part.slice(1), 10);
-    const m = matches[i];
-    if (!m) return part;
-
-    if (outcome === 'H') return `${m.homeTeam} beats ${m.awayTeam} by ${gd}`;
-    if (outcome === 'A') return `${m.awayTeam} beats ${m.homeTeam} by ${gd}`;
-    return `${m.homeTeam} draws with ${m.awayTeam}`;
-  });
-  return '  ' + decoded.join(', ');
-}
-
-/**
- * When there are too many patterns (>200), create a statistical summary
- * so the AI can still reason about them without exceeding context.
- */
-function summarizePatterns(
+function reduceAndDecodePatterns(
   patterns: string[],
   matches: { homeTeam: string; awayTeam: string; isTeamMatch: boolean }[],
-): string {
-  const matchCount = matches.length;
-  const lines: string[] = [];
+): { text: string; reducedCount: number } {
+  // Group by outcome-only key (strip GD numbers)
+  const groups = new Map<string, { minGDs: number[]; count: number }>();
 
-  for (let i = 0; i < matchCount; i++) {
-    const m = matches[i];
-    const outcomes = { H: 0, D: 0, A: 0 };
-    const minGd: Record<string, number> = { H: Infinity, D: 0, A: Infinity };
-    const maxGd: Record<string, number> = { H: 0, D: 0, A: 0 };
+  for (const pattern of patterns) {
+    const parts = pattern.split('|');
+    const outcomeKey = parts.map(p => p.charAt(0)).join('|');
+    const gds = parts.map(p => parseInt(p.slice(1), 10) || 0);
 
-    for (const p of patterns) {
-      const parts = p.split('|');
-      const outcome = parts[i].charAt(0) as 'H' | 'D' | 'A';
-      const gd = parseInt(parts[i].slice(1), 10);
-      outcomes[outcome]++;
-      if (gd < minGd[outcome]) minGd[outcome] = gd;
-      if (gd > maxGd[outcome]) maxGd[outcome] = gd;
-    }
-
-    lines.push(`  Match ${i}: ${m.homeTeam} vs ${m.awayTeam}${m.isTeamMatch ? ' (own)' : ''}`);
-    for (const o of ['H', 'D', 'A'] as const) {
-      if (outcomes[o] > 0) {
-        const label = o === 'H' ? `${m.homeTeam} wins` : o === 'A' ? `${m.awayTeam} wins` : 'Draw';
-        const pct = ((outcomes[o] / patterns.length) * 100).toFixed(0);
-        const gdRange = o === 'D' ? '' : ` (GD ${minGd[o]}-${maxGd[o]})`;
-        lines.push(`    ${label}: ${outcomes[o]}/${patterns.length} patterns (${pct}%)${gdRange}`);
+    if (!groups.has(outcomeKey)) {
+      groups.set(outcomeKey, { minGDs: [...gds], count: 1 });
+    } else {
+      const g = groups.get(outcomeKey)!;
+      g.count++;
+      for (let i = 0; i < gds.length; i++) {
+        if (gds[i] < g.minGDs[i]) g.minGDs[i] = gds[i];
       }
     }
   }
 
-  return lines.join('\n');
+  const lines: string[] = [];
+  for (const [outcomeKey, { minGDs, count }] of groups) {
+    const outcomes = outcomeKey.split('|');
+    const decoded = outcomes.map((o, i) => {
+      const m = matches[i];
+      if (!m) return o;
+      const gd = minGDs[i];
+      const gdNote = m.isTeamMatch && o !== 'D' && gd > 1 ? ` by ${gd}+ goals` : '';
+      if (o === 'H') return `${m.homeTeam} beats ${m.awayTeam}${gdNote}`;
+      if (o === 'A') return `${m.awayTeam} beats ${m.homeTeam}${gdNote}`;
+      return `${m.homeTeam} draws with ${m.awayTeam}`;
+    });
+    const variants = count > 1 ? ` [${count} GD variants]` : '';
+    lines.push(`  ${decoded.join(', ')}${variants}`);
+  }
+
+  return { text: lines.join('\n'), reducedCount: groups.size };
 }
 
 // ============================================================

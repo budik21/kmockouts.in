@@ -64,7 +64,7 @@ export function generateScenarioSummaries(
 function parsePattern(pattern: string): MatchPatternEntry[] {
   return pattern.split('|').map(part => {
     const rawOutcome = part.charAt(0) as RawOutcome;
-    const goalDiff = parseInt(part.slice(1), 10);
+    const goalDiff = parseInt(part.slice(1), 10) || 0;
     return { rawOutcome, goalDiff };
   });
 }

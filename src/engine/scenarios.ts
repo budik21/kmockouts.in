@@ -23,7 +23,7 @@ export interface TeamScenarioSummary {
   positionProbabilities: { [position: number]: number };
   /** Deduplicated edge scenarios grouped by position */
   edgeScenariosByPosition: { [position: number]: MatchCombination[] };
-  /** All distinct W/D/L outcome patterns per position (e.g. "H|D", "A|H") — complete, not capped */
+  /** Team-specific outcome patterns per position: own match → outcome+GD (e.g. "H2"), other → outcome only ("H"). Complete, not capped. */
   outcomePatternsByPosition: { [position: number]: string[] };
 }
 
@@ -128,35 +128,31 @@ function fullEnumerationScenarios(
     // Build the match combination description
     const matchCombo = buildMatchCombination(remainingMatches, indices);
 
-    // Build pattern key with goal difference (e.g. "H3|D0|A2")
-    const patternKey = matchCombo.matchResults.map(r =>
-      `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
-    ).join('|');
-
     // Record for each team
     for (const s of standings) {
       const data = teamData.get(s.team.id)!;
       data.positionCounts[s.position]++;
 
-      // Track outcome pattern with goal diff (complete, uncapped)
-      data.patternSets[s.position].add(patternKey);
-
-      // Team-specific dedup key:
-      //   • team's own match  → outcome + GD (matters for tiebreakers)
-      //   • other matches     → outcome only (H/D/A); different margins are irrelevant
-      const teamDedupKey = matchCombo.matchResults.map((r, i) => {
+      // Team-specific pattern key:
+      //   • team's own match  → outcome + GD (needed for min-GD extraction in summaries)
+      //   • other matches     → outcome only (GD variations are irrelevant)
+      const teamPatternKey = matchCombo.matchResults.map((r, i) => {
         const m = remainingMatches[i];
         const isOwn = m.homeTeamId === s.team.id || m.awayTeamId === s.team.id;
         return isOwn
           ? `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
           : r.shortResult;
       }).join('|');
+      data.patternSets[s.position].add(teamPatternKey);
+
+      // Edge scenario dedup: outcome-only for ALL matches.
+      // Different goal margins for the same W/D/L combination are not
+      // structurally different — the summary text handles GD thresholds.
+      const dedupKey = matchCombo.matchResults.map(r => r.shortResult).join('|');
 
       const edgeSet = data.edgeSets[s.position];
-      if (edgeSet.size < MAX_EDGES && !edgeSet.has(teamDedupKey)) {
-        edgeSet.add(teamDedupKey);
-        // Normalise other-match scores to minimal representation so the card
-        // doesn't show arbitrary margins for matches the team isn't in.
+      if (edgeSet.size < MAX_EDGES && !edgeSet.has(dedupKey)) {
+        edgeSet.add(dedupKey);
         data.edgeScenarios[s.position].push(
           normalizeOtherMatchScores(matchCombo, remainingMatches, s.team.id),
         );
@@ -227,27 +223,26 @@ function monteCarloGroupScenarios(
     const standings = calculateStandings({ teams, matches: allMatches });
     const matchCombo = buildMatchCombination(remainingMatches, indices);
 
-    const patternKey = matchCombo.matchResults.map(r =>
-      `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
-    ).join('|');
-
     for (const s of standings) {
       const data = teamData.get(s.team.id)!;
       data.positionCounts[s.position]++;
 
-      data.patternSets[s.position].add(patternKey);
-
-      const teamDedupKey = matchCombo.matchResults.map((r, i) => {
+      // Team-specific pattern: own match → outcome+GD, other → outcome only
+      const teamPatternKey = matchCombo.matchResults.map((r, i) => {
         const m = remainingMatches[i];
         const isOwn = m.homeTeamId === s.team.id || m.awayTeamId === s.team.id;
         return isOwn
           ? `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
           : r.shortResult;
       }).join('|');
+      data.patternSets[s.position].add(teamPatternKey);
+
+      // Edge dedup: outcome-only for all matches
+      const dedupKey = matchCombo.matchResults.map(r => r.shortResult).join('|');
 
       const edgeSet = data.edgeSets[s.position];
-      if (edgeSet.size < MAX_EDGES && !edgeSet.has(teamDedupKey)) {
-        edgeSet.add(teamDedupKey);
+      if (edgeSet.size < MAX_EDGES && !edgeSet.has(dedupKey)) {
+        edgeSet.add(dedupKey);
         data.edgeScenarios[s.position].push(
           normalizeOtherMatchScores(matchCombo, remainingMatches, s.team.id),
         );
