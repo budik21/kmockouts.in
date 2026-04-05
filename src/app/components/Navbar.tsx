@@ -4,7 +4,6 @@ import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
-import ScenarioSwitcher from './ScenarioSwitcher';
 import FeedbackWidget from './FeedbackWidget';
 import TeamSearch from './TeamSearch';
 
@@ -51,7 +50,6 @@ export default function Navbar() {
           </Link>
           <div className="d-flex align-items-center gap-2">
             <TeamSearch />
-            <ScenarioSwitcher />
             <button
               className="navbar-hamburger"
               type="button"
@@ -107,6 +105,13 @@ export default function Navbar() {
               onClick={navigateAndClose('/worldcup2026/best-third-placed')}
             >
               🥉 Best 3rd
+            </a>
+            <a
+              href="/worldcup2026/scenarios"
+              className="nav-link offcanvas-nav-link"
+              onClick={navigateAndClose('/worldcup2026/scenarios')}
+            >
+              🧪 Scenarios
             </a>
             <a
               href="/worldcup2026/fifa-ranking"

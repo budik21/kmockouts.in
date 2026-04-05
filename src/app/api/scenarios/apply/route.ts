@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { applyScenario } from '@/lib/apply-scenario';
 import { recalculateAllProbabilities } from '@/lib/probability-cache';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,10 @@ export async function POST(request: NextRequest) {
     const scenarioId: number = body.scenarioId;
 
     const matchesApplied = await applyScenario(scenarioId);
+
+    // Invalidate AI summary cache so commentary regenerates fresh for the new data
+    await query('DELETE FROM ai_summary_cache');
+
     await recalculateAllProbabilities();
 
     if (scenarioId === 0) {

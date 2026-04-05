@@ -1275,6 +1275,179 @@ a { color: inherit; text-decoration: none; }
   color: var(--wc-accent);
 }
 
+/* ============================================================
+   Scenario Picker (pricing-plan style cards)
+   ============================================================ */
+
+.scenario-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  align-items: stretch; /* all cards same height */
+}
+
+@media (max-width: 900px) {
+  .scenario-cards {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
+}
+
+.scenario-card {
+  position: relative;
+  background: var(--wc-surface);
+  border: 2px solid var(--wc-border);
+  border-radius: 0.875rem;
+  padding: 1.5rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  overflow: hidden; /* keeps overlay inside rounded corners */
+}
+
+.scenario-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.scenario-card-active {
+  border-color: var(--wc-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wc-primary) 18%, transparent);
+}
+
+/* featured: badge only, no coloured border (avoids "looks selected" confusion) */
+.scenario-card-featured {
+  /* intentionally no border-color override */
+}
+
+/* Loading overlay — covers the card while applying */
+.scenario-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--wc-bg) 80%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: inherit;
+}
+
+.scenario-card-overlay .spinner-border {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-width: 3px;
+  color: var(--wc-primary);
+}
+
+.scenario-featured-badge {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--wc-accent);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 0.22rem 0.85rem;
+  border-radius: 2rem;
+  white-space: nowrap;
+}
+
+.scenario-card-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wc-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.scenario-card-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+  margin-bottom: 0.6rem;
+}
+
+.scenario-card-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 0.2rem;
+  color: var(--wc-text);
+}
+
+.scenario-card-tagline {
+  font-size: 0.95rem;
+  color: var(--wc-primary);
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.scenario-card-desc {
+  font-size: 0.82rem;
+  color: var(--wc-text-muted);
+  line-height: 1.5;
+  margin: 0 0 1rem;
+  flex: 1;
+}
+
+.scenario-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  border-top: 1px solid var(--wc-border);
+  padding-top: 0.75rem;
+}
+
+.scenario-check {
+  color: var(--wc-primary);
+  font-weight: 700;
+  margin-right: 0.35rem;
+}
+
+.scenario-apply-btn {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: 0.5rem;
+  border: 2px solid var(--wc-primary);
+  background: var(--wc-primary); /* filled by default */
+  color: white;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: filter 0.15s, opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: auto; /* push to bottom of flex card */
+}
+
+.scenario-apply-btn:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+/* "Currently Active" state — muted, not clickable */
+.scenario-apply-btn-selected {
+  background: var(--wc-surface);
+  border-color: var(--wc-border);
+  color: var(--wc-text-muted);
+  cursor: default;
+}
+
+.scenario-apply-btn-selected:hover {
+  filter: none;
+}
+
+.scenario-apply-btn:disabled:not(.scenario-apply-btn-selected) {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* Best-third qualification outlook accordion */
 .b3-accordion {
   border-top: 1px solid var(--wc-border);
