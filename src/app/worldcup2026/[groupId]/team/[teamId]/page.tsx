@@ -87,6 +87,9 @@ export default async function TeamDetailPage({ params }: PageProps) {
 
   const teamMap = new Map(teams.map((t) => [t.id, { id: t.id, name: t.name, shortName: t.shortName, countryCode: t.countryCode, fifaRanking: t.fifaRanking }]));
 
+  // Has this team played at least one match?
+  const teamHasPlayed = played.some((m) => m.homeTeamId === team.id || m.awayTeamId === team.id);
+
   // Calculate standings
   const standings = calculateStandings({ teams, matches: played });
   const standingsForDisplay = standings.map((s) => ({
@@ -269,20 +272,22 @@ export default async function TeamDetailPage({ params }: PageProps) {
         </nav>
       </div>
 
-      {/* Qualify/Eliminate widgets */}
-      <QualifyWidgets
-        qualifyProb={qualifyProb}
-        eliminateProb={eliminateProb}
-        prob1st={probs[1] ?? 0}
-        prob2nd={probs[2] ?? 0}
-        prob3rd={probs[3] ?? 0}
-        prob4th={probs[4] ?? 0}
-        totalScenarios={teamSummary.totalScenarios}
-        matchesRemaining={remaining.length}
-        teamName={team.name}
-        bestThirdRank={bestThirdRank}
-        bestThirdQualifies={bestThirdQualifies}
-      />
+      {/* Qualify/Eliminate widgets — only after the team has played */}
+      {teamHasPlayed && (
+        <QualifyWidgets
+          qualifyProb={qualifyProb}
+          eliminateProb={eliminateProb}
+          prob1st={probs[1] ?? 0}
+          prob2nd={probs[2] ?? 0}
+          prob3rd={probs[3] ?? 0}
+          prob4th={probs[4] ?? 0}
+          totalScenarios={teamSummary.totalScenarios}
+          matchesRemaining={remaining.length}
+          teamName={team.name}
+          bestThirdRank={bestThirdRank}
+          bestThirdQualifies={bestThirdQualifies}
+        />
+      )}
 
       {/* Current standings */}
       <div className="group-card mb-4">
@@ -294,8 +299,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Scenarios accordion */}
-      {remaining.length > 0 && (
+      {/* Scenarios accordion — only after the team has played */}
+      {remaining.length > 0 && teamHasPlayed && (
         <ScenariosAccordion
           edgeScenariosByPosition={enrichedEdges}
           probabilities={probs}

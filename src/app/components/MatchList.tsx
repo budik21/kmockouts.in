@@ -2,6 +2,12 @@
 
 import TeamFlag from './TeamFlag';
 import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from './CardIcons';
+import {
+  FAIR_PLAY_YELLOW_CARD,
+  FAIR_PLAY_YELLOW_THEN_RED,
+  FAIR_PLAY_RED_CARD_DIRECT,
+  FAIR_PLAY_YELLOW_AND_DIRECT_RED,
+} from '@/lib/constants';
 
 interface MatchData {
   id: number;
@@ -33,37 +39,62 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-/** Renders card counts with icons */
+/** Calculate fair-play deduction points for a set of cards */
+function fairPlayDeduction(yc: number, yc2: number, rc: number, ycRc: number): number {
+  return (
+    yc * FAIR_PLAY_YELLOW_CARD +
+    yc2 * FAIR_PLAY_YELLOW_THEN_RED +
+    rc * FAIR_PLAY_RED_CARD_DIRECT +
+    ycRc * FAIR_PLAY_YELLOW_AND_DIRECT_RED
+  );
+}
+
+/** Renders card counts with icons and fair-play deduction */
 function CardBadges({ yc, yc2, rc, ycRc }: { yc: number; yc2: number; rc: number; ycRc: number }) {
   const hasCards = yc > 0 || yc2 > 0 || rc > 0 || ycRc > 0;
   if (!hasCards) return null;
+
+  const fp = fairPlayDeduction(yc, yc2, rc, ycRc);
 
   return (
     <span className="match-cards">
       {yc > 0 && (
         <span className="match-card-badge">
-          <YellowCardIcon size={0.65} />
+          <YellowCardIcon size={0.85} />
           <span className="match-card-count">{yc}</span>
         </span>
       )}
       {yc2 > 0 && (
         <span className="match-card-badge">
-          <SecondYellowIcon size={0.65} />
+          <SecondYellowIcon size={0.85} />
           <span className="match-card-count">{yc2}</span>
         </span>
       )}
       {rc > 0 && (
         <span className="match-card-badge">
-          <RedCardIcon size={0.65} />
+          <RedCardIcon size={0.85} />
           <span className="match-card-count">{rc}</span>
         </span>
       )}
       {ycRc > 0 && (
         <span className="match-card-badge">
-          <YellowAndRedCardIcon size={0.65} />
+          <YellowAndRedCardIcon size={0.85} />
           <span className="match-card-count">{ycRc}</span>
         </span>
       )}
+    </span>
+  );
+}
+
+/** Fair-play deduction label */
+function FppLabel({ yc, yc2, rc, ycRc }: { yc: number; yc2: number; rc: number; ycRc: number }) {
+  const fp = fairPlayDeduction(yc, yc2, rc, ycRc);
+  if (fp === 0) return null;
+  return (
+    <span className="match-fpp-label" title="Fair Play Points deduction">
+      <span className="match-fpp-text-full">Total FPP:</span>
+      <span className="match-fpp-text-short">FPP:</span>
+      {' '}<strong>{fp}</strong>
     </span>
   );
 }
@@ -135,11 +166,13 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
                 {hasCards && (
                   <div className="match-cards-row">
                     <div className="match-cards-home">
+                      {homeHasCards && <FppLabel yc={m.homeYc ?? 0} yc2={m.homeYc2 ?? 0} rc={m.homeRcDirect ?? 0} ycRc={m.homeYcRc ?? 0} />}
                       {homeHasCards && <CardBadges yc={m.homeYc ?? 0} yc2={m.homeYc2 ?? 0} rc={m.homeRcDirect ?? 0} ycRc={m.homeYcRc ?? 0} />}
                     </div>
                     <div className="match-cards-spacer" />
                     <div className="match-cards-away">
                       {awayHasCards && <CardBadges yc={m.awayYc ?? 0} yc2={m.awayYc2 ?? 0} rc={m.awayRcDirect ?? 0} ycRc={m.awayYcRc ?? 0} />}
+                      {awayHasCards && <FppLabel yc={m.awayYc ?? 0} yc2={m.awayYc2 ?? 0} rc={m.awayRcDirect ?? 0} ycRc={m.awayYcRc ?? 0} />}
                     </div>
                   </div>
                 )}
