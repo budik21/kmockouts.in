@@ -40,12 +40,14 @@ const POSITION_LABELS: { [pos: number]: string } = {
   4: '4th Place',
 };
 
-const POSITION_COLORS: { [pos: number]: string } = {
-  1: '#0a6b3f',
-  2: '#0a6b3f',
-  3: '#a31b1b',
-  4: '#a31b1b',
-};
+function probStyle(prob: number): { background: string; color: string } {
+  if (prob <= 0) return { background: '#a31b1b', color: '#ffffff' };
+  if (prob >= 80) return { background: '#0a5c2f', color: '#ffffff' };
+  if (prob >= 60) return { background: '#1a7a3a', color: '#ffffff' };
+  if (prob >= 40) return { background: '#2e9e4e', color: '#ffffff' };
+  if (prob >= 20) return { background: '#4db86a', color: '#1a3a1a' };
+  return { background: '#7ed69a', color: '#1a3a1a' };
+}
 
 export default function ScenariosAccordion({
   edgeScenariosByPosition,
@@ -82,7 +84,7 @@ function PositionSection({ pos, combos, prob, summary }: { pos: number; combos: 
   const hasMore = combos.length > visibleCount;
 
   return (
-    <div className="accordion-item" style={{ borderLeft: `4px solid ${POSITION_COLORS[pos]}` }}>
+    <div className="accordion-item" style={{ borderLeft: `4px solid ${probStyle(prob).background}` }}>
       <h2 className="accordion-header">
         <button
           className="accordion-button collapsed"
@@ -95,7 +97,7 @@ function PositionSection({ pos, combos, prob, summary }: { pos: number; combos: 
         >
           <span
             className="badge me-2"
-            style={{ background: POSITION_COLORS[pos], minWidth: '75px', fontSize: '1rem', padding: '0.4em 0.6em' }}
+            style={{ ...probStyle(prob), minWidth: '75px', fontSize: '1rem', padding: '0.4em 0.6em' }}
           >
             {prob.toFixed(1)}%
           </span>
@@ -112,7 +114,7 @@ function PositionSection({ pos, combos, prob, summary }: { pos: number; combos: 
           {summary && (
             <div
               className="scenario-summary-box"
-              style={{ borderLeftColor: POSITION_COLORS[pos] }}
+              style={{ borderLeftColor: probStyle(prob).background }}
               dangerouslySetInnerHTML={{ __html: summary }}
             />
           )}
