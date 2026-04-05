@@ -159,15 +159,24 @@ export default async function TeamDetailPage({ params }: PageProps) {
   for (let pos = 1; pos <= 4; pos++) {
     enrichedEdges[pos] = (teamSummary.edgeScenariosByPosition[pos] ?? []).map((combo) => ({
       shortKey: combo.shortKey,
-      matchResults: combo.matchResults.map((mr) => ({
-        ...mr,
-        homeTeamName: teamMap.get(mr.homeTeamId)?.name ?? '?',
-        homeTeamShort: teamMap.get(mr.homeTeamId)?.shortName ?? '?',
-        homeCountryCode: teamMap.get(mr.homeTeamId)?.countryCode ?? '',
-        awayTeamName: teamMap.get(mr.awayTeamId)?.name ?? '?',
-        awayTeamShort: teamMap.get(mr.awayTeamId)?.shortName ?? '?',
-        awayCountryCode: teamMap.get(mr.awayTeamId)?.countryCode ?? '',
-      })),
+      matchResults: combo.matchResults
+        .map((mr) => ({
+          ...mr,
+          homeTeamName: teamMap.get(mr.homeTeamId)?.name ?? '?',
+          homeTeamShort: teamMap.get(mr.homeTeamId)?.shortName ?? '?',
+          homeCountryCode: teamMap.get(mr.homeTeamId)?.countryCode ?? '',
+          awayTeamName: teamMap.get(mr.awayTeamId)?.name ?? '?',
+          awayTeamShort: teamMap.get(mr.awayTeamId)?.shortName ?? '?',
+          awayCountryCode: teamMap.get(mr.awayTeamId)?.countryCode ?? '',
+        }))
+        // Team's own match always first
+        .sort((a, b) => {
+          const aOwn = a.homeTeamId === team.id || a.awayTeamId === team.id;
+          const bOwn = b.homeTeamId === team.id || b.awayTeamId === team.id;
+          if (aOwn && !bOwn) return -1;
+          if (!aOwn && bOwn) return 1;
+          return 0;
+        }),
     }));
   }
 

@@ -141,11 +141,25 @@ function fullEnumerationScenarios(
       // Track outcome pattern with goal diff (complete, uncapped)
       data.patternSets[s.position].add(patternKey);
 
-      // Deduplicate by short key (W/D/L pattern)
+      // Team-specific dedup key:
+      //   • team's own match  → outcome + GD (matters for tiebreakers)
+      //   • other matches     → outcome only (H/D/A); different margins are irrelevant
+      const teamDedupKey = matchCombo.matchResults.map((r, i) => {
+        const m = remainingMatches[i];
+        const isOwn = m.homeTeamId === s.team.id || m.awayTeamId === s.team.id;
+        return isOwn
+          ? `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
+          : r.shortResult;
+      }).join('|');
+
       const edgeSet = data.edgeSets[s.position];
-      if (edgeSet.size < MAX_EDGES && !edgeSet.has(matchCombo.shortKey)) {
-        edgeSet.add(matchCombo.shortKey);
-        data.edgeScenarios[s.position].push(matchCombo);
+      if (edgeSet.size < MAX_EDGES && !edgeSet.has(teamDedupKey)) {
+        edgeSet.add(teamDedupKey);
+        // Normalise other-match scores to minimal representation so the card
+        // doesn't show arbitrary margins for matches the team isn't in.
+        data.edgeScenarios[s.position].push(
+          normalizeOtherMatchScores(matchCombo, remainingMatches, s.team.id),
+        );
       }
     }
 
@@ -223,10 +237,20 @@ function monteCarloGroupScenarios(
 
       data.patternSets[s.position].add(patternKey);
 
+      const teamDedupKey = matchCombo.matchResults.map((r, i) => {
+        const m = remainingMatches[i];
+        const isOwn = m.homeTeamId === s.team.id || m.awayTeamId === s.team.id;
+        return isOwn
+          ? `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
+          : r.shortResult;
+      }).join('|');
+
       const edgeSet = data.edgeSets[s.position];
-      if (edgeSet.size < MAX_EDGES && !edgeSet.has(matchCombo.shortKey)) {
-        edgeSet.add(matchCombo.shortKey);
-        data.edgeScenarios[s.position].push(matchCombo);
+      if (edgeSet.size < MAX_EDGES && !edgeSet.has(teamDedupKey)) {
+        edgeSet.add(teamDedupKey);
+        data.edgeScenarios[s.position].push(
+          normalizeOtherMatchScores(matchCombo, remainingMatches, s.team.id),
+        );
       }
     }
   }
@@ -254,6 +278,30 @@ function monteCarloGroupScenarios(
 // ============================================================
 // Helpers
 // ============================================================
+
+/**
+ * Return a copy of a MatchCombination where every match the team is NOT
+ * involved in is normalised to the minimal score for its outcome:
+ *   home win → 1:0,  draw → 0:0,  away win → 0:1
+ *
+ * This prevents the scenario list from showing "X 1:0 Y, XX 2:0 YY" and
+ * "X 1:0 Y, XX 3:0 YY" as separate entries — only one entry per distinct
+ * (own-match outcome+GD) × (other-match W/D/L) combination is kept.
+ */
+function normalizeOtherMatchScores(
+  combo: MatchCombination,
+  remainingMatches: Match[],
+  teamId: number,
+): MatchCombination {
+  const matchResults = combo.matchResults.map((r, i) => {
+    const m = remainingMatches[i];
+    if (m.homeTeamId === teamId || m.awayTeamId === teamId) return r;
+    if (r.shortResult === 'H') return { ...r, homeGoals: 1, awayGoals: 0, label: 'Home win by 1' };
+    if (r.shortResult === 'A') return { ...r, homeGoals: 0, awayGoals: 1, label: 'Away win by 1' };
+    return { ...r, homeGoals: 0, awayGoals: 0, label: 'Draw' };
+  });
+  return { matchResults, shortKey: combo.shortKey };
+}
 
 function buildSimulatedMatches(
   remainingMatches: Match[],
