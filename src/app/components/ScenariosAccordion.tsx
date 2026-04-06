@@ -156,32 +156,82 @@ function CombinationCard({ combo, index }: { combo: EnrichedCombination; index: 
         Scenario {index}
       </div>
       <div className="scenario-card-body">
-        {combo.matchResults.map((mr, i) => {
-          const isHomeWin = mr.homeGoals > mr.awayGoals;
-          const isAwayWin = mr.awayGoals > mr.homeGoals;
-          return (
-            <div className="scenario-match" key={i}>
-              <span
-                className="scenario-team home"
-                style={{ fontWeight: isHomeWin ? 700 : 400 }}
-              >
-                {mr.homeTeamShort}
-                <TeamFlag countryCode={mr.homeCountryCode} className="ms-1" />
-              </span>
-              <span className="scenario-score">
-                {mr.homeGoals} : {mr.awayGoals}
-              </span>
-              <span
-                className="scenario-team away"
-                style={{ fontWeight: isAwayWin ? 700 : 400 }}
-              >
-                <TeamFlag countryCode={mr.awayCountryCode} className="me-1" />
-                {mr.awayTeamShort}
-              </span>
-            </div>
-          );
-        })}
+        {combo.matchResults.map((mr, i) => (
+          <MatchResultRow key={i} mr={mr} />
+        ))}
       </div>
+    </div>
+  );
+}
+
+function MatchResultRow({ mr }: { mr: EnrichedMatchResult }) {
+  const gd = mr.homeGoals - mr.awayGoals;
+
+  // Draw
+  if (gd === 0) {
+    const isDraw00 = mr.homeGoals === 0 && mr.awayGoals === 0;
+    const drawLabel = isDraw00 ? '0 : 0' : 'X : X';
+    const drawTooltip = isDraw00 ? 'Goalless draw' : 'Scoring draw (1:1 or higher)';
+    return (
+      <div className="scenario-match">
+        <span className="scenario-team home">
+          {mr.homeTeamShort}
+          <TeamFlag countryCode={mr.homeCountryCode} className="ms-1" />
+        </span>
+        <span className="scenario-gd scenario-gd-draw" title={drawTooltip} tabIndex={0}>
+          {drawLabel}
+        </span>
+        <span className="scenario-team away">
+          <TeamFlag countryCode={mr.awayCountryCode} className="me-1" />
+          {mr.awayTeamShort}
+        </span>
+      </div>
+    );
+  }
+
+  // Win/Loss
+  const absGd = Math.abs(gd);
+  const isHomeWin = gd > 0;
+  const winnerShort = isHomeWin ? mr.homeTeamShort : mr.awayTeamShort;
+  const winnerCode = isHomeWin ? mr.homeCountryCode : mr.awayCountryCode;
+  const winnerName = isHomeWin ? mr.homeTeamName : mr.awayTeamName;
+  const loserShort = isHomeWin ? mr.awayTeamShort : mr.homeTeamShort;
+  const loserCode = isHomeWin ? mr.awayCountryCode : mr.homeCountryCode;
+  const gdLabel = absGd >= 6 ? '+6' : `+${absGd}`;
+  const tooltip = `${winnerName} wins by ${absGd >= 6 ? '6+' : absGd} goal${absGd === 1 ? '' : 's'} difference`;
+
+  if (isHomeWin) {
+    return (
+      <div className="scenario-match">
+        <span className="scenario-team home">
+          <span className="scenario-winner-box" title={tooltip} tabIndex={0}>
+            {winnerShort}
+            <TeamFlag countryCode={winnerCode} className="ms-1" />
+            <span className="scenario-gd-badge">{gdLabel}</span>
+          </span>
+        </span>
+        <span className="scenario-team away">
+          <TeamFlag countryCode={loserCode} className="me-1" />
+          {loserShort}
+        </span>
+      </div>
+    );
+  }
+
+  // Away win
+  return (
+    <div className="scenario-match">
+      <span className="scenario-team home">
+        {loserShort}
+        <TeamFlag countryCode={loserCode} className="ms-1" />
+      </span>
+      <span className="scenario-team away">
+        <span className="scenario-winner-box" title={tooltip} tabIndex={0}>
+          <span className="scenario-gd-badge">{gdLabel}</span>
+          <TeamFlag countryCode={winnerCode} className="me-1" />
+          {winnerShort}
+        </span>
+      </span>
     </div>
   );
 }
