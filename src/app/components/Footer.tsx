@@ -23,6 +23,10 @@ export default function Footer() {
               Fixtures
             </a>
             <span className="footer-sep">&middot;</span>
+            <a href="/worldcup2026/knockout-bracket">
+              Knockout Bracket
+            </a>
+            <span className="footer-sep">&middot;</span>
             <a href="/worldcup2026/how-to-clinch-play-off-worldcup2026">
               How to Clinch a Play-Off Spot
             </a>

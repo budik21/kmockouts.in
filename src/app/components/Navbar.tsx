@@ -107,6 +107,13 @@ export default function Navbar() {
               🥉 Best 3rd
             </a>
             <a
+              href="/worldcup2026/knockout-bracket"
+              className="nav-link offcanvas-nav-link"
+              onClick={navigateAndClose('/worldcup2026/knockout-bracket')}
+            >
+              🏟️ Knockout Bracket
+            </a>
+            <a
               href="/worldcup2026/scenarios"
               className="nav-link offcanvas-nav-link"
               onClick={navigateAndClose('/worldcup2026/scenarios')}

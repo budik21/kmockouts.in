@@ -156,6 +156,19 @@ export async function initializeSchema(): Promise<void> {
       calculated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- Knockout stage: third-place team assignment combinations (FIFA Annex C)
+    CREATE TABLE IF NOT EXISTS knockout_third_place_assignment (
+      option_id         INTEGER PRIMARY KEY,
+      pos_1a            TEXT NOT NULL,
+      pos_1b            TEXT NOT NULL,
+      pos_1d            TEXT NOT NULL,
+      pos_1e            TEXT NOT NULL,
+      pos_1g            TEXT NOT NULL,
+      pos_1i            TEXT NOT NULL,
+      pos_1k            TEXT NOT NULL,
+      pos_1l            TEXT NOT NULL
+    );
+
     -- AI-generated scenario summaries cache
     CREATE TABLE IF NOT EXISTS ai_summary_cache (
       group_id      TEXT NOT NULL,
@@ -167,6 +180,23 @@ export async function initializeSchema(): Promise<void> {
       PRIMARY KEY (group_id, team_id, position)
     );
   `);
+
+  // ---- Seed knockout third-place combinations (FIFA Annex C) ----
+  const existingCombos = await pool.query('SELECT COUNT(*) as cnt FROM knockout_third_place_assignment');
+  if (parseInt(existingCombos.rows[0].cnt) === 0) {
+    try {
+      const combos = (await import('../../data/seed/knockout-third-place-combinations.json')).default;
+      const values = combos.map((c: Record<string, string | number>) =>
+        `(${c.option},'${c['1A']}','${c['1B']}','${c['1D']}','${c['1E']}','${c['1G']}','${c['1I']}','${c['1K']}','${c['1L']}')`
+      ).join(',');
+      await pool.query(
+        `INSERT INTO knockout_third_place_assignment (option_id, pos_1a, pos_1b, pos_1d, pos_1e, pos_1g, pos_1i, pos_1k, pos_1l) VALUES ${values} ON CONFLICT DO NOTHING`
+      );
+      console.log(`Seeded ${combos.length} knockout third-place combinations`);
+    } catch (e) {
+      console.warn('Could not seed knockout combinations:', e);
+    }
+  }
 
   // ---- One-time data migrations ----
 

@@ -3182,3 +3182,493 @@ a.ranking-team-name:hover {
   color: var(--wc-text-muted);
   opacity: 0.55;
 }
+
+/* ============================================================
+   Knockout Bracket
+   ============================================================ */
+
+.ko-bracket {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.ko-bracket-info {
+  font-size: 0.85rem;
+}
+
+.ko-qualifying-third {
+  margin-bottom: 1rem;
+  color: var(--wc-text-muted);
+}
+
+/* ── Round navigation (sticky) ── */
+
+.ko-round-nav {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.5rem 0;
+  margin-bottom: 1.25rem;
+  overflow-x: auto;
+  position: sticky;
+  top: 56px; /* below navbar */
+  z-index: 100;
+  background: var(--wc-bg);
+  border-bottom: 1px solid var(--wc-border);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.ko-round-nav::-webkit-scrollbar { display: none; }
+
+.ko-round-nav-btn {
+  flex-shrink: 0;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--wc-border);
+  border-radius: 999px;
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.ko-round-nav-btn:hover {
+  border-color: var(--wc-primary);
+  color: var(--wc-primary);
+}
+.ko-round-nav-btn.active {
+  background: var(--wc-primary);
+  color: #fff;
+  border-color: var(--wc-primary);
+}
+
+/* ── Round section ── */
+
+.ko-round {
+  margin-bottom: 2rem;
+  scroll-margin-top: 110px; /* space for navbar + nav buttons */
+}
+
+.ko-round-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--wc-text);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--wc-primary);
+}
+
+/* ── Match grid ── */
+
+.ko-round-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+.ko-round-grid-r32 { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.ko-round-grid-r16 { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.ko-round-grid-qf { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.ko-round-grid-sf { grid-template-columns: repeat(2, 1fr); }
+.ko-round-grid-thirdPlace,
+.ko-round-grid-final { grid-template-columns: 1fr; max-width: 320px; margin: 0 auto; }
+
+/* ── Match card ── */
+
+.ko-match-card {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ko-match-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.ko-match-number {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ko-match-kickoff {
+  font-size: 0.62rem;
+  color: var(--wc-text-muted);
+  white-space: nowrap;
+}
+
+.ko-match-venue {
+  font-size: 0.58rem;
+  color: var(--wc-text-muted);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.1rem;
+}
+
+.ko-match-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ko-match-vs {
+  font-size: 0.6rem;
+  color: var(--wc-text-muted);
+  text-align: center;
+  line-height: 1;
+}
+
+/* ── Slot ── */
+
+.ko-slot {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.35rem;
+  border-radius: 0.25rem;
+  min-height: 1.7rem;
+}
+
+.ko-slot-resolved {
+  background: rgba(25, 135, 84, 0.06);
+}
+
+.ko-slot-code {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--wc-text);
+  cursor: default;
+}
+
+.ko-slot-placeholder {
+  background: rgba(108, 117, 125, 0.08);
+}
+
+.ko-slot-placeholder-text {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--wc-text-muted);
+}
+
+/* ── Final & third-place styling ── */
+
+.ko-round-grid-final .ko-match-card,
+.ko-match-card-highlight {
+  border-color: var(--wc-accent);
+  border-width: 2px;
+}
+.ko-round-grid-final .ko-match-number,
+.ko-match-card-highlight .ko-match-number {
+  color: var(--wc-accent);
+}
+
+/* ── Responsive: mobile ── */
+
+@media (max-width: 576px) {
+  .ko-round-grid-r32,
+  .ko-round-grid-r16,
+  .ko-round-grid-qf {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ko-round-grid-sf {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ko-round-nav-btn {
+    font-size: 0.72rem;
+    padding: 0.25rem 0.55rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .ko-round-grid-r32,
+  .ko-round-grid-r16,
+  .ko-round-grid-qf,
+  .ko-round-grid-sf {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Desktop Bracket Tree
+   ============================================================ */
+
+/* Hidden by default (mobile-first), shown on wide screens */
+.ko-tree {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .ko-bracket {
+    max-width: none;
+  }
+  .ko-tree {
+    display: block;
+  }
+  .ko-stacked {
+    display: none;
+  }
+}
+
+/* ── Column headers ── */
+
+.ko-tree-headers {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.ko-tree-headers span {
+  flex: 1;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--wc-text-muted);
+  letter-spacing: 0.06em;
+}
+
+.ko-tree-header-center {
+  flex: 0 0 160px !important;
+  color: var(--wc-accent) !important;
+}
+
+/* ── Bracket row (two halves + center) ── */
+
+.ko-tree-bracket {
+  display: flex;
+  align-items: stretch;
+  min-height: 820px;
+}
+
+/* ── Each half ── */
+
+.ko-tree-half {
+  display: flex;
+  flex: 1;
+}
+
+.ko-tree-half-right {
+  flex-direction: row-reverse;
+}
+
+/* ── Round column ── */
+
+.ko-tree-round {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Match slot within a round column ── */
+
+.ko-tree-match {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 2px 0;
+}
+
+/* ── Center column (Final + 3rd Place) ── */
+
+.ko-tree-center {
+  flex: 0 0 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  padding: 0 0.5rem;
+}
+
+.ko-tree-center-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.05em;
+  color: var(--wc-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.ko-tree-center-match {
+  width: 100%;
+}
+
+/* ── Compact match cards inside the tree ── */
+
+.ko-tree .ko-match-card {
+  padding: 0.3rem 0.45rem;
+  gap: 0.1rem;
+  width: 100%;
+}
+
+.ko-tree .ko-match-vs {
+  display: none;
+}
+
+.ko-tree .ko-match-teams {
+  gap: 0;
+}
+
+.ko-tree .ko-match-teams .ko-slot {
+  padding: 0.15rem 0.25rem;
+  min-height: 1.4rem;
+}
+
+.ko-tree .ko-match-number {
+  font-size: 0.55rem;
+}
+
+.ko-tree .ko-match-kickoff {
+  font-size: 0.55rem;
+}
+
+.ko-tree .ko-match-venue {
+  font-size: 0.5rem;
+}
+
+.ko-tree .ko-slot-code {
+  font-size: 0.75rem;
+}
+
+.ko-tree .ko-slot-placeholder-text {
+  font-size: 0.7rem;
+}
+
+/* Thin separator between home/away instead of "vs" */
+.ko-tree .ko-match-teams .ko-slot:first-child {
+  border-bottom: 1px solid var(--wc-border);
+}
+
+/* ============================================================
+   Bracket connector lines
+   ============================================================ */
+
+/* ── LEFT HALF connectors (lines go RIGHT) ── */
+
+.ko-tree-half-left .ko-tree-round {
+  margin-right: 20px;
+}
+
+.ko-tree-half-left .ko-tree-round:last-child {
+  margin-right: 10px;
+}
+
+/* Outgoing horizontal + vertical bracket (odd = 1st of pair) */
+.ko-tree-half-left .ko-tree-round:not(:last-child) .ko-tree-match:nth-child(odd)::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 10px;
+  height: 100%;
+  border-top: 1px solid var(--wc-border);
+  border-right: 1px solid var(--wc-border);
+  pointer-events: none;
+}
+
+/* Outgoing horizontal (even = 2nd of pair) */
+.ko-tree-half-left .ko-tree-round:not(:last-child) .ko-tree-match:nth-child(even)::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 10px;
+  height: 0;
+  border-top: 1px solid var(--wc-border);
+  pointer-events: none;
+}
+
+/* Incoming horizontal from previous round */
+.ko-tree-half-left .ko-tree-round:not(:first-child) .ko-tree-match::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 10px;
+  height: 0;
+  border-top: 1px solid var(--wc-border);
+  pointer-events: none;
+}
+
+/* ── RIGHT HALF connectors (lines go LEFT, mirrored) ── */
+
+.ko-tree-half-right .ko-tree-round {
+  margin-left: 20px;
+}
+
+.ko-tree-half-right .ko-tree-round:last-child {
+  margin-left: 10px;
+}
+
+/* Outgoing horizontal + vertical bracket (odd = 1st of pair) — mirrored */
+.ko-tree-half-right .ko-tree-round:not(:last-child) .ko-tree-match:nth-child(odd)::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 10px;
+  height: 100%;
+  border-top: 1px solid var(--wc-border);
+  border-left: 1px solid var(--wc-border);
+  pointer-events: none;
+}
+
+/* Outgoing horizontal (even = 2nd of pair) — mirrored */
+.ko-tree-half-right .ko-tree-round:not(:last-child) .ko-tree-match:nth-child(even)::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 10px;
+  height: 0;
+  border-top: 1px solid var(--wc-border);
+  pointer-events: none;
+}
+
+/* Incoming horizontal from previous round — mirrored */
+.ko-tree-half-right .ko-tree-round:not(:first-child) .ko-tree-match::before {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 10px;
+  height: 0;
+  border-top: 1px solid var(--wc-border);
+  pointer-events: none;
+}
+
+/* ── Center connectors (SF → Final) ── */
+
+.ko-tree-half-left .ko-tree-round:last-child .ko-tree-match::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 10px;
+  height: 0;
+  border-top: 1px solid var(--wc-border);
+  pointer-events: none;
+}
+
+.ko-tree-half-right .ko-tree-round:last-child .ko-tree-match::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 10px;
+  height: 0;
+  border-top: 1px solid var(--wc-border);
+  pointer-events: none;
+}
