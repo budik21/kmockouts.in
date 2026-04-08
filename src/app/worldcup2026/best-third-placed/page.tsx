@@ -3,11 +3,12 @@ import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match, TeamStanding } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
 import { compareThirdPlaced } from '@/engine/best-third';
-import { getCachedBestThirdProbabilities } from '@/engine/probability';
+import { getCachedBestThirdProbabilities, getCachedQualificationThreshold } from '@/engine/probability';
 import BestThirdTable from '@/app/components/BestThirdTable';
 import BestThirdSummaries from '@/app/components/BestThirdSummaries';
 import ThirdPlacedMatchesGrid from '@/app/components/ThirdPlacedMatchesGrid';
 import { generateBestThirdSummaries, BestThirdTeamContext } from '@/engine/best-third-summary-ai';
+import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,7 @@ export default async function BestThirdPlacedPage() {
   const thirdPlaced: { groupId: GroupId; standing: TeamStanding; teamMatches: { opponentName: string; opponentShort: string; opponentCode: string; isHome: boolean; homeGoals: number | null; awayGoals: number | null; status: string; round: number; venue: string; kickOff: string }[] }[] = [];
   let groupsWithMatches = 0;
   let allTeamsPlayedTwo = true; // Track if every team across all groups has ≥2 matches
+  let hasRemainingMatches = false; // Track if any group still has unplayed matches
 
   for (const gid of ALL_GROUPS) {
     const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
@@ -59,6 +61,9 @@ export default async function BestThirdPlacedPage() {
 
     if (finishedMatches.length > 0) {
       groupsWithMatches++;
+    }
+    if (allMatches.length > finishedMatches.length) {
+      hasRemainingMatches = true;
     }
 
     // Check if every team in this group has played at least 2 matches
@@ -107,9 +112,13 @@ export default async function BestThirdPlacedPage() {
 
   // Load per-group best-third probabilities (only shown when all teams have ≥2 matches)
   let bestThirdProbs: Map<string, number> | null = null;
+  let qualificationThreshold: import('@/engine/best-third').QualificationThreshold | null = null;
   if (allTeamsPlayedTwo) {
     try {
-      bestThirdProbs = await getCachedBestThirdProbabilities();
+      [bestThirdProbs, qualificationThreshold] = await Promise.all([
+        getCachedBestThirdProbabilities(),
+        getCachedQualificationThreshold(),
+      ]);
     } catch {
       // Table might not exist yet
     }
@@ -206,6 +215,10 @@ export default async function BestThirdPlacedPage() {
         8 of 12 third-placed teams qualify for the Round of 32
       </p>
 
+      {showTable && qualificationThreshold && hasRemainingMatches && (
+        <QualificationThresholdBox threshold={qualificationThreshold} />
+      )}
+
       {showTable ? (
         <div className="group-card">
           <div className="group-card-header">
@@ -218,6 +231,7 @@ export default async function BestThirdPlacedPage() {
             <BestThirdTable
               teams={tableData}
               groupProbabilities={bestThirdProbs ? Object.fromEntries(bestThirdProbs) : undefined}
+              qualificationThreshold={hasRemainingMatches ? qualificationThreshold : undefined}
             />
           </div>
         </div>

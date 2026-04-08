@@ -7,7 +7,7 @@
 import { query } from './db';
 import { GroupId } from './types';
 import { ALL_GROUPS } from './constants';
-import { calculateGroupProbabilities, calculateAllProbabilities, cacheProbabilities, cacheBestThirdProbabilities } from '../engine/probability';
+import { calculateGroupProbabilities, calculateAllProbabilities, cacheProbabilities, cacheBestThirdProbabilities, cacheQualificationThreshold } from '../engine/probability';
 
 export interface CachedTeamProb {
   teamId: number;
@@ -118,6 +118,11 @@ export async function recalculateAllProbabilities(): Promise<void> {
 
   // Cache per-group best-third probabilities for the best-third page
   await cacheBestThirdProbabilities(bestThird.groupProbabilities);
+
+  // Cache qualification threshold (what stats are needed for 8th place)
+  if (bestThird.qualificationThreshold) {
+    await cacheQualificationThreshold(bestThird.qualificationThreshold);
+  }
 }
 
 /**

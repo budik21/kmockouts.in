@@ -169,6 +169,13 @@ export async function initializeSchema(): Promise<void> {
       pos_1l            TEXT NOT NULL
     );
 
+    -- Qualification threshold cache (what stats are needed for 8th place among best thirds)
+    CREATE TABLE IF NOT EXISTS qualification_threshold_cache (
+      id              INTEGER PRIMARY KEY DEFAULT 1,
+      threshold_json  TEXT NOT NULL,
+      calculated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     -- AI-generated scenario summaries cache
     CREATE TABLE IF NOT EXISTS ai_summary_cache (
       group_id      TEXT NOT NULL,

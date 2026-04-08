@@ -17,11 +17,33 @@ export interface GroupData {
   remainingMatches: Match[];
 }
 
+export interface PointsBreakdownEntry {
+  points: number;
+  /** % of iterations where 8th place had strictly fewer points (having this many pts always qualifies) */
+  pctQualifyRegardless: number;
+  /** % of iterations where 8th place had exactly this many points (GD tiebreaker needed) */
+  pctExact: number;
+  /** Median GD of the 8th-place team when it had exactly this many points */
+  medianGD: number;
+  /** Maximum GD seen at 8th place for this point value (worst case — you need more than this) */
+  maxGD: number;
+  /** For selected GD thresholds: what total % of scenarios would a team with (pts, GD) qualify?
+   *  e.g. [{gd: -1, pctQualify: 72}, {gd: 0, pctQualify: 80}, ...] */
+  gdThresholds: { gd: number; pctQualify: number }[];
+}
+
+export interface QualificationThreshold {
+  pointsBreakdown: PointsBreakdownEntry[];
+  totalIterations: number;
+}
+
 export interface BestThirdResult {
   /** For each group, probability that the third-placed team qualifies */
   groupProbabilities: Map<GroupId, number>;
   /** For each team (by id), probability they finish 3rd AND qualify as best-third */
   teamProbabilities: Map<number, number>;
+  /** What stats the 8th-place team typically has — useful for "what do I need to qualify" */
+  qualificationThreshold: QualificationThreshold | null;
 }
 
 /**
@@ -67,6 +89,9 @@ export function calculateBestThirdProbabilities(
   // Count how often each specific team qualifies as best-third
   const teamQualifyCount = new Map<number, number>();
 
+  // Track 8th-place team stats for qualification threshold
+  const eighthPlaceStats: { points: number; gd: number }[] = [];
+
   for (let iter = 0; iter < iterations; iter++) {
     // For each group, simulate remaining matches and get standings
     const thirdPlaced: { groupId: GroupId; standing: TeamStanding }[] = [];
@@ -104,6 +129,15 @@ export function calculateBestThirdProbabilities(
       const teamId = q.standing.team.id;
       teamQualifyCount.set(teamId, (teamQualifyCount.get(teamId) ?? 0) + 1);
     }
+
+    // Record 8th-place team's stats (the last qualifier)
+    if (thirdPlaced.length >= QUALIFY_BEST_THIRD) {
+      const eighth = thirdPlaced[QUALIFY_BEST_THIRD - 1];
+      eighthPlaceStats.push({
+        points: eighth.standing.points,
+        gd: eighth.standing.goalDifference,
+      });
+    }
   }
 
   // Convert to probabilities
@@ -118,5 +152,79 @@ export function calculateBestThirdProbabilities(
     teamProbabilities.set(teamId, Math.round((count / iterations) * 10000) / 100);
   }
 
-  return { groupProbabilities, teamProbabilities };
+  // Compute qualification threshold from 8th-place stats
+  const qualificationThreshold = computeQualificationThreshold(eighthPlaceStats);
+
+  return { groupProbabilities, teamProbabilities, qualificationThreshold };
+}
+
+/**
+ * Compute a summary of what the 8th-place team typically looks like.
+ */
+function computeQualificationThreshold(
+  stats: { points: number; gd: number }[],
+): QualificationThreshold | null {
+  if (stats.length === 0) return null;
+  const total = stats.length;
+
+  // Group by points value
+  const byPoints = new Map<number, number[]>();
+  for (const s of stats) {
+    if (!byPoints.has(s.points)) byPoints.set(s.points, []);
+    byPoints.get(s.points)!.push(s.gd);
+  }
+
+  // Sort point values ascending for cumulative calculation
+  const pointValues = Array.from(byPoints.keys()).sort((a, b) => a - b);
+
+  // Pre-compute: for each point value, how many iterations had 8th.points strictly less
+  // (cumulative count of iterations with lower point values)
+  const countBelow = new Map<number, number>();
+  let cumBelow = 0;
+  for (const pts of pointValues) {
+    countBelow.set(pts, cumBelow);
+    cumBelow += byPoints.get(pts)!.length;
+  }
+
+  // Build breakdown sorted by points descending (highest first)
+  const breakdown: PointsBreakdownEntry[] = [];
+
+  for (const pts of [...pointValues].reverse()) {
+    const gds = byPoints.get(pts)!;
+    const count = gds.length;
+    const pctExact = round2((count / total) * 100);
+    const pctQualifyRegardless = round2((countBelow.get(pts)! / total) * 100);
+
+    gds.sort((a, b) => a - b);
+    const medianGD = gds[Math.floor(gds.length / 2)];
+    const maxGD = gds[gds.length - 1];
+
+    // For selected GD thresholds, compute total qualify %:
+    // qualify = (8th.pts < pts) + (8th.pts == pts AND 8th.GD <= gd)
+    const gdRange = Array.from(new Set([-3, -2, -1, 0, 1, 2, 3, medianGD, maxGD]))
+      .sort((a, b) => a - b);
+    const gdThresholds: { gd: number; pctQualify: number }[] = [];
+    const below = countBelow.get(pts)!;
+    for (const g of gdRange) {
+      // Count iterations where 8th had exactly pts points AND GD <= g
+      const countAtOrBelow = gds.filter(v => v <= g).length;
+      const pctQualify = round2(((below + countAtOrBelow) / total) * 100);
+      gdThresholds.push({ gd: g, pctQualify });
+    }
+
+    breakdown.push({
+      points: pts,
+      pctQualifyRegardless,
+      pctExact,
+      medianGD,
+      maxGD,
+      gdThresholds,
+    });
+  }
+
+  return { pointsBreakdown: breakdown, totalIterations: total };
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }

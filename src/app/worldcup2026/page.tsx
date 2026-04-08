@@ -4,9 +4,11 @@ import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
 import { compareThirdPlaced } from '@/engine/best-third';
 import { getAllCachedProbsOrCompute } from '@/lib/probability-cache';
+import { getCachedQualificationThreshold } from '@/engine/probability';
 import Link from 'next/link';
 import GroupOverview from '@/app/components/GroupOverview';
 import BestThirdTable from '@/app/components/BestThirdTable';
+import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import NewsWidget from '@/app/components/NewsWidget';
 import Countdown from '@/app/components/Countdown';
 
@@ -48,9 +50,11 @@ interface ThirdPlacedTeam {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPlacedTeams: ThirdPlacedTeam[] }> {
+async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPlacedTeams: ThirdPlacedTeam[]; allTeamsPlayedTwo: boolean; hasRemainingMatches: boolean }> {
   const groups: Record<string, unknown> = {};
   const thirdPlaced: { groupId: GroupId; standing: ReturnType<typeof calculateStandings>[number] }[] = [];
+  let allTeamsPlayedTwo = true;
+  let hasRemainingMatches = false;
 
   // Read cached probabilities (computes any missing groups on first load)
   const cachedProbs = await getAllCachedProbsOrCompute();
@@ -58,9 +62,23 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
   for (const gid of ALL_GROUPS) {
     const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
     const matchRows = await query<MatchRow>("SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round", [gid]);
+    const allMatchRows = await query<MatchRow>('SELECT * FROM match WHERE group_id = $1', [gid]);
     const teams = teamRows.map(rowToTeam);
     const matches = matchRows.map(rowToMatch);
     const standings = calculateStandings({ teams, matches });
+
+    if (allMatchRows.length > matchRows.length) {
+      hasRemainingMatches = true;
+    }
+    if (allTeamsPlayedTwo) {
+      for (const t of teams) {
+        const teamMatchCount = matches.filter(m => m.homeTeamId === t.id || m.awayTeamId === t.id).length;
+        if (teamMatchCount < 2) {
+          allTeamsPlayedTwo = false;
+          break;
+        }
+      }
+    }
 
     // Collect third-placed team
     const third = standings.find((s) => s.position === 3);
@@ -126,7 +144,7 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
     fairPlayPoints: tp.standing.fairPlayPoints,
   }));
 
-  return { groups, thirdPlacedTeams };
+  return { groups, thirdPlacedTeams, allTeamsPlayedTwo, hasRemainingMatches };
 }
 
 interface NewsRow {
@@ -154,7 +172,17 @@ async function getNewsArticles() {
 }
 
 export default async function HomePage() {
-  const [{ groups, thirdPlacedTeams }, articles] = await Promise.all([buildGroupsData(), getNewsArticles()]);
+  const [{ groups, thirdPlacedTeams, allTeamsPlayedTwo, hasRemainingMatches }, articles] = await Promise.all([buildGroupsData(), getNewsArticles()]);
+
+  // Load qualification threshold when conditions are met
+  let qualificationThreshold: import('@/engine/best-third').QualificationThreshold | null = null;
+  if (allTeamsPlayedTwo && hasRemainingMatches) {
+    try {
+      qualificationThreshold = await getCachedQualificationThreshold();
+    } catch {
+      // Table might not exist yet
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const hasMatchesPlayed = Object.values(groups).some((g: any) =>
@@ -180,6 +208,9 @@ export default async function HomePage() {
 
         {hasMatchesPlayed && (
           <div className="mt-3">
+            {qualificationThreshold && (
+              <QualificationThresholdBox threshold={qualificationThreshold} />
+            )}
             <Link href="/worldcup2026/best-third-placed" style={{ textDecoration: 'none' }}>
               <div className="group-card">
                 <div className="group-card-header">
@@ -189,7 +220,7 @@ export default async function HomePage() {
                   </span>
                 </div>
                 <div className="group-card-body">
-                  <BestThirdTable teams={thirdPlacedTeams} />
+                  <BestThirdTable teams={thirdPlacedTeams} qualificationThreshold={qualificationThreshold} />
                 </div>
               </div>
             </Link>

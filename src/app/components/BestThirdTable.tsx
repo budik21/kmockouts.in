@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { slugify } from '@/lib/slugify';
 import TeamFlag from './TeamFlag';
+import type { QualificationThreshold } from '@/engine/best-third';
 
 interface ThirdPlacedTeam {
   rank: number;
@@ -30,6 +31,8 @@ interface BestThirdTableProps {
   teams: ThirdPlacedTeam[];
   /** Per-group qualification probability (e.g. { A: 72.5, B: 45.1, ... }). Shown only when provided. */
   groupProbabilities?: { [groupId: string]: number };
+  /** Qualification threshold data for coloring the points column. */
+  qualificationThreshold?: QualificationThreshold | null;
 }
 
 function probStyle(prob: number): { background: string; color: string } {
@@ -41,7 +44,63 @@ function probStyle(prob: number): { background: string; color: string } {
   return { background: '#7ed69a', color: '#1a3a1a' };
 }
 
-export default function BestThirdTable({ teams, groupProbabilities }: BestThirdTableProps) {
+function getPointsStyle(
+  points: number,
+  goalDifference: number,
+  threshold?: QualificationThreshold | null,
+): React.CSSProperties | undefined {
+  if (!threshold) return undefined;
+
+  // Find the entry for this point value
+  const entry = threshold.pointsBreakdown.find(b => b.points === points);
+  if (!entry) {
+    // Points value not seen at 8th place — either always qualifies or never
+    const allPoints = threshold.pointsBreakdown.map(b => b.points);
+    const maxThresholdPts = Math.max(...allPoints);
+    if (points > maxThresholdPts) {
+      // More points than 8th ever had — safe
+      return { background: '#0a5c2f', color: '#fff', borderRadius: '4px', padding: '2px 6px' };
+    }
+    // Fewer points than 8th ever had — bad
+    const minThresholdPts = Math.min(...allPoints);
+    if (points < minThresholdPts) {
+      return { background: '#a31b1b', color: '#fff', borderRadius: '4px', padding: '2px 6px' };
+    }
+    return undefined;
+  }
+
+  // Find the qualify % for this team's GD at this point level
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const basePct = entry.pctQualifyRegardless ?? (entry as any).pctEnoughWithAnyGD ?? 50;
+  let pctQualify = basePct;
+  if (entry.gdThresholds?.length) {
+    for (const t of entry.gdThresholds) {
+      if (t.gd >= goalDifference) {
+        pctQualify = t.pctQualify;
+        break;
+      }
+    }
+    // If GD is higher than all thresholds, use the last one
+    const lastGdt = entry.gdThresholds[entry.gdThresholds.length - 1];
+    if (goalDifference > lastGdt.gd) {
+      pctQualify = lastGdt.pctQualify;
+    }
+  }
+
+  // Map qualify % to color
+  let bg: string;
+  let color: string;
+  if (pctQualify >= 90) { bg = '#0a5c2f'; color = '#fff'; }
+  else if (pctQualify >= 70) { bg = '#1a7a3a'; color = '#fff'; }
+  else if (pctQualify >= 50) { bg = '#2e9e4e'; color = '#fff'; }
+  else if (pctQualify >= 30) { bg = '#d4a017'; color = '#1a1a1a'; }
+  else if (pctQualify >= 15) { bg = '#d4761a'; color = '#fff'; }
+  else { bg = '#a31b1b'; color = '#fff'; }
+
+  return { background: bg, color, borderRadius: '4px', padding: '2px 6px' };
+}
+
+export default function BestThirdTable({ teams, groupProbabilities, qualificationThreshold }: BestThirdTableProps) {
   const showProb = !!groupProbabilities;
   return (
     <div className="table-responsive">
@@ -94,7 +153,13 @@ export default function BestThirdTable({ teams, groupProbabilities }: BestThirdT
               <td className="text-center">
                 {t.goalDifference > 0 ? `+${t.goalDifference}` : t.goalDifference}
               </td>
-              <td className="text-center fw-bold">{t.points}</td>
+              <td className="text-center fw-bold">
+                {qualificationThreshold ? (
+                  <span style={getPointsStyle(t.points, t.goalDifference, qualificationThreshold)}>
+                    {t.points}
+                  </span>
+                ) : t.points}
+              </td>
               <td className="text-center d-none d-sm-table-cell">{t.fairPlayPoints}</td>
               {showProb && (
                 <td className="text-center">

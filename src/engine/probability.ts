@@ -7,7 +7,7 @@ import { query, getPool } from '../lib/db';
 import { ALL_GROUPS } from '../lib/constants';
 import { GroupId, Team, Match, TeamRow, MatchRow } from '../lib/types';
 import { enumerateGroupScenarios, TeamScenarioSummary } from './scenarios';
-import { calculateBestThirdProbabilities, GroupData, BestThirdResult } from './best-third';
+import { calculateBestThirdProbabilities, GroupData, BestThirdResult, QualificationThreshold } from './best-third';
 
 // ============================================================
 // Data access helpers
@@ -200,5 +200,36 @@ export async function cacheProbabilities(
     throw e;
   } finally {
     client.release();
+  }
+}
+
+/**
+ * Save qualification threshold data to cache.
+ */
+export async function cacheQualificationThreshold(
+  threshold: QualificationThreshold,
+): Promise<void> {
+  await query(
+    `INSERT INTO qualification_threshold_cache (id, threshold_json, calculated_at)
+     VALUES (1, $1, NOW())
+     ON CONFLICT(id) DO UPDATE SET
+       threshold_json = EXCLUDED.threshold_json,
+       calculated_at = EXCLUDED.calculated_at`,
+    [JSON.stringify(threshold)],
+  );
+}
+
+/**
+ * Read cached qualification threshold.
+ */
+export async function getCachedQualificationThreshold(): Promise<QualificationThreshold | null> {
+  const rows = await query<{ threshold_json: string }>(
+    'SELECT threshold_json FROM qualification_threshold_cache WHERE id = 1',
+  );
+  if (rows.length === 0) return null;
+  try {
+    return JSON.parse(rows[0].threshold_json) as QualificationThreshold;
+  } catch {
+    return null;
   }
 }
