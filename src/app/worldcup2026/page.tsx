@@ -208,9 +208,6 @@ export default async function HomePage() {
 
         {hasMatchesPlayed && (
           <div className="mt-3">
-            {qualificationThreshold && (
-              <QualificationThresholdBox threshold={qualificationThreshold} />
-            )}
             <Link href="/worldcup2026/best-third-placed" style={{ textDecoration: 'none' }}>
               <div className="group-card">
                 <div className="group-card-header">
@@ -224,6 +221,9 @@ export default async function HomePage() {
                 </div>
               </div>
             </Link>
+            {qualificationThreshold && (
+              <QualificationThresholdBox threshold={qualificationThreshold} />
+            )}
           </div>
         )}
 
