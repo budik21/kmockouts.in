@@ -220,7 +220,7 @@ export default async function HomePage() {
                   </span>
                 </div>
                 <div className="group-card-body">
-                  <BestThirdTable teams={thirdPlacedTeams} qualificationThreshold={qualificationThreshold} />
+                  <BestThirdTable teams={thirdPlacedTeams} />
                 </div>
               </div>
             </Link>

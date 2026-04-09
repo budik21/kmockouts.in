@@ -6,7 +6,6 @@ import { compareThirdPlaced } from '@/engine/best-third';
 import { getCachedBestThirdProbabilities, getCachedQualificationThreshold } from '@/engine/probability';
 import { getAllCachedProbs } from '@/lib/probability-cache';
 import BestThirdTable from '@/app/components/BestThirdTable';
-import BestThirdSummaries from '@/app/components/BestThirdSummaries';
 import ThirdPlacedMatchesGrid from '@/app/components/ThirdPlacedMatchesGrid';
 import { generateBestThirdSummaries, BestThirdTeamContext } from '@/engine/best-third-summary-ai';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
@@ -245,7 +244,7 @@ export default async function BestThirdPlacedPage() {
             <BestThirdTable
               teams={tableData}
               groupProbabilities={bestThirdProbs ? Object.fromEntries(bestThirdProbs) : undefined}
-              qualificationThreshold={hasRemainingMatches ? qualificationThreshold : undefined}
+              summaries={summariesData.map(s => ({ teamId: s.teamId, summaryHtml: s.summaryHtml, qualProbability: s.qualProbability }))}
             />
           </div>
         </div>
@@ -258,10 +257,6 @@ export default async function BestThirdPlacedPage() {
             {groupsWithMatches}/12 groups have results so far.
           </p>
         </div>
-      )}
-
-      {summariesData.length > 0 && (
-        <BestThirdSummaries teams={summariesData} />
       )}
 
       {showTable && (

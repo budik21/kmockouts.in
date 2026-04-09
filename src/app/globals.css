@@ -1339,6 +1339,73 @@ a { color: inherit; text-decoration: none; }
   color: var(--wc-accent);
 }
 
+/* Points column subtle highlight */
+.b3-table-pts-highlight .b3-pts-col {
+  background: rgba(0, 0, 0, 0.035);
+}
+
+[data-bs-theme="dark"] .b3-table-pts-highlight .b3-pts-col {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Clickable rows with expand/collapse */
+.b3-row-clickable {
+  cursor: pointer;
+}
+
+.b3-row-clickable:hover td {
+  background: var(--wc-surface);
+  transition: background 0.15s;
+}
+
+.b3-row-clickable:hover .b3-pts-col {
+  background: color-mix(in srgb, var(--wc-surface) 60%, transparent);
+}
+
+.b3-expand-col {
+  width: 28px;
+  padding: 0 !important;
+}
+
+.b3-expand-cell {
+  padding: 0.5rem 0.4rem !important;
+}
+
+.b3-row-chevron {
+  font-size: 0.65rem;
+  color: var(--wc-text-muted);
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.b3-row-chevron-open {
+  transform: rotate(180deg);
+}
+
+/* Expanded summary row */
+.b3-summary-row td {
+  border-left: 3px solid var(--wc-accent);
+}
+
+.b3-summary-cell {
+  padding: 0 !important;
+}
+
+.b3-summary-content {
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  background: var(--wc-surface);
+}
+
+.b3-summary-content p {
+  margin: 0 0 0.3rem 0;
+}
+
+.b3-summary-content p:last-child {
+  margin-bottom: 0;
+}
+
 /* ============================================================
    Scenario Picker (pricing-plan style cards)
    ============================================================ */

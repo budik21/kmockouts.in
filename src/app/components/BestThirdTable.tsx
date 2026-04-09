@@ -1,9 +1,9 @@
 'use client';
 
+import { Fragment, useState } from 'react';
 import Link from 'next/link';
 import { slugify } from '@/lib/slugify';
 import TeamFlag from './TeamFlag';
-import type { QualificationThreshold } from '@/engine/best-third';
 
 interface ThirdPlacedTeam {
   rank: number;
@@ -27,12 +27,18 @@ interface ThirdPlacedTeam {
   fairPlayPoints: number;
 }
 
+interface TeamSummary {
+  teamId: number;
+  summaryHtml: string;
+  qualProbability: number;
+}
+
 interface BestThirdTableProps {
   teams: ThirdPlacedTeam[];
   /** Per-group qualification probability (e.g. { A: 72.5, B: 45.1, ... }). Shown only when provided. */
   groupProbabilities?: { [groupId: string]: number };
-  /** Qualification threshold data for coloring the points column. */
-  qualificationThreshold?: QualificationThreshold | null;
+  /** AI-generated summaries keyed by team ID */
+  summaries?: TeamSummary[];
 }
 
 function probStyle(prob: number): { background: string; color: string } {
@@ -44,67 +50,15 @@ function probStyle(prob: number): { background: string; color: string } {
   return { background: '#7ed69a', color: '#1a3a1a' };
 }
 
-function getPointsStyle(
-  points: number,
-  goalDifference: number,
-  threshold?: QualificationThreshold | null,
-): React.CSSProperties | undefined {
-  if (!threshold) return undefined;
-
-  // Find the entry for this point value
-  const entry = threshold.pointsBreakdown.find(b => b.points === points);
-  if (!entry) {
-    // Points value not seen at 8th place — either always qualifies or never
-    const allPoints = threshold.pointsBreakdown.map(b => b.points);
-    const maxThresholdPts = Math.max(...allPoints);
-    if (points > maxThresholdPts) {
-      // More points than 8th ever had — safe
-      return { background: '#0a5c2f', color: '#fff', borderRadius: '4px', padding: '2px 6px' };
-    }
-    // Fewer points than 8th ever had — bad
-    const minThresholdPts = Math.min(...allPoints);
-    if (points < minThresholdPts) {
-      return { background: '#a31b1b', color: '#fff', borderRadius: '4px', padding: '2px 6px' };
-    }
-    return undefined;
-  }
-
-  // Find the qualify % for this team's GD at this point level
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const basePct = entry.pctQualifyRegardless ?? (entry as any).pctEnoughWithAnyGD ?? 50;
-  let pctQualify = basePct;
-  if (entry.gdThresholds?.length) {
-    for (const t of entry.gdThresholds) {
-      if (t.gd >= goalDifference) {
-        pctQualify = t.pctQualify;
-        break;
-      }
-    }
-    // If GD is higher than all thresholds, use the last one
-    const lastGdt = entry.gdThresholds[entry.gdThresholds.length - 1];
-    if (goalDifference > lastGdt.gd) {
-      pctQualify = lastGdt.pctQualify;
-    }
-  }
-
-  // Map qualify % to color
-  let bg: string;
-  let color: string;
-  if (pctQualify >= 90) { bg = '#0a5c2f'; color = '#fff'; }
-  else if (pctQualify >= 70) { bg = '#1a7a3a'; color = '#fff'; }
-  else if (pctQualify >= 50) { bg = '#2e9e4e'; color = '#fff'; }
-  else if (pctQualify >= 30) { bg = '#d4a017'; color = '#1a1a1a'; }
-  else if (pctQualify >= 15) { bg = '#d4761a'; color = '#fff'; }
-  else { bg = '#a31b1b'; color = '#fff'; }
-
-  return { background: bg, color, borderRadius: '4px', padding: '2px 6px' };
-}
-
-export default function BestThirdTable({ teams, groupProbabilities, qualificationThreshold }: BestThirdTableProps) {
+export default function BestThirdTable({ teams, groupProbabilities, summaries }: BestThirdTableProps) {
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const showProb = !!groupProbabilities;
+  const summaryMap = new Map(summaries?.map(s => [s.teamId, s]) ?? []);
+  const hasSummaries = summaryMap.size > 0;
+
   return (
     <div className="table-responsive">
-      <table className="standings-table table table-sm mb-0">
+      <table className="standings-table table table-sm mb-0 b3-table-pts-highlight">
         <thead>
           <tr>
             <th>#</th>
@@ -117,66 +71,87 @@ export default function BestThirdTable({ teams, groupProbabilities, qualificatio
             <th className="text-center d-none d-sm-table-cell">GF</th>
             <th className="text-center d-none d-sm-table-cell">GA</th>
             <th className="text-center">GD</th>
-            <th className="text-center">Pts</th>
+            <th className="text-center b3-pts-col">Pts</th>
             <th className="text-center d-none d-sm-table-cell">FP</th>
             {showProb && <th className="text-center">%</th>}
+            {hasSummaries && <th className="b3-expand-col"></th>}
           </tr>
         </thead>
         <tbody>
-          {teams.map((t) => (
-            <tr
-              key={t.team.id}
-              className={t.rank <= 8 ? 'best-third-qualify' : 'best-third-eliminated'}
-            >
-              <td>{t.rank}</td>
-              <td className="team-name">
-                <Link href={`/worldcup2026/group-${t.groupId.toLowerCase()}/team/${slugify(t.team.name)}`} className="best-third-team-link" onClick={(e) => e.stopPropagation()}>
-                  <TeamFlag countryCode={t.team.countryCode} />
-                  <span className="team-name-full">{t.team.name}</span>
-                  <span className="team-short" title={t.team.name}>{t.team.shortName}</span>
-                </Link>
-                {t.team.fifaRanking && (
-                  <span className="standings-ranking" title="FIFA Ranking">({t.team.fifaRanking})</span>
+          {teams.map((t) => {
+            const summary = summaryMap.get(t.team.id);
+            const isExpanded = expandedId === t.team.id;
+            const isClickable = !!summary;
+            const colSpan = 11 + (showProb ? 1 : 0) + (hasSummaries ? 1 : 0);
+
+            return (
+              <Fragment key={t.team.id}>
+                <tr
+                  className={`${t.rank <= 8 ? 'best-third-qualify' : 'best-third-eliminated'}${isClickable ? ' b3-row-clickable' : ''}`}
+                  onClick={isClickable ? () => setExpandedId(isExpanded ? null : t.team.id) : undefined}
+                >
+                  <td>{t.rank}</td>
+                  <td className="team-name">
+                    <Link href={`/worldcup2026/group-${t.groupId.toLowerCase()}/team/${slugify(t.team.name)}`} className="best-third-team-link" onClick={(e) => e.stopPropagation()}>
+                      <TeamFlag countryCode={t.team.countryCode} />
+                      <span className="team-name-full">{t.team.name}</span>
+                      <span className="team-short" title={t.team.name}>{t.team.shortName}</span>
+                    </Link>
+                    {t.team.fifaRanking && (
+                      <span className="standings-ranking" title="FIFA Ranking">({t.team.fifaRanking})</span>
+                    )}
+                  </td>
+                  <td className="text-center d-none d-sm-table-cell">
+                    <Link href={`/worldcup2026/group-${t.groupId.toLowerCase()}`} className="group-link" onClick={(e) => e.stopPropagation()}>
+                      {t.groupId}
+                    </Link>
+                  </td>
+                  <td className="text-center">{t.matchesPlayed}</td>
+                  <td className="text-center d-none d-sm-table-cell">{t.wins}</td>
+                  <td className="text-center d-none d-sm-table-cell">{t.draws}</td>
+                  <td className="text-center d-none d-sm-table-cell">{t.losses}</td>
+                  <td className="text-center d-none d-sm-table-cell">{t.goalsFor}</td>
+                  <td className="text-center d-none d-sm-table-cell">{t.goalsAgainst}</td>
+                  <td className="text-center">
+                    {t.goalDifference > 0 ? `+${t.goalDifference}` : t.goalDifference}
+                  </td>
+                  <td className="text-center fw-bold b3-pts-col">{t.points}</td>
+                  <td className="text-center d-none d-sm-table-cell">{t.fairPlayPoints}</td>
+                  {showProb && (
+                    <td className="text-center">
+                      <span
+                        className="badge"
+                        style={{
+                          ...probStyle(groupProbabilities![t.groupId] ?? 0),
+                          minWidth: '48px',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {(groupProbabilities![t.groupId] ?? 0).toFixed(1)}
+                      </span>
+                    </td>
+                  )}
+                  {hasSummaries && (
+                    <td className="text-center b3-expand-cell">
+                      {isClickable && (
+                        <span className={`b3-row-chevron${isExpanded ? ' b3-row-chevron-open' : ''}`}>&#9662;</span>
+                      )}
+                    </td>
+                  )}
+                </tr>
+                {isExpanded && summary && (
+                  <tr className="b3-summary-row">
+                    <td colSpan={colSpan} className="b3-summary-cell">
+                      <div
+                        className="b3-summary-content"
+                        dangerouslySetInnerHTML={{ __html: summary.summaryHtml }}
+                      />
+                    </td>
+                  </tr>
                 )}
-              </td>
-              <td className="text-center d-none d-sm-table-cell">
-                <Link href={`/worldcup2026/group-${t.groupId.toLowerCase()}`} className="group-link" onClick={(e) => e.stopPropagation()}>
-                  {t.groupId}
-                </Link>
-              </td>
-              <td className="text-center">{t.matchesPlayed}</td>
-              <td className="text-center d-none d-sm-table-cell">{t.wins}</td>
-              <td className="text-center d-none d-sm-table-cell">{t.draws}</td>
-              <td className="text-center d-none d-sm-table-cell">{t.losses}</td>
-              <td className="text-center d-none d-sm-table-cell">{t.goalsFor}</td>
-              <td className="text-center d-none d-sm-table-cell">{t.goalsAgainst}</td>
-              <td className="text-center">
-                {t.goalDifference > 0 ? `+${t.goalDifference}` : t.goalDifference}
-              </td>
-              <td className="text-center fw-bold">
-                {qualificationThreshold ? (
-                  <span style={getPointsStyle(t.points, t.goalDifference, qualificationThreshold)}>
-                    {t.points}
-                  </span>
-                ) : t.points}
-              </td>
-              <td className="text-center d-none d-sm-table-cell">{t.fairPlayPoints}</td>
-              {showProb && (
-                <td className="text-center">
-                  <span
-                    className="badge"
-                    style={{
-                      ...probStyle(groupProbabilities![t.groupId] ?? 0),
-                      minWidth: '48px',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    {(groupProbabilities![t.groupId] ?? 0).toFixed(1)}
-                  </span>
-                </td>
-              )}
-            </tr>
-          ))}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
       <div className="best-third-legend mt-2">
@@ -188,3 +163,4 @@ export default function BestThirdTable({ teams, groupProbabilities, qualificatio
     </div>
   );
 }
+
