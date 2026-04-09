@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-import { recalculateGroupProbabilities } from '@/lib/probability-cache';
-import type { GroupId } from '@/lib/types';
+import { recalculateAllProbabilities, pregenerateBestThirdSummaries } from '@/lib/probability-cache';
 
 interface UpdateBody {
   matchId: number;
@@ -65,11 +64,17 @@ export async function POST(request: NextRequest) {
       [groupId],
     );
 
-    // Fire recalculation asynchronously
-    recalculateGroupProbabilities(groupId as GroupId)
+    // Fire recalculation asynchronously (all groups + best-third + AI summaries)
+    recalculateAllProbabilities()
       .then(async () => {
+        console.log(`[admin] Recalculated all probabilities (triggered by group ${groupId})`);
+        // Pre-generate AI summaries so users don't wait on first page load
+        try {
+          await pregenerateBestThirdSummaries();
+        } catch (err) {
+          console.error('[admin] AI summary pregeneration failed:', err);
+        }
         await query('UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1', [groupId]);
-        console.log(`[admin] Recalculated group ${groupId}`);
       })
       .catch(async (err) => {
         console.error(`[admin] Recalculation failed for group ${groupId}:`, err);
