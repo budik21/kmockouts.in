@@ -10,12 +10,33 @@ import ThirdPlacedMatchesGrid from '@/app/components/ThirdPlacedMatchesGrid';
 import { generateBestThirdSummaries, BestThirdTeamContext } from '@/engine/best-third-summary-ai';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+import JsonLd from '@/app/components/JsonLd';
+import { SITE_URL } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic';
+// ISR — best-third standings change a few times per day after match results.
+export const revalidate = 600;
 
-export const metadata = {
-  title: 'Best Third-Placed Teams | FIFA World Cup 2026',
-  description: '8 of 12 third-placed teams qualify for the Round of 32 at FIFA World Cup 2026.',
+export const metadata: Metadata = {
+  title:
+    'Best Third-Placed Teams — Play-Off Qualifiers | FIFA World Cup 2026',
+  description:
+    'Live ranking of the 12 third-placed teams at the FIFA World Cup 2026. The 8 best advance from the play-off to the knockout Round of 32. Points, goal difference, fair play and FIFA ranking tiebreakers.',
+  keywords: [
+    'best third placed teams',
+    'World Cup 2026 play-off',
+    'World Cup 2026 third place ranking',
+    'Round of 32 qualifiers',
+    'FIFA World Cup 2026 third-placed',
+    'soccer play-off',
+  ],
+  alternates: { canonical: '/worldcup2026/best-third-placed' },
+  openGraph: {
+    title: 'Best Third-Placed Teams — Play-Off Qualifiers | World Cup 2026',
+    description:
+      'Live ranking of the 12 third-placed teams. The 8 best advance from the play-off to the FIFA World Cup 2026 knockout Round of 32.',
+    url: `${SITE_URL}/worldcup2026/best-third-placed`,
+  },
 };
 
 function rowToTeam(row: TeamRow): Team {
@@ -210,8 +231,29 @@ export default async function BestThirdPlacedPage() {
     }
   }
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: `${SITE_URL}/worldcup2026`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Best Third-Placed Teams',
+        item: `${SITE_URL}/worldcup2026/best-third-placed`,
+      },
+    ],
+  };
+
   return (
     <main className="container py-4">
+      <JsonLd data={breadcrumbJsonLd} />
+
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
@@ -223,9 +265,9 @@ export default async function BestThirdPlacedPage() {
         </ol>
       </nav>
 
-      <h1 className="mb-1">Best Third-Placed Teams</h1>
+      <h1 className="mb-1">Best Third-Placed Teams — FIFA World Cup 2026 Play-Off</h1>
       <p className="text-muted mb-4">
-        8 of 12 third-placed teams qualify for the Round of 32
+        8 of 12 third-placed teams qualify for the knockout Round of 32
       </p>
 
       {showTable && qualificationThreshold && hasRemainingMatches && (

@@ -6,6 +6,8 @@ import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probab
 import GroupDetailClient from './GroupDetailClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import JsonLd from '@/app/components/JsonLd';
+import { SITE_URL } from '@/lib/seo';
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -35,7 +37,13 @@ function parseGroupSlug(slug: string): GroupId | null {
   return ALL_GROUPS.includes(groupId) ? groupId : null;
 }
 
-export const dynamic = 'force-dynamic';
+// ISR — group standings update only after a match ends.
+export const revalidate = 600;
+
+// Pre-build all 12 group pages so ISR caching kicks in immediately.
+export function generateStaticParams() {
+  return ALL_GROUPS.map((g) => ({ groupId: `group-${g.toLowerCase()}` }));
+}
 
 interface PageProps {
   params: Promise<{ groupId: string }>;
@@ -45,9 +53,43 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { groupId: slug } = await params;
   const groupId = parseGroupSlug(slug);
   if (!groupId) return { title: 'Group not found' };
+
+  const teamRows = await query<TeamRow>(
+    'SELECT name FROM team WHERE group_id = $1 ORDER BY id',
+    [groupId],
+  );
+  const teamNames = teamRows.map((t) => t.name).join(', ');
+  const canonical = `/worldcup2026/group-${groupId.toLowerCase()}`;
+
+  const title = `Group ${groupId} — Standings, Fixtures & Knockout Scenarios | FIFA World Cup 2026`;
+  const description = teamNames
+    ? `Group ${groupId} of the FIFA World Cup 2026 features ${teamNames}. Live standings, fixtures, knockout play-off scenarios and qualification probabilities for every team.`
+    : `Live standings, match results and qualification probabilities for Group ${groupId} of the FIFA World Cup 2026 in Canada, Mexico and USA.`;
+
   return {
-    title: `Group ${groupId} Standings & Scenarios | FIFA World Cup 2026`,
-    description: `Live standings, match results, and qualification probabilities for Group ${groupId} of the FIFA World Cup 2026 in Canada, Mexico & USA.`,
+    title,
+    description,
+    keywords: [
+      `Group ${groupId} World Cup 2026`,
+      `Group ${groupId} standings`,
+      `Group ${groupId} fixtures`,
+      'FIFA World Cup 2026',
+      'knockout bracket',
+      'play-off',
+      'soccer',
+    ],
+    alternates: { canonical },
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}${canonical}`,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
   };
 }
 
@@ -121,8 +163,51 @@ export default async function GroupDetailPage({ params }: PageProps) {
     }
   }
 
+  // Structured data: BreadcrumbList + SportsEvent (the group "section" of the tournament)
+  // with each team as a SportsTeam competitor.
+  const groupCanonical = `${SITE_URL}/worldcup2026/group-${groupId.toLowerCase()}`;
+  const groupJsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${SITE_URL}/worldcup2026`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: `Group ${groupId}`,
+          item: groupCanonical,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SportsEvent',
+      name: `FIFA World Cup 2026 — Group ${groupId}`,
+      sport: 'Soccer',
+      url: groupCanonical,
+      organizer: {
+        '@type': 'SportsOrganization',
+        name: 'FIFA',
+        url: 'https://www.fifa.com',
+      },
+      competitor: teams.map((t) => ({
+        '@type': 'SportsTeam',
+        name: t.name,
+        sport: 'Soccer',
+      })),
+    },
+  ];
+
   return (
     <main className="container py-4">
+      <JsonLd data={groupJsonLd} />
+
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Group {groupId}</h2>
         <div className="d-flex align-items-center gap-3 flex-wrap">

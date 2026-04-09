@@ -9,7 +9,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
 import type { QualificationThreshold } from './best-third';
 
-const client = new Anthropic();
+// Lazy singleton — instantiating Anthropic() at module load throws when
+// ANTHROPIC_API_KEY is not configured, which would crash any page that
+// imports this module (even just to read cached summaries).
+let _client: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!_client) _client = new Anthropic();
+  return _client;
+}
 
 const SYSTEM_PROMPT = `You are a football (soccer) analyst writing for a World Cup prediction website.
 
@@ -101,7 +108,7 @@ ${matchInfo}
 
 Write a short summary (2-4 sentences) of what this team needs to qualify as best third-placed.`;
 
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 256,
     system: SYSTEM_PROMPT,
@@ -134,6 +141,22 @@ async function getCached(teamId: number, contextHash: string): Promise<string | 
   const rows = await query<{ summary_html: string }>(
     'SELECT summary_html FROM ai_summary_cache WHERE group_id = $1 AND team_id = $2 AND patterns_hash = $3',
     ['B3', teamId, contextHash],
+  );
+  return rows.length > 0 ? rows[0].summary_html : null;
+}
+
+/**
+ * Fallback: return the most recent cached summary for a team regardless of
+ * the patterns_hash. Used when an exact (stats-matching) cache entry is not
+ * available — better to show a slightly stale summary than nothing.
+ */
+async function getCachedAny(teamId: number): Promise<string | null> {
+  const rows = await query<{ summary_html: string }>(
+    `SELECT summary_html FROM ai_summary_cache
+     WHERE group_id = $1 AND team_id = $2
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    ['B3', teamId],
   );
   return rows.length > 0 ? rows[0].summary_html : null;
 }
@@ -174,11 +197,14 @@ export async function generateBestThirdSummaries(
 ): Promise<Map<number, string>> {
   const result = new Map<number, string>();
 
-  if (!process.env.ANTHROPIC_API_KEY || allTeams.length === 0) return result;
+  if (allTeams.length === 0) return result;
 
   const ctxHash = hashContext(allTeams, threshold ?? null);
+  const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
 
-  // Build tasks — check cache first
+  // Always check cache first — even when no API key is configured we want
+  // to serve previously generated summaries rather than silently hide the
+  // feature. Missing exact hash match falls back to the most recent entry.
   const tasks: BestThirdTeamContext[] = [];
   for (const team of allTeams) {
     try {
@@ -188,12 +214,29 @@ export async function generateBestThirdSummaries(
         continue;
       }
     } catch {
-      // Cache miss
+      // Cache lookup failed — fall through to fallback / regeneration
     }
+
+    // No exact-hash hit. If we cannot regenerate (no API key), try to serve
+    // the latest stale cache entry so the UI still shows something useful.
+    if (!hasApiKey) {
+      try {
+        const stale = await getCachedAny(team.teamId);
+        if (stale) {
+          result.set(team.teamId, stale);
+          continue;
+        }
+      } catch {
+        // Ignore — nothing we can do
+      }
+      continue;
+    }
+
     tasks.push(team);
   }
 
-  if (tasks.length === 0) return result;
+  // Nothing left to generate (either all served from cache or no API key).
+  if (tasks.length === 0 || !hasApiKey) return result;
 
   // Generate summaries with limited concurrency to avoid rate limits
   const MAX_CONCURRENT = 3;

@@ -1,7 +1,32 @@
 import { query } from '@/lib/db';
+import type { Metadata } from 'next';
 import FifaRankingClient from './FifaRankingClient';
+import JsonLd from '@/app/components/JsonLd';
+import { SITE_URL } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic';
+// ISR — FIFA ranking is scraped daily, refresh roughly every 30 minutes.
+export const revalidate = 1800;
+
+export const metadata: Metadata = {
+  title: 'FIFA Ranking 2026 — All World Cup Soccer Teams Sorted by Rank',
+  description:
+    'Complete FIFA ranking of all 48 FIFA World Cup 2026 soccer teams with their group, points and qualification status. Updated regularly from the official FIFA / Coca-Cola Men\'s World Ranking.',
+  keywords: [
+    'FIFA ranking',
+    'FIFA World Cup 2026 ranking',
+    'soccer ranking',
+    'football ranking',
+    'World Cup teams ranked',
+    'FIFA Coca-Cola ranking',
+  ],
+  alternates: { canonical: '/worldcup2026/fifa-ranking' },
+  openGraph: {
+    title: 'FIFA Ranking 2026 — All World Cup Soccer Teams',
+    description:
+      'Complete FIFA ranking of all 48 FIFA World Cup 2026 teams with their group and qualification status.',
+    url: `${SITE_URL}/worldcup2026/fifa-ranking`,
+  },
+};
 
 interface RankingTeam {
   id: number;
@@ -25,18 +50,41 @@ export default async function FifaRankingPage() {
   // Extract unique groups sorted alphabetically
   const groups = [...new Set(teams.map((t) => t.group_id))].sort();
 
+  // BreadcrumbList for the FIFA ranking page.
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: `${SITE_URL}/worldcup2026`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'FIFA Ranking',
+        item: `${SITE_URL}/worldcup2026/fifa-ranking`,
+      },
+    ],
+  };
+
   return (
-    <FifaRankingClient
-      teams={teams.map((t) => ({
-        id: t.id,
-        name: t.name,
-        shortName: t.short_name,
-        countryCode: t.country_code,
-        groupId: t.group_id,
-        fifaRanking: t.fifa_ranking,
-      }))}
-      groups={groups}
-      rankingDate={rankingDate}
-    />
+    <>
+      <JsonLd data={breadcrumbJsonLd} />
+      <FifaRankingClient
+        teams={teams.map((t) => ({
+          id: t.id,
+          name: t.name,
+          shortName: t.short_name,
+          countryCode: t.country_code,
+          groupId: t.group_id,
+          fifaRanking: t.fifa_ranking,
+        }))}
+        groups={groups}
+        rankingDate={rankingDate}
+      />
+    </>
   );
 }

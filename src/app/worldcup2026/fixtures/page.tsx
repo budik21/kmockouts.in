@@ -1,12 +1,32 @@
 import { query } from '@/lib/db';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import FixturesCalendar from '@/app/components/FixturesCalendar';
+import JsonLd from '@/app/components/JsonLd';
+import { SITE_URL } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic';
+// ISR — fixtures only change a few times per day after match results are recorded.
+export const revalidate = 600;
 
-export const metadata = {
-  title: 'Fixtures & Results | FIFA World Cup 2026',
-  description: 'Complete schedule of all FIFA World Cup 2026 group stage matches with results.',
+export const metadata: Metadata = {
+  title: 'FIFA World Cup 2026 Fixtures, Results & Schedule',
+  description:
+    'Complete schedule and live results for every FIFA World Cup 2026 group stage soccer match. Kick-off times, venues, scores and play-off implications for all 48 teams.',
+  keywords: [
+    'FIFA World Cup 2026 fixtures',
+    'World Cup 2026 schedule',
+    'World Cup results',
+    'soccer fixtures',
+    'football fixtures',
+    'World Cup kick-off times',
+  ],
+  alternates: { canonical: '/worldcup2026/fixtures' },
+  openGraph: {
+    title: 'FIFA World Cup 2026 Fixtures, Results & Schedule',
+    description:
+      'Every group stage match of the FIFA World Cup 2026 with kick-off times, venues and live results.',
+    url: `${SITE_URL}/worldcup2026/fixtures`,
+  },
 };
 
 interface FixtureRow {
@@ -113,8 +133,29 @@ export default async function FixturesPage() {
 
   const days = Array.from(dayMap.values()).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: `${SITE_URL}/worldcup2026`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Fixtures',
+        item: `${SITE_URL}/worldcup2026/fixtures`,
+      },
+    ],
+  };
+
   return (
     <main className="container py-4">
+      <JsonLd data={breadcrumbJsonLd} />
+
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
@@ -126,9 +167,9 @@ export default async function FixturesPage() {
         </ol>
       </nav>
 
-      <h1 className="mb-1">Fixtures &amp; Results</h1>
+      <h1 className="mb-1">FIFA World Cup 2026 Fixtures &amp; Results</h1>
       <p className="text-muted mb-4">
-        All group stage matches &bull; FIFA World Cup 2026
+        Complete schedule of all group stage matches &bull; kick-off times, venues and live scores
       </p>
 
       <FixturesCalendar days={days} />

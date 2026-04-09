@@ -36,7 +36,7 @@ export default function NewsWidget({ articles }: NewsWidgetProps) {
           {article.imageUrl ? (
             <img
               src={article.imageUrl}
-              alt=""
+              alt={article.title}
               className="news-card-img"
               loading="lazy"
             />
