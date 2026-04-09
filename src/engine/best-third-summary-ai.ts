@@ -7,6 +7,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
+import type { QualificationThreshold } from './best-third';
 
 const client = new Anthropic();
 
@@ -46,7 +47,7 @@ export interface BestThirdTeamContext {
   points: number;
   goalDifference: number;
   goalsFor: number;
-  qualProbability: number; // per-group probability
+  qualProbability: number; // per-team probability of finishing 3rd AND qualifying
   remainingMatch: { opponent: string } | null;
 }
 
@@ -55,6 +56,8 @@ export interface BestThirdSummaryInput {
   allTeams: BestThirdTeamContext[];
   /** Which team we're generating the summary for */
   targetTeam: BestThirdTeamContext;
+  /** What the 8th-place team typically looks like (from Monte Carlo) */
+  threshold: QualificationThreshold | null;
 }
 
 async function generateBestThirdSummary(input: BestThirdSummaryInput): Promise<string> {
@@ -67,13 +70,33 @@ async function generateBestThirdSummary(input: BestThirdSummaryInput): Promise<s
     ? `Remaining match: vs ${target.remainingMatch.opponent}`
     : 'All matches played.';
 
+  // Build threshold context from simulation data
+  let thresholdInfo = '';
+  if (input.threshold?.pointsBreakdown.length) {
+    const lines = input.threshold.pointsBreakdown
+      .filter(b => b.pctExact >= 1 || b.pctQualifyRegardless >= 1)
+      .map(b => {
+        const gdNote = b.gdThresholds?.length
+          ? b.gdThresholds
+              .filter(g => g.pctQualify >= 50 && g.pctQualify <= 95)
+              .slice(0, 2)
+              .map(g => `with GD ≥ ${g.gd >= 0 ? '+' : ''}${g.gd}: ${g.pctQualify.toFixed(0)}%`)
+              .join(', ')
+          : '';
+        return `  ${b.points} pts: qualifies regardless of GD in ${b.pctQualifyRegardless.toFixed(0)}% of simulations${gdNote ? ` (${gdNote})` : ''}`;
+      });
+    if (lines.length) {
+      thresholdInfo = `\nQualification threshold (what the 8th-place team typically looks like based on simulations):\n${lines.join('\n')}\nIMPORTANT: Use this threshold data to assess whether a team's points and GD are enough. Do NOT just rely on the qualification probability — explain in terms of points and goal difference.\n`;
+    }
+  }
+
   const userPrompt = `Best third-placed teams table (top 8 qualify, bottom 4 eliminated):
 ${tableLines}
-
+${thresholdInfo}
 Team to analyze: ${target.teamName} (Group ${target.groupId})
 Current rank: ${target.currentRank} of 12 (${target.currentRank <= 8 ? 'currently qualifying' : 'currently NOT qualifying'})
 Stats: ${target.points} pts, GD ${target.goalDifference >= 0 ? '+' : ''}${target.goalDifference}, GF ${target.goalsFor}
-Qualification probability: ${target.qualProbability.toFixed(1)}%
+Qualification probability (chance of finishing 3rd in group AND qualifying as best third): ${target.qualProbability.toFixed(1)}%
 ${matchInfo}
 
 Write a short summary (2-4 sentences) of what this team needs to qualify as best third-placed.`;
@@ -93,8 +116,11 @@ Write a short summary (2-4 sentences) of what this team needs to qualify as best
 // Cache
 // ============================================================
 
-function hashContext(allTeams: BestThirdTeamContext[]): string {
-  const str = allTeams.map(t => `${t.teamId}:${t.points}:${t.goalDifference}:${t.goalsFor}:${t.qualProbability}`).join('|');
+function hashContext(allTeams: BestThirdTeamContext[], threshold: QualificationThreshold | null): string {
+  const thresholdStr = threshold
+    ? threshold.pointsBreakdown.map(b => `${b.points}:${b.pctQualifyRegardless}:${b.medianGD}`).join(',')
+    : 'none';
+  const str = allTeams.map(t => `${t.teamId}:${t.points}:${t.goalDifference}:${t.goalsFor}:${t.qualProbability}`).join('|') + '||' + thresholdStr;
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
@@ -144,12 +170,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  */
 export async function generateBestThirdSummaries(
   allTeams: BestThirdTeamContext[],
+  threshold?: QualificationThreshold | null,
 ): Promise<Map<number, string>> {
   const result = new Map<number, string>();
 
   if (!process.env.ANTHROPIC_API_KEY || allTeams.length === 0) return result;
 
-  const ctxHash = hashContext(allTeams);
+  const ctxHash = hashContext(allTeams, threshold ?? null);
 
   // Build tasks — check cache first
   const tasks: BestThirdTeamContext[] = [];
@@ -172,7 +199,7 @@ export async function generateBestThirdSummaries(
   const promises = tasks.map(async (targetTeam) => {
     try {
       const summary = await withTimeout(
-        generateBestThirdSummary({ allTeams, targetTeam }),
+        generateBestThirdSummary({ allTeams, targetTeam, threshold: threshold ?? null }),
         AI_CALL_TIMEOUT_MS,
       );
       if (summary) {

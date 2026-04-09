@@ -4,6 +4,7 @@ import { GroupId, TeamRow, MatchRow, Team, Match, TeamStanding } from '@/lib/typ
 import { calculateStandings } from '@/engine/standings';
 import { compareThirdPlaced } from '@/engine/best-third';
 import { getCachedBestThirdProbabilities, getCachedQualificationThreshold } from '@/engine/probability';
+import { getAllCachedProbs } from '@/lib/probability-cache';
 import BestThirdTable from '@/app/components/BestThirdTable';
 import BestThirdSummaries from '@/app/components/BestThirdSummaries';
 import ThirdPlacedMatchesGrid from '@/app/components/ThirdPlacedMatchesGrid';
@@ -113,11 +114,13 @@ export default async function BestThirdPlacedPage() {
   // Load per-group best-third probabilities (only shown when all teams have ≥2 matches)
   let bestThirdProbs: Map<string, number> | null = null;
   let qualificationThreshold: import('@/engine/best-third').QualificationThreshold | null = null;
+  let allTeamProbs: Map<string, Map<number, import('@/lib/probability-cache').CachedTeamProb>> | null = null;
   if (allTeamsPlayedTwo) {
     try {
-      [bestThirdProbs, qualificationThreshold] = await Promise.all([
+      [bestThirdProbs, qualificationThreshold, allTeamProbs] = await Promise.all([
         getCachedBestThirdProbabilities(),
         getCachedQualificationThreshold(),
+        getAllCachedProbs(),
       ]);
     } catch {
       // Table might not exist yet
@@ -160,6 +163,17 @@ export default async function BestThirdPlacedPage() {
   // Generate AI summaries for best-third teams (only when probabilities are available)
   let summariesData: { teamId: number; teamName: string; teamShort: string; countryCode: string; groupId: string; qualProbability: number; summaryHtml: string }[] = [];
   if (showTable && bestThirdProbs && allTeamsPlayedTwo) {
+    // Look up per-team probThirdQual (more accurate than per-group)
+    const getTeamQualProb = (groupId: string, teamId: number): number => {
+      const groupCache = allTeamProbs?.get(groupId);
+      if (groupCache) {
+        const teamProb = groupCache.get(teamId);
+        if (teamProb && teamProb.probThirdQual > 0) return teamProb.probThirdQual;
+      }
+      // Fallback to per-group probability
+      return bestThirdProbs!.get(groupId) ?? 0;
+    };
+
     const aiTeams: BestThirdTeamContext[] = thirdPlaced.map((tp, i) => {
       const remaining = tp.teamMatches.find(m => m.status !== 'FINISHED');
       return {
@@ -170,15 +184,15 @@ export default async function BestThirdPlacedPage() {
         points: tp.standing.points,
         goalDifference: tp.standing.goalDifference,
         goalsFor: tp.standing.goalsFor,
-        qualProbability: bestThirdProbs.get(tp.groupId) ?? 0,
+        qualProbability: getTeamQualProb(tp.groupId, tp.standing.team.id),
         remainingMatch: remaining ? { opponent: remaining.opponentName } : null,
       };
     });
 
     try {
-      const aiSummaries = await generateBestThirdSummaries(aiTeams);
+      const aiSummaries = await generateBestThirdSummaries(aiTeams, qualificationThreshold);
       summariesData = thirdPlaced
-        .map((tp, i) => {
+        .map((tp) => {
           const html = aiSummaries.get(tp.standing.team.id);
           if (!html) return null;
           return {
@@ -187,7 +201,7 @@ export default async function BestThirdPlacedPage() {
             teamShort: tp.standing.team.shortName,
             countryCode: tp.standing.team.countryCode,
             groupId: tp.groupId,
-            qualProbability: bestThirdProbs!.get(tp.groupId) ?? 0,
+            qualProbability: getTeamQualProb(tp.groupId, tp.standing.team.id),
             summaryHtml: html,
           };
         })
