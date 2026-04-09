@@ -134,7 +134,11 @@ export default function BestThirdTable({ teams, groupProbabilities, summaries }:
                   {hasSummaries && (
                     <td className="text-center b3-expand-cell">
                       {isClickable && (
-                        <span className={`b3-row-chevron${isExpanded ? ' b3-row-chevron-open' : ''}`}>&#9662;</span>
+                        <span className={`b3-row-expand-btn${isExpanded ? ' b3-row-expand-open' : ''}`}>
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm-.75 4a.75.75 0 1 1 1.5 0 .75.75 0 0 1-1.5 0zM7 7.5a.5.5 0 0 1 1 0v3.5a.5.5 0 0 1-1 0V7.5z"/>
+                          </svg>
+                        </span>
                       )}
                     </td>
                   )}

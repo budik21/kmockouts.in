@@ -1363,23 +1363,34 @@ a { color: inherit; text-decoration: none; }
 }
 
 .b3-expand-col {
-  width: 28px;
+  width: 36px;
   padding: 0 !important;
 }
 
 .b3-expand-cell {
-  padding: 0.5rem 0.4rem !important;
+  padding: 0.5rem 0.35rem !important;
 }
 
-.b3-row-chevron {
-  font-size: 0.65rem;
+.b3-row-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--wc-border);
   color: var(--wc-text-muted);
-  transition: transform 0.2s;
-  display: inline-block;
+  transition: background 0.15s, color 0.15s;
 }
 
-.b3-row-chevron-open {
-  transform: rotate(180deg);
+.b3-row-clickable:hover .b3-row-expand-btn {
+  background: var(--wc-accent);
+  color: #fff;
+}
+
+.b3-row-expand-open {
+  background: var(--wc-accent) !important;
+  color: #fff !important;
 }
 
 /* Expanded summary row */
