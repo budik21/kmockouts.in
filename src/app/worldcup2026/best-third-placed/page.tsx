@@ -38,6 +38,27 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
+function buildTeamProbabilities(
+  thirdPlaced: { groupId: GroupId; standing: TeamStanding }[],
+  allTeamProbs: Map<string, Map<number, import('@/lib/probability-cache').CachedTeamProb>>,
+  bestThirdProbs: Map<string, number> | null,
+): { [teamId: number]: number } {
+  const result: { [teamId: number]: number } = {};
+  for (const tp of thirdPlaced) {
+    const groupCache = allTeamProbs.get(tp.groupId);
+    if (groupCache) {
+      const teamProb = groupCache.get(tp.standing.team.id);
+      if (teamProb && teamProb.probThirdQual > 0) {
+        result[tp.standing.team.id] = teamProb.probThirdQual;
+        continue;
+      }
+    }
+    // Fallback to per-group probability
+    result[tp.standing.team.id] = bestThirdProbs?.get(tp.groupId) ?? 0;
+  }
+  return result;
+}
+
 export default async function BestThirdPlacedPage() {
   // Collect third-placed team from each group + their matches
   const thirdPlaced: { groupId: GroupId; standing: TeamStanding; teamMatches: { opponentName: string; opponentShort: string; opponentCode: string; isHome: boolean; homeGoals: number | null; awayGoals: number | null; status: string; round: number; venue: string; kickOff: string }[] }[] = [];
@@ -243,7 +264,7 @@ export default async function BestThirdPlacedPage() {
           <div className="group-card-body">
             <BestThirdTable
               teams={tableData}
-              groupProbabilities={bestThirdProbs ? Object.fromEntries(bestThirdProbs) : undefined}
+              teamProbabilities={allTeamProbs ? buildTeamProbabilities(thirdPlaced, allTeamProbs, bestThirdProbs) : undefined}
               summaries={summariesData.map(s => ({ teamId: s.teamId, summaryHtml: s.summaryHtml, qualProbability: s.qualProbability }))}
             />
           </div>

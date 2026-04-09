@@ -195,26 +195,29 @@ export async function generateBestThirdSummaries(
 
   if (tasks.length === 0) return result;
 
-  // Generate all uncached summaries in parallel
-  const promises = tasks.map(async (targetTeam) => {
-    try {
-      const summary = await withTimeout(
-        generateBestThirdSummary({ allTeams, targetTeam, threshold: threshold ?? null }),
-        AI_CALL_TIMEOUT_MS,
-      );
-      if (summary) {
-        result.set(targetTeam.teamId, summary);
-        try {
-          await saveCache(targetTeam.teamId, summary, ctxHash);
-        } catch {
-          // Non-fatal
+  // Generate summaries with limited concurrency to avoid rate limits
+  const MAX_CONCURRENT = 3;
+  for (let i = 0; i < tasks.length; i += MAX_CONCURRENT) {
+    const batch = tasks.slice(i, i + MAX_CONCURRENT);
+    const promises = batch.map(async (targetTeam) => {
+      try {
+        const summary = await withTimeout(
+          generateBestThirdSummary({ allTeams, targetTeam, threshold: threshold ?? null }),
+          AI_CALL_TIMEOUT_MS,
+        );
+        if (summary) {
+          result.set(targetTeam.teamId, summary);
+          try {
+            await saveCache(targetTeam.teamId, summary, ctxHash);
+          } catch {
+            // Non-fatal
+          }
         }
+      } catch (err) {
+        console.error(`Best-third AI summary failed for ${targetTeam.teamName}:`, err);
       }
-    } catch (err) {
-      console.error(`Best-third AI summary failed for ${targetTeam.teamName}:`, err);
-    }
-  });
-
-  await Promise.allSettled(promises);
+    });
+    await Promise.allSettled(promises);
+  }
   return result;
 }

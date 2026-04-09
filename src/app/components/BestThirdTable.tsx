@@ -35,8 +35,8 @@ interface TeamSummary {
 
 interface BestThirdTableProps {
   teams: ThirdPlacedTeam[];
-  /** Per-group qualification probability (e.g. { A: 72.5, B: 45.1, ... }). Shown only when provided. */
-  groupProbabilities?: { [groupId: string]: number };
+  /** Per-team qualification probability (teamId -> probability). */
+  teamProbabilities?: { [teamId: number]: number };
   /** AI-generated summaries keyed by team ID */
   summaries?: TeamSummary[];
 }
@@ -50,9 +50,9 @@ function probStyle(prob: number): { background: string; color: string } {
   return { background: '#7ed69a', color: '#1a3a1a' };
 }
 
-export default function BestThirdTable({ teams, groupProbabilities, summaries }: BestThirdTableProps) {
+export default function BestThirdTable({ teams, teamProbabilities, summaries }: BestThirdTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const showProb = !!groupProbabilities;
+  const showProb = !!teamProbabilities;
   const summaryMap = new Map(summaries?.map(s => [s.teamId, s]) ?? []);
   const hasSummaries = summaryMap.size > 0;
 
@@ -122,12 +122,12 @@ export default function BestThirdTable({ teams, groupProbabilities, summaries }:
                       <span
                         className="badge"
                         style={{
-                          ...probStyle(groupProbabilities![t.groupId] ?? 0),
+                          ...probStyle(teamProbabilities![t.team.id] ?? 0),
                           minWidth: '48px',
                           fontSize: '0.85rem',
                         }}
                       >
-                        {(groupProbabilities![t.groupId] ?? 0).toFixed(1)}
+                        {(teamProbabilities![t.team.id] ?? 0).toFixed(1)}
                       </span>
                     </td>
                   )}
