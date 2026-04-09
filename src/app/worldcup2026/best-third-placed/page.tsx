@@ -38,6 +38,12 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
+/**
+ * Build per-team CONDITIONAL probability: "if this team finishes 3rd, what's
+ * the chance they qualify as best third?" = probThirdQual / probThird * 100.
+ * This is the relevant metric for the best-third table, which already shows
+ * teams that are currently in 3rd place.
+ */
 function buildTeamProbabilities(
   thirdPlaced: { groupId: GroupId; standing: TeamStanding }[],
   allTeamProbs: Map<string, Map<number, import('@/lib/probability-cache').CachedTeamProb>>,
@@ -48,8 +54,9 @@ function buildTeamProbabilities(
     const groupCache = allTeamProbs.get(tp.groupId);
     if (groupCache) {
       const teamProb = groupCache.get(tp.standing.team.id);
-      if (teamProb && teamProb.probThirdQual > 0) {
-        result[tp.standing.team.id] = teamProb.probThirdQual;
+      if (teamProb && teamProb.probThird > 0) {
+        // Conditional: given 3rd place, chance of qualifying
+        result[tp.standing.team.id] = (teamProb.probThirdQual / teamProb.probThird) * 100;
         continue;
       }
     }
