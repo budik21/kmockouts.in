@@ -1,19 +1,98 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import JsonLd from '@/app/components/JsonLd';
+import { SITE_URL } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'How to Clinch a Play-Off Spot | FIFA World Cup 2026',
+  title:
+    'How to Qualify for the FIFA World Cup 2026 Knockout Stage — Play-Off Rules',
   description:
-    'Understand FIFA World Cup 2026 qualification rules: how 32 of 48 teams advance from the group stage, third-placed team rankings, tiebreaker rules, and how we calculate probabilities.',
+    'Complete guide to FIFA World Cup 2026 qualification: how 32 of 48 soccer teams advance from the group stage to the knockout bracket, third-placed play-off ranking, FIFA tiebreaker rules and probability simulation.',
   keywords: [
-    'FIFA World Cup 2026', 'qualification rules', 'group stage', 'play-off',
-    'third-placed teams', 'tiebreaker', 'knockout round', 'Round of 32',
+    'FIFA World Cup 2026 qualification',
+    'how to qualify World Cup',
+    'play-off rules',
+    'knockout stage rules',
+    'Round of 32',
+    'third-placed teams',
+    'FIFA tiebreaker rules',
+    'World Cup play-off',
+    'soccer qualification rules',
   ],
+  alternates: { canonical: '/worldcup2026/how-to-clinch-play-off-worldcup2026' },
+  openGraph: {
+    title: 'How to Qualify for the FIFA World Cup 2026 Knockout Stage',
+    description:
+      'How 32 of 48 teams advance from the group stage to the knockout bracket — play-off rules, tiebreakers and probabilities.',
+    url: `${SITE_URL}/worldcup2026/how-to-clinch-play-off-worldcup2026`,
+    type: 'article',
+  },
 };
 
 export default function HowToQualifyPage() {
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${SITE_URL}/worldcup2026`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'How to Clinch a Play-Off Spot',
+          item: `${SITE_URL}/worldcup2026/how-to-clinch-play-off-worldcup2026`,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'How does a team qualify for the FIFA World Cup 2026 knockout stage?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: '32 of 48 teams advance to the Round of 32: the 12 group winners, the 12 runners-up, and the 8 best third-placed teams ranked across all 12 groups.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'What are the FIFA tiebreaker rules?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'FIFA Article 13 applies head-to-head points, head-to-head goal difference and head-to-head goals first. If still tied, overall goal difference, overall goals scored and fair play points are used. The final tiebreaker is the FIFA / Coca-Cola Men\'s World Ranking.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'How are the best third-placed teams ranked?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'The 12 third-placed teams are ranked by points, goal difference, goals scored, fair play points and FIFA ranking. The top 8 advance to the knockout Round of 32.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'How does Knockouts.in calculate qualification probabilities?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'For each group with five or fewer remaining matches we enumerate every possible score combination (up to 537,824). For larger groups we run a 50,000-iteration Monte Carlo simulation, then apply FIFA tiebreaker rules to determine final positions.',
+          },
+        },
+      ],
+    },
+  ];
+
   return (
     <main className="container py-4">
+      <JsonLd data={jsonLd} />
+
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
@@ -25,9 +104,10 @@ export default function HowToQualifyPage() {
         </ol>
       </nav>
 
-      <h1 className="mb-2">How to Clinch a Play-Off Spot</h1>
+      <h1 className="mb-2">How to Clinch a Play-Off Spot at the FIFA World Cup 2026</h1>
       <p className="text-muted mb-4" style={{ fontSize: '1.05rem' }}>
-        Everything you need to know about advancing from the FIFA World Cup 2026 group stage.
+        Everything you need to know about advancing from the FIFA World Cup 2026 group stage to the
+        knockout bracket: qualification rules, third-placed play-off ranking and FIFA tiebreaker rules.
       </p>
 
       {/* ── Section A: Path to the Knockout Stage ── */}

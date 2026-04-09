@@ -16,6 +16,8 @@ import ScenariosAccordion from '@/app/components/ScenariosAccordion';
 import GroupStandings from '@/app/components/GroupStandings';
 import MatchList from '@/app/components/MatchList';
 import NextMatchDate from '@/app/components/NextMatchDate';
+import JsonLd from '@/app/components/JsonLd';
+import { SITE_URL } from '@/lib/seo';
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -45,7 +47,17 @@ function parseGroupSlug(slug: string): GroupId | null {
   return ALL_GROUPS.includes(groupId) ? groupId : null;
 }
 
-export const dynamic = 'force-dynamic';
+// ISR — team data only changes after a match ends.
+export const revalidate = 600;
+
+// Pre-build all 48 team pages so the first request hits a cached version.
+export async function generateStaticParams() {
+  const teams = await query<TeamRow>('SELECT name, group_id FROM team ORDER BY id');
+  return teams.map((t) => ({
+    groupId: `group-${t.group_id.toLowerCase()}`,
+    teamId: slugify(t.name),
+  }));
+}
 
 interface PageProps {
   params: Promise<{ groupId: string; teamId: string }>;
@@ -58,9 +70,37 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const rows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1', [groupId]);
   const team = rows.find((r) => slugify(r.name) === rawTeamId.toLowerCase());
   if (!team) return { title: 'Team not found' };
+
+  const canonical = `/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(team.name)}`;
+  const title = `${team.name} at the FIFA World Cup 2026 — Group ${groupId} Standings, Fixtures & Knockout Scenarios`;
+  const description = `Track ${team.name}'s FIFA World Cup 2026 journey in Group ${groupId}: live standings, fixtures, FIFA ranking, knockout play-off probability and every scenario for advancing to the Round of 32.`;
+
   return {
-    title: `${team.name} — Group ${groupId} | FIFA World Cup 2026`,
-    description: `Track ${team.name}'s qualification scenarios, standings, and match results in Group ${groupId} of the FIFA World Cup 2026.`,
+    title,
+    description,
+    keywords: [
+      `${team.name} World Cup 2026`,
+      `${team.name} FIFA ranking`,
+      `${team.name} fixtures`,
+      `${team.name} knockout`,
+      `${team.name} play-off`,
+      `Group ${groupId}`,
+      'FIFA World Cup 2026',
+      'soccer',
+      'football',
+    ],
+    alternates: { canonical },
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}${canonical}`,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
   };
 }
 
@@ -241,8 +281,52 @@ export default async function TeamDetailPage({ params }: PageProps) {
     ? teamMap.get(nextMatch.homeTeamId === team.id ? nextMatch.awayTeamId : nextMatch.homeTeamId)
     : null;
 
+  // Structured data: SportsTeam + BreadcrumbList for the team page.
+  const teamCanonical = `${SITE_URL}/worldcup2026/${groupSlug}/team/${slugify(team.name)}`;
+  const teamJsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/worldcup2026` },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: `Group ${groupId}`,
+          item: `${SITE_URL}/worldcup2026/${groupSlug}`,
+        },
+        { '@type': 'ListItem', position: 3, name: team.name, item: teamCanonical },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SportsTeam',
+      name: team.name,
+      sport: 'Soccer',
+      url: teamCanonical,
+      memberOf: {
+        '@type': 'SportsOrganization',
+        name: 'FIFA',
+        url: 'https://www.fifa.com',
+      },
+      ...(team.fifaRanking
+        ? {
+            athlete: undefined,
+            // Custom-friendly hint about FIFA ranking via additional property
+            additionalProperty: {
+              '@type': 'PropertyValue',
+              name: 'FIFA World Ranking',
+              value: team.fifaRanking,
+            },
+          }
+        : {}),
+    },
+  ];
+
   return (
     <main className="container py-4">
+      <JsonLd data={teamJsonLd} />
+
       {/* Header: team name left, breadcrumb right */}
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <div>

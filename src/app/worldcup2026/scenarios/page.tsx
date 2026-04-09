@@ -1,13 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import ScenarioPicker from '@/app/components/ScenarioPicker';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata = {
-  title: 'Test Scenarios | FIFA World Cup 2026',
-  description: 'Switch between match data scenarios to explore the tournament at different stages.',
+export const metadata: Metadata = {
+  title: 'Test Scenarios',
+  description:
+    'Internal testing tool — switch between match data snapshots to preview the tournament at different stages.',
+  // Internal/admin tool — keep out of search engines.
+  robots: { index: false, follow: false },
 };
 
 export interface ScenarioMeta {

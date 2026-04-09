@@ -6,11 +6,14 @@ import { compareThirdPlaced } from '@/engine/best-third';
 import { getAllCachedProbsOrCompute } from '@/lib/probability-cache';
 import { getCachedQualificationThreshold } from '@/engine/probability';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import GroupOverview from '@/app/components/GroupOverview';
 import BestThirdTable from '@/app/components/BestThirdTable';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import NewsWidget from '@/app/components/NewsWidget';
 import Countdown from '@/app/components/Countdown';
+import JsonLd from '@/app/components/JsonLd';
+import { SITE_URL } from '@/lib/seo';
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -32,7 +35,30 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
-export const dynamic = 'force-dynamic';
+// ISR: data only changes a few times per day after a match ends.
+// Re-render at most every 10 minutes — admin actions trigger fresh requests
+// and Next.js will revalidate in the background.
+export const revalidate = 600;
+
+export const metadata: Metadata = {
+  title: 'FIFA World Cup 2026 Bracket, Standings & Knockout Tracker',
+  description:
+    'Follow every group, fixture and knockout play-off match of the FIFA World Cup 2026. Live standings, FIFA ranking and qualification probabilities for all 48 soccer teams in Canada, Mexico and USA.',
+  alternates: { canonical: '/worldcup2026' },
+  openGraph: {
+    title: 'FIFA World Cup 2026 Bracket, Standings & Knockout Tracker',
+    description:
+      'Live group standings, knockout bracket, FIFA ranking and play-off probabilities for the FIFA World Cup 2026.',
+    url: `${SITE_URL}/worldcup2026`,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FIFA World Cup 2026 Bracket, Standings & Knockout Tracker',
+    description:
+      'Live group standings, knockout bracket and play-off probabilities for the FIFA World Cup 2026.',
+  },
+};
 
 interface ThirdPlacedTeam {
   rank: number;
@@ -184,13 +210,69 @@ export default async function HomePage() {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const hasMatchesPlayed = Object.values(groups).some((g: any) =>
     g.standings.some((s: any) => s.matchesPlayed > 0)
   );
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  // BreadcrumbList + FAQPage structured data for the homepage.
+  const homeJsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: `${SITE_URL}/worldcup2026`,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'How many soccer teams play at the FIFA World Cup 2026?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: '48 national teams play at the FIFA World Cup 2026, divided into 12 groups of 4. The top two teams from each group plus the eight best third-placed teams advance to the Round of 32.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'How does the FIFA World Cup 2026 knockout bracket work?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'The knockout phase starts with a Round of 32 and continues through the Round of 16, Quarterfinals, Semifinals and Final. Every match is single elimination — losers are out, winners advance to the next round.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'How are the best third-placed teams chosen for the play-off?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'After the group stage, the 12 third-placed teams are ranked by points, goal difference, goals scored, fair play points and FIFA ranking. The top 8 advance to the knockout Round of 32.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Where is the FIFA World Cup 2026 played?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'The FIFA World Cup 2026 is jointly hosted by Canada, Mexico and the United States, with matches played in 16 host cities across the three countries.',
+          },
+        },
+      ],
+    },
+  ];
 
   return (
     <>
+      <JsonLd data={homeJsonLd} />
       <section className="hero">
         <div className="container">
           <h1>Who Clinches a World Cup Play-Off?</h1>
@@ -226,6 +308,30 @@ export default async function HomePage() {
             )}
           </div>
         )}
+
+        {/* SEO content block — keyword-rich descriptive text + internal links */}
+        <section className="mt-5" aria-label="About Knockouts.in">
+          <h2 className="h4 mb-3">Your FIFA World Cup 2026 Knockout &amp; Play-Off Tracker</h2>
+          <p className="text-muted">
+            Knockouts.in is the fastest way to follow the <strong>FIFA World Cup 2026</strong> in
+            Canada, Mexico and the United States. We track every soccer match in all 12 groups,
+            compute live <strong>standings</strong>, simulate every remaining fixture and tell you
+            exactly who is on course for the <strong>knockout bracket</strong> and the eight
+            best-third <strong>play-off</strong> spots.
+          </p>
+          <p className="text-muted">
+            Explore the interactive <Link href="/worldcup2026/knockout-bracket">knockout bracket</Link>,
+            check the latest <Link href="/worldcup2026/fifa-ranking">FIFA ranking</Link>, browse the
+            full <Link href="/worldcup2026/fixtures">fixtures &amp; results</Link>, see the
+            current <Link href="/worldcup2026/best-third-placed">best third-placed teams</Link>,
+            or learn{' '}
+            <Link href="/worldcup2026/how-to-clinch-play-off-worldcup2026">
+              how to clinch a play-off spot
+            </Link>
+            . Every group page shows live standings and the exact scenarios each team needs to
+            qualify for the knockout stage.
+          </p>
+        </section>
 
         <div className="paypal-donate-section">
           <p className="paypal-donate-heading">Support us</p>
