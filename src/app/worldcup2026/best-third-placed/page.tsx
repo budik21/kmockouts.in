@@ -38,34 +38,6 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
-/**
- * Build per-team CONDITIONAL probability: "if this team finishes 3rd, what's
- * the chance they qualify as best third?" = probThirdQual / probThird * 100.
- * This is the relevant metric for the best-third table, which already shows
- * teams that are currently in 3rd place.
- */
-function buildTeamProbabilities(
-  thirdPlaced: { groupId: GroupId; standing: TeamStanding }[],
-  allTeamProbs: Map<string, Map<number, import('@/lib/probability-cache').CachedTeamProb>>,
-  bestThirdProbs: Map<string, number> | null,
-): { [teamId: number]: number } {
-  const result: { [teamId: number]: number } = {};
-  for (const tp of thirdPlaced) {
-    const groupCache = allTeamProbs.get(tp.groupId);
-    if (groupCache) {
-      const teamProb = groupCache.get(tp.standing.team.id);
-      if (teamProb && teamProb.probThird > 0) {
-        // Conditional: given 3rd place, chance of qualifying
-        result[tp.standing.team.id] = (teamProb.probThirdQual / teamProb.probThird) * 100;
-        continue;
-      }
-    }
-    // Fallback to per-group probability
-    result[tp.standing.team.id] = bestThirdProbs?.get(tp.groupId) ?? 0;
-  }
-  return result;
-}
-
 export default async function BestThirdPlacedPage() {
   // Collect third-placed team from each group + their matches
   const thirdPlaced: { groupId: GroupId; standing: TeamStanding; teamMatches: { opponentName: string; opponentShort: string; opponentCode: string; isHome: boolean; homeGoals: number | null; awayGoals: number | null; status: string; round: number; venue: string; kickOff: string }[] }[] = [];
@@ -271,7 +243,6 @@ export default async function BestThirdPlacedPage() {
           <div className="group-card-body">
             <BestThirdTable
               teams={tableData}
-              teamProbabilities={allTeamProbs ? buildTeamProbabilities(thirdPlaced, allTeamProbs, bestThirdProbs) : undefined}
               summaries={summariesData.map(s => ({ teamId: s.teamId, summaryHtml: s.summaryHtml, qualProbability: s.qualProbability }))}
             />
           </div>

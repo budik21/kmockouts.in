@@ -35,24 +35,12 @@ interface TeamSummary {
 
 interface BestThirdTableProps {
   teams: ThirdPlacedTeam[];
-  /** Per-team qualification probability (teamId -> probability). */
-  teamProbabilities?: { [teamId: number]: number };
   /** AI-generated summaries keyed by team ID */
   summaries?: TeamSummary[];
 }
 
-function probStyle(prob: number): { background: string; color: string } {
-  if (prob <= 0) return { background: '#a31b1b', color: '#ffffff' };
-  if (prob >= 80) return { background: '#0a5c2f', color: '#ffffff' };
-  if (prob >= 60) return { background: '#1a7a3a', color: '#ffffff' };
-  if (prob >= 40) return { background: '#2e9e4e', color: '#ffffff' };
-  if (prob >= 20) return { background: '#4db86a', color: '#1a3a1a' };
-  return { background: '#7ed69a', color: '#1a3a1a' };
-}
-
-export default function BestThirdTable({ teams, teamProbabilities, summaries }: BestThirdTableProps) {
+export default function BestThirdTable({ teams, summaries }: BestThirdTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const showProb = !!teamProbabilities;
   const summaryMap = new Map(summaries?.map(s => [s.teamId, s]) ?? []);
   const hasSummaries = summaryMap.size > 0;
 
@@ -73,7 +61,6 @@ export default function BestThirdTable({ teams, teamProbabilities, summaries }: 
             <th className="text-center">GD</th>
             <th className="text-center b3-pts-col">Pts</th>
             <th className="text-center d-none d-sm-table-cell">FP</th>
-            {showProb && <th className="text-center">%</th>}
             {hasSummaries && <th className="b3-expand-col"></th>}
           </tr>
         </thead>
@@ -82,7 +69,7 @@ export default function BestThirdTable({ teams, teamProbabilities, summaries }: 
             const summary = summaryMap.get(t.team.id);
             const isExpanded = expandedId === t.team.id;
             const isClickable = !!summary;
-            const colSpan = 11 + (showProb ? 1 : 0) + (hasSummaries ? 1 : 0);
+            const colSpan = 11 + (hasSummaries ? 1 : 0);
 
             return (
               <Fragment key={t.team.id}>
@@ -117,20 +104,6 @@ export default function BestThirdTable({ teams, teamProbabilities, summaries }: 
                   </td>
                   <td className="text-center fw-bold b3-pts-col">{t.points}</td>
                   <td className="text-center d-none d-sm-table-cell">{t.fairPlayPoints}</td>
-                  {showProb && (
-                    <td className="text-center">
-                      <span
-                        className="badge"
-                        style={{
-                          ...probStyle(teamProbabilities![t.team.id] ?? 0),
-                          minWidth: '48px',
-                          fontSize: '0.85rem',
-                        }}
-                      >
-                        {(teamProbabilities![t.team.id] ?? 0).toFixed(1)}
-                      </span>
-                    </td>
-                  )}
                   {hasSummaries && (
                     <td className="text-center b3-expand-cell">
                       {isClickable && (
