@@ -12,8 +12,13 @@ import BestThirdTable from '@/app/components/BestThirdTable';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import NewsWidget from '@/app/components/NewsWidget';
 import Countdown from '@/app/components/Countdown';
+import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
+
+// AdSense slot IDs — replace with real values from your AdSense console
+const AD_SLOT_BETWEEN_GROUPS = 'XXXXXXXXXX';  // TODO: replace with real slot ID
+const AD_SLOT_BEFORE_THIRD   = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -286,10 +291,11 @@ export default async function HomePage() {
 
       <main className="container">
         <NewsWidget articles={articles} />
-        <GroupOverview groups={groups} />
+        <GroupOverview groups={groups} adSlot={AD_SLOT_BETWEEN_GROUPS} />
 
         {hasMatchesPlayed && (
           <div className="mt-3">
+            <AdBanner slot={AD_SLOT_BEFORE_THIRD} format="auto" className="mb-3" />
             <Link href="/worldcup2026/best-third-placed" style={{ textDecoration: 'none' }}>
               <div className="group-card">
                 <div className="group-card-header">
@@ -336,7 +342,7 @@ export default async function HomePage() {
         <div className="paypal-donate-section">
           <p className="paypal-donate-heading">Support us</p>
           <p className="paypal-donate-text">
-            Knockouts.in is provided without fees and ads.<br />
+            Knockouts.in is free to use.<br />
             If you like it, drop a buck via PayPal.
           </p>
           <form action="https://www.paypal.com/donate" method="post" target="_blank">

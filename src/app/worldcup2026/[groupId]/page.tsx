@@ -6,8 +6,11 @@ import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probab
 import GroupDetailClient from './GroupDetailClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
+
+const AD_SLOT_GROUP_PAGE = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -240,6 +243,9 @@ export default async function GroupDetailPage({ params }: PageProps) {
         finishedCount={finishedMatches.length}
         totalCount={allMatches.length}
       />
+
+      {/* Ad banner */}
+      <AdBanner slot={AD_SLOT_GROUP_PAGE} format="auto" className="mt-4" />
 
       {/* SEO text */}
       <p className="text-muted mt-4" style={{ fontSize: '0.9rem' }}>

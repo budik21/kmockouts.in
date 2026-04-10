@@ -16,8 +16,11 @@ import ScenariosAccordion from '@/app/components/ScenariosAccordion';
 import GroupStandings from '@/app/components/GroupStandings';
 import MatchList from '@/app/components/MatchList';
 import NextMatchDate from '@/app/components/NextMatchDate';
+import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
+
+const AD_SLOT_TEAM_PAGE = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -446,6 +449,9 @@ export default async function TeamDetailPage({ params }: PageProps) {
           </div>
         ) : null;
       })()}
+
+      {/* Ad banner */}
+      <AdBanner slot={AD_SLOT_TEAM_PAGE} format="auto" className="mt-4" />
 
       {/* SEO text */}
       <p className="text-muted mt-4" style={{ fontSize: '0.9rem' }}>

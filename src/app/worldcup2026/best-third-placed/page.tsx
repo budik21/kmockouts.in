@@ -11,8 +11,11 @@ import { generateBestThirdSummaries, BestThirdTeamContext } from '@/engine/best-
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
+
+const AD_SLOT_BEST_THIRD = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
 // ISR — best-third standings change a few times per day after match results.
 export const revalidate = 60;
@@ -303,6 +306,9 @@ export default async function BestThirdPlacedPage() {
       {showTable && (
         <ThirdPlacedMatchesGrid teams={matchesGridData} />
       )}
+
+      {/* Ad banner */}
+      <AdBanner slot={AD_SLOT_BEST_THIRD} format="auto" className="mt-4" />
     </main>
   );
 }

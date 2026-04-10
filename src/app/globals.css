@@ -1181,6 +1181,20 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ============================================================
+   Ad Containers
+   ============================================================ */
+
+.ad-container {
+  text-align: center;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.ad-container .adsbygoogle {
+  margin: 0 auto;
+}
+
+/* ============================================================
    Page Transition Spinner
    ============================================================ */
 
