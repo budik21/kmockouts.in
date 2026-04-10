@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Script from 'next/script';
 
 const GA_ID = 'G-82JJNM9XMF';
-const ADSENSE_ID = 'ca-pub-4440685571892428';
 const CONSENT_KEY = 'cookie-consent';
 
 export default function CookieConsent() {
@@ -50,11 +49,6 @@ export default function CookieConsent() {
               gtag('config', '${GA_ID}');
             `}
           </Script>
-          <Script
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_ID}`}
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-          />
         </>
       )}
 
@@ -62,7 +56,7 @@ export default function CookieConsent() {
         <div className="cookie-banner">
           <div className="container d-flex flex-column flex-sm-row align-items-center justify-content-between gap-3">
             <p className="mb-0" style={{ fontSize: '0.85rem' }}>
-              This website uses cookies for traffic analysis and personalized ads (Google Analytics &amp; AdSense).
+              This website uses cookies for traffic analysis (Google Analytics).
             </p>
             <div className="d-flex gap-2 flex-shrink-0">
               <button className="btn btn-sm cookie-btn-accept" onClick={accept}>
