@@ -45,6 +45,10 @@ export default function Footer() {
               Feedback
             </a>
             <span className="footer-sep">&middot;</span>
+            <a href="/privacy-policy">
+              Privacy Policy
+            </a>
+            <span className="footer-sep">&middot;</span>
             <form
               action="https://www.paypal.com/donate"
               method="post"
