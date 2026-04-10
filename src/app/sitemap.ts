@@ -6,7 +6,7 @@ import { slugify } from '@/lib/slugify';
 import { SITE_URL } from '@/lib/seo';
 
 // Sitemap is regenerated alongside the ISR pages.
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = SITE_URL;

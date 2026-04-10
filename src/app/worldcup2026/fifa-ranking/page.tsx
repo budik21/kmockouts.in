@@ -5,7 +5,7 @@ import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 
 // ISR — FIFA ranking is scraped daily, refresh roughly every 30 minutes.
-export const revalidate = 1800;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'FIFA Ranking 2026 — All World Cup Soccer Teams Sorted by Rank',

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { applyScenario } from '@/lib/apply-scenario';
 import { recalculateAllProbabilities } from '@/lib/probability-cache';
 import { query } from '@/lib/db';
@@ -22,6 +23,9 @@ export async function POST(request: NextRequest) {
     await query('DELETE FROM ai_summary_cache');
 
     await recalculateAllProbabilities();
+
+    // Purge ISR cache for all pages that show match results / probabilities
+    revalidatePath('/worldcup2026', 'layout');
 
     if (scenarioId === 0) {
       return NextResponse.json({ success: true, message: 'Reset to clean state', active: null });

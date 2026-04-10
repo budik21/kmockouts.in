@@ -38,7 +38,7 @@ function rowToMatch(row: MatchRow): Match {
 // ISR: data only changes a few times per day after a match ends.
 // Re-render at most every 10 minutes — admin actions trigger fresh requests
 // and Next.js will revalidate in the background.
-export const revalidate = 600;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'FIFA World Cup 2026 Bracket, Standings & Knockout Tracker',

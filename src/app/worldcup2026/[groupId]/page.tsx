@@ -38,7 +38,7 @@ function parseGroupSlug(slug: string): GroupId | null {
 }
 
 // ISR — group standings update only after a match ends.
-export const revalidate = 600;
+export const revalidate = 60;
 
 // Pre-build all 12 group pages so ISR caching kicks in immediately.
 export function generateStaticParams() {

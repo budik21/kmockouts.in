@@ -6,7 +6,7 @@ import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 
 // ISR — fixtures only change a few times per day after match results are recorded.
-export const revalidate = 600;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'FIFA World Cup 2026 Fixtures, Results & Schedule',

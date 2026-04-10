@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { recalculateAllProbabilities, pregenerateBestThirdSummaries } from '@/lib/probability-cache';
@@ -74,6 +75,8 @@ export async function POST(request: NextRequest) {
         } catch (err) {
           console.error('[admin] AI summary pregeneration failed:', err);
         }
+        // Purge ISR cache so pages reflect new results immediately
+        revalidatePath('/worldcup2026', 'layout');
         await query('UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1', [groupId]);
       })
       .catch(async (err) => {

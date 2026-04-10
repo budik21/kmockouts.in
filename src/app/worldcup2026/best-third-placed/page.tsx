@@ -15,7 +15,7 @@ import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 
 // ISR — best-third standings change a few times per day after match results.
-export const revalidate = 600;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title:

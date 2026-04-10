@@ -48,7 +48,7 @@ function parseGroupSlug(slug: string): GroupId | null {
 }
 
 // ISR — team data only changes after a match ends.
-export const revalidate = 600;
+export const revalidate = 60;
 
 // Pre-build all 48 team pages so the first request hits a cached version.
 export async function generateStaticParams() {
