@@ -134,14 +134,9 @@ function fullEnumerationScenarios(
       data.positionCounts[s.position]++;
 
       // Team-specific pattern key:
-      //   • team's own match  → outcome + GD (needed for min-GD extraction in summaries)
-      //   • other matches     → outcome only (GD variations are irrelevant)
-      const teamPatternKey = matchCombo.matchResults.map((r, i) => {
-        const m = remainingMatches[i];
-        const isOwn = m.homeTeamId === s.team.id || m.awayTeamId === s.team.id;
-        return isOwn
-          ? `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`
-          : r.shortResult;
+      //   • all matches → outcome + GD (needed for cross-match GD analysis in summaries)
+      const teamPatternKey = matchCombo.matchResults.map((r) => {
+        return `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`;
       }).join('|');
       data.patternSets[s.position].add(teamPatternKey);
 

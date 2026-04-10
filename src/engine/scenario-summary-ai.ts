@@ -147,49 +147,99 @@ function posLabel(pos: number): string {
  * Reduce outcome patterns to unique W/D/L combinations with min goal-difference
  * thresholds, producing a concise prompt instead of hundreds of GD variants.
  *
- * Patterns use team-specific format: own match → outcome+GD (e.g. "H2"),
- * other matches → outcome only ("H", "D", "A").
+ * Patterns use format: outcome+GD for ALL matches (e.g. "H3|H1").
+ * Sub-groups by own-match GD to preserve cross-match dependencies
+ * (e.g. "team loses by 4+ AND other wins" vs "team loses by 1 AND other wins by 3+").
  */
 function reduceAndDecodePatterns(
   patterns: string[],
   matches: { homeTeam: string; awayTeam: string; isTeamMatch: boolean }[],
 ): { text: string; reducedCount: number } {
-  // Group by outcome-only key (strip GD numbers)
-  const groups = new Map<string, { minGDs: number[]; count: number }>();
+  const ownIndices = matches.map((m, i) => m.isTeamMatch ? i : -1).filter(i => i >= 0);
+  const otherIndices = matches.map((m, i) => !m.isTeamMatch ? i : -1).filter(i => i >= 0);
 
+  // Group by outcome-only key (strip GD numbers)
+  const outcomeGroups = new Map<string, number[][]>();
   for (const pattern of patterns) {
     const parts = pattern.split('|');
     const outcomeKey = parts.map(p => p.charAt(0)).join('|');
     const gds = parts.map(p => parseInt(p.slice(1), 10) || 0);
-
-    if (!groups.has(outcomeKey)) {
-      groups.set(outcomeKey, { minGDs: [...gds], count: 1 });
-    } else {
-      const g = groups.get(outcomeKey)!;
-      g.count++;
-      for (let i = 0; i < gds.length; i++) {
-        if (gds[i] < g.minGDs[i]) g.minGDs[i] = gds[i];
-      }
-    }
+    if (!outcomeGroups.has(outcomeKey)) outcomeGroups.set(outcomeKey, []);
+    outcomeGroups.get(outcomeKey)!.push(gds);
   }
 
   const lines: string[] = [];
-  for (const [outcomeKey, { minGDs, count }] of groups) {
+
+  for (const [outcomeKey, allGDs] of outcomeGroups) {
     const outcomes = outcomeKey.split('|');
-    const decoded = outcomes.map((o, i) => {
-      const m = matches[i];
-      if (!m) return o;
-      const gd = minGDs[i];
-      const gdNote = m.isTeamMatch && o !== 'D' && gd > 1 ? ` by ${gd}+ goals` : '';
-      if (o === 'H') return `${m.homeTeam} beats ${m.awayTeam}${gdNote}`;
-      if (o === 'A') return `${m.awayTeam} beats ${m.homeTeam}${gdNote}`;
-      return `${m.homeTeam} draws with ${m.awayTeam}`;
-    });
-    const variants = count > 1 ? ` [${count} GD variants]` : '';
-    lines.push(`  ${decoded.join(', ')}${variants}`);
+
+    if (otherIndices.length === 0) {
+      // No other matches — simple min-GD across all entries
+      const minGDs = allGDs[0].map((_, i) => Math.min(...allGDs.map(g => g[i])));
+      lines.push(formatPatternLine(outcomes, minGDs, matches, allGDs.length));
+      continue;
+    }
+
+    // Sub-group by own-match GD values to preserve cross-match constraints
+    const byOwnGD = new Map<string, number[][]>();
+    for (const gds of allGDs) {
+      const key = ownIndices.map(i => gds[i]).join(',');
+      if (!byOwnGD.has(key)) byOwnGD.set(key, []);
+      byOwnGD.get(key)!.push(gds);
+    }
+
+    // For each sub-group, compute min other-match GDs, then merge sub-groups
+    // with identical other-match constraints
+    interface SubGroup {
+      ownGDsList: number[][];
+      otherMinGDs: number[];
+      count: number;
+    }
+    const merged: SubGroup[] = [];
+    for (const [ownKey, subGDs] of byOwnGD) {
+      const ownGDs = ownKey.split(',').map(Number);
+      const otherMinGDs = otherIndices.map(i => Math.min(...subGDs.map(g => g[i])));
+      const match = merged.find(m => m.otherMinGDs.every((v, i) => v === otherMinGDs[i]));
+      if (match) {
+        match.ownGDsList.push(ownGDs);
+        match.count += subGDs.length;
+      } else {
+        merged.push({ ownGDsList: [ownGDs], otherMinGDs, count: subGDs.length });
+      }
+    }
+
+    // Generate a line for each merged sub-group
+    for (const { ownGDsList, otherMinGDs, count } of merged) {
+      const minGDs = matches.map((_, i) => {
+        const ownIdx = ownIndices.indexOf(i);
+        if (ownIdx >= 0) return Math.min(...ownGDsList.map(g => g[ownIdx]));
+        const otherIdx = otherIndices.indexOf(i);
+        return otherIdx >= 0 ? otherMinGDs[otherIdx] : 0;
+      });
+      lines.push(formatPatternLine(outcomes, minGDs, matches, count));
+    }
   }
 
-  return { text: lines.join('\n'), reducedCount: groups.size };
+  return { text: lines.join('\n'), reducedCount: lines.length };
+}
+
+function formatPatternLine(
+  outcomes: string[],
+  minGDs: number[],
+  matches: { homeTeam: string; awayTeam: string; isTeamMatch: boolean }[],
+  count: number,
+): string {
+  const decoded = outcomes.map((o, i) => {
+    const m = matches[i];
+    if (!m) return o;
+    const gd = minGDs[i];
+    const gdNote = o !== 'D' && gd > 1 ? ` by ${gd}+ goals` : '';
+    if (o === 'H') return `${m.homeTeam} beats ${m.awayTeam}${gdNote}`;
+    if (o === 'A') return `${m.awayTeam} beats ${m.homeTeam}${gdNote}`;
+    return `${m.homeTeam} draws with ${m.awayTeam}`;
+  });
+  const variants = count > 1 ? ` [${count} GD variants]` : '';
+  return `  ${decoded.join(', ')}${variants}`;
 }
 
 // ============================================================

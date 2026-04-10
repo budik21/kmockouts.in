@@ -23,9 +23,15 @@ interface MatchPatternEntry {
   goalDiff: number;
 }
 
+interface OtherConstraint {
+  matchIdx: number;
+  outcomes: Set<RawOutcome>;
+  minGoalDiffs: Map<RawOutcome, number>;
+}
+
 interface Branch {
   ownConditions: { matchIdx: number; outcome: ExtOutcome; minGoalDiff: number }[];
-  otherConstraints: { matchIdx: number; outcomes: Set<RawOutcome> }[];
+  otherConstraints: OtherConstraint[];
 }
 
 /**
@@ -110,36 +116,141 @@ function summarizePosition(
     groups.get(ownKey)!.push(entries);
   }
 
-  // Build branches
+  // Build branches — sub-group by own-match GD to preserve cross-match
+  // GD dependencies (e.g. "loses by 4+ AND other team wins" vs
+  // "loses by 1 AND other team wins by 3+").
   const branches: Branch[] = [];
   for (const [ownKey, groupEntries] of groups) {
     const ownOutcomes = ownKey.split('|') as TeamOutcome[];
 
-    const ownConditions = ownOutcomes.map((outcome, i) => {
-      const matchIdx = ownMatchIndices[i];
-      // Find minimum goal diff within this group for this match
-      const diffs = groupEntries.map(e => e[matchIdx].goalDiff);
-      const minGoalDiff = Math.min(...diffs);
-      return { matchIdx, outcome: outcome as ExtOutcome, minGoalDiff };
-    });
-
-    const otherConstraints: Branch['otherConstraints'] = [];
-    for (const idx of otherMatchIndices) {
-      const outcomes = new Set<RawOutcome>(groupEntries.map(e => e[idx].rawOutcome));
-      otherConstraints.push({ matchIdx: idx, outcomes });
+    if (otherMatchIndices.length === 0) {
+      // No other matches — just compute own conditions as before
+      const ownConditions = ownOutcomes.map((outcome, i) => {
+        const matchIdx = ownMatchIndices[i];
+        const diffs = groupEntries.map(e => e[matchIdx].goalDiff);
+        return { matchIdx, outcome: outcome as ExtOutcome, minGoalDiff: Math.min(...diffs) };
+      });
+      branches.push({ ownConditions, otherConstraints: [] });
+      continue;
     }
 
-    branches.push({ ownConditions, otherConstraints });
+    // Sub-group entries by own-match GD values
+    const byOwnGD = new Map<string, MatchPatternEntry[][]>();
+    for (const entries of groupEntries) {
+      const gdKey = ownMatchIndices.map(i => entries[i].goalDiff).join(',');
+      if (!byOwnGD.has(gdKey)) byOwnGD.set(gdKey, []);
+      byOwnGD.get(gdKey)!.push(entries);
+    }
+
+    // For each own-GD sub-group, compute other constraints with minGoalDiffs
+    interface SubBranch {
+      ownGDs: number[][];
+      otherConstraints: OtherConstraint[];
+    }
+    const subBranches: SubBranch[] = [];
+    for (const [gdKey, subEntries] of byOwnGD) {
+      const ownGDs = gdKey.split(',').map(Number);
+      const oc: OtherConstraint[] = [];
+      for (const idx of otherMatchIndices) {
+        const outcomes = new Set<RawOutcome>();
+        const minGDs = new Map<RawOutcome, number>();
+        for (const e of subEntries) {
+          const raw = e[idx].rawOutcome;
+          const gd = e[idx].goalDiff;
+          outcomes.add(raw);
+          const curr = minGDs.get(raw);
+          minGDs.set(raw, curr !== undefined ? Math.min(curr, gd) : gd);
+        }
+        oc.push({ matchIdx: idx, outcomes, minGoalDiffs: minGDs });
+      }
+      subBranches.push({ ownGDs: [ownGDs], otherConstraints: oc });
+    }
+
+    // Merge sub-branches with identical other constraints
+    const mergedSubs: SubBranch[] = [];
+    for (const sb of subBranches) {
+      const match = mergedSubs.find(m => otherConstraintsEqual(m.otherConstraints, sb.otherConstraints));
+      if (match) {
+        match.ownGDs.push(...sb.ownGDs);
+      } else {
+        mergedSubs.push({ ownGDs: [...sb.ownGDs], otherConstraints: sb.otherConstraints });
+      }
+    }
+
+    // Convert to branches
+    for (const { ownGDs, otherConstraints } of mergedSubs) {
+      const ownConditions = ownOutcomes.map((outcome, dimIdx) => {
+        const matchIdx = ownMatchIndices[dimIdx];
+        const minGoalDiff = Math.min(...ownGDs.map(gds => gds[dimIdx]));
+        return { matchIdx, outcome: outcome as ExtOutcome, minGoalDiff };
+      });
+      branches.push({ ownConditions, otherConstraints });
+    }
   }
 
   // Merge branches
   const merged = mergeBranches(branches, ownMatchIndices, otherMatchIndices);
 
-  if (merged.length > 5) {
+  // Remove branches fully subsumed by a wider branch
+  const deduped = removeRedundantBranches(merged);
+
+  if (deduped.length > 5) {
     return 'Multiple scenarios possible — see details below.';
   }
 
-  return buildSentence(merged, remainingMatches, teamId, teamName);
+  return buildSentence(deduped, remainingMatches, teamId, teamName);
+}
+
+// ============================================================
+// Redundancy removal
+// ============================================================
+
+/**
+ * Remove branches that are fully subsumed by a wider branch.
+ * E.g., if branch A says "draws or loses (any)" and branch B says
+ * "loses by 4+ (BIH draws or loses)", B is redundant since A covers it.
+ */
+function removeRedundantBranches(branches: Branch[]): Branch[] {
+  return branches.filter(b =>
+    !branches.some(a => a !== b && branchSubsumes(a, b))
+  );
+}
+
+function branchSubsumes(a: Branch, b: Branch): boolean {
+  if (a.ownConditions.length !== b.ownConditions.length) return false;
+  if (a.otherConstraints.length !== b.otherConstraints.length) return false;
+
+  let strictlyWider = false;
+
+  for (let i = 0; i < a.ownConditions.length; i++) {
+    const ao = a.ownConditions[i], bo = b.ownConditions[i];
+    if (ao.matchIdx !== bo.matchIdx) return false;
+    if (!outcomeIncludes(ao.outcome, bo.outcome)) return false;
+    if (ao.minGoalDiff > bo.minGoalDiff) return false;
+    if (ao.outcome !== bo.outcome || ao.minGoalDiff < bo.minGoalDiff) strictlyWider = true;
+  }
+
+  for (let i = 0; i < a.otherConstraints.length; i++) {
+    for (const outcome of b.otherConstraints[i].outcomes) {
+      if (!a.otherConstraints[i].outcomes.has(outcome)) return false;
+    }
+    if (a.otherConstraints[i].outcomes.size > b.otherConstraints[i].outcomes.size) strictlyWider = true;
+    for (const [outcome, bGD] of b.otherConstraints[i].minGoalDiffs) {
+      const aGD = a.otherConstraints[i].minGoalDiffs.get(outcome);
+      if (aGD !== undefined && aGD > bGD) return false;
+      if (aGD !== undefined && aGD < bGD) strictlyWider = true;
+    }
+  }
+
+  return strictlyWider;
+}
+
+function outcomeIncludes(a: ExtOutcome, b: ExtOutcome): boolean {
+  if (a === b) return true;
+  if (a === 'ANY') return true;
+  if (a === 'DRAW_OR_WIN') return b === 'DRAW' || b === 'WIN';
+  if (a === 'DRAW_OR_LOSS') return b === 'DRAW' || b === 'LOSS';
+  return false;
 }
 
 // ============================================================
@@ -152,8 +263,36 @@ function mergeBranches(
   otherMatchIndices: number[],
 ): Branch[] {
   if (ownMatchIndices.length === 0) return branches;
-  if (ownMatchIndices.length === 1) return mergeSingleOwnMatch(branches, otherMatchIndices);
-  return mergeMultiOwnMatches(branches, ownMatchIndices, otherMatchIndices);
+
+  // Group branches by their other constraints so the merge logic
+  // (which assumes at most one branch per own-outcome type) works correctly
+  // even when sub-grouping produces multiple branches of the same outcome type.
+  const constraintGroups = new Map<string, Branch[]>();
+  for (const b of branches) {
+    const key = otherConstraintFingerprint(b.otherConstraints);
+    if (!constraintGroups.has(key)) constraintGroups.set(key, []);
+    constraintGroups.get(key)!.push(b);
+  }
+
+  const result: Branch[] = [];
+  for (const group of constraintGroups.values()) {
+    if (ownMatchIndices.length === 1) {
+      result.push(...mergeSingleOwnMatch(group, otherMatchIndices));
+    } else {
+      result.push(...mergeMultiOwnMatches(group, ownMatchIndices, otherMatchIndices));
+    }
+  }
+  return result;
+}
+
+function otherConstraintFingerprint(oc: OtherConstraint[]): string {
+  return oc.map(c => {
+    const outcomeEntries = Array.from(c.outcomes).sort().map(o => {
+      const gd = c.minGoalDiffs.get(o) ?? 0;
+      return `${o}${gd}`;
+    }).join(',');
+    return `${c.matchIdx}:${outcomeEntries}`;
+  }).join('|');
 }
 
 function mergeSingleOwnMatch(branches: Branch[], otherMatchIndices: number[]): Branch[] {
@@ -259,9 +398,7 @@ function mergeMultiOwnMatches(
 }
 
 function constraintKey(b: Branch): string {
-  return b.otherConstraints
-    .map(c => `${c.matchIdx}:${Array.from(c.outcomes).sort().join(',')}`)
-    .join('|');
+  return otherConstraintFingerprint(b.otherConstraints);
 }
 
 /**
@@ -515,17 +652,29 @@ function deduplicateTuples(tuples: OwnTuple[]): OwnTuple[] {
   return Array.from(map.values());
 }
 
-function sameOtherConstraints(a: Branch, b: Branch): boolean {
-  if (a.otherConstraints.length !== b.otherConstraints.length) return false;
-  for (let i = 0; i < a.otherConstraints.length; i++) {
-    const aSet = a.otherConstraints[i]?.outcomes;
-    const bSet = b.otherConstraints[i]?.outcomes;
-    if (!aSet || !bSet || aSet.size !== bSet.size) return false;
-    for (const v of aSet) {
-      if (!bSet.has(v)) return false;
+function otherConstraintsEqual(
+  a: OtherConstraint[],
+  b: OtherConstraint[],
+): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].outcomes.size !== b[i].outcomes.size) return false;
+    for (const v of a[i].outcomes) {
+      if (!b[i].outcomes.has(v)) return false;
+    }
+    // Compare minGoalDiffs
+    for (const [outcome, gd] of a[i].minGoalDiffs) {
+      if (b[i].minGoalDiffs.get(outcome) !== gd) return false;
+    }
+    for (const [outcome] of b[i].minGoalDiffs) {
+      if (!a[i].minGoalDiffs.has(outcome)) return false;
     }
   }
   return true;
+}
+
+function sameOtherConstraints(a: Branch, b: Branch): boolean {
+  return otherConstraintsEqual(a.otherConstraints, b.otherConstraints);
 }
 
 // ============================================================
@@ -560,7 +709,7 @@ function buildSentence(
     for (const oc of b.otherConstraints) {
       if (oc.outcomes.size === 3) continue;
       const m = remainingMatches[oc.matchIdx];
-      const desc = describeOtherOutcome(oc.outcomes, m.homeTeamName, m.awayTeamName);
+      const desc = describeOtherOutcome(oc.outcomes, m.homeTeamName, m.awayTeamName, oc.minGoalDiffs);
       if (desc) conditions.push(desc);
     }
 
@@ -620,6 +769,7 @@ function describeOtherOutcome(
   outcomes: Set<RawOutcome>,
   homeName: string,
   awayName: string,
+  minGoalDiffs?: Map<RawOutcome, number>,
 ): string | null {
   if (outcomes.size === 3) return null;
 
@@ -628,8 +778,15 @@ function describeOtherOutcome(
 
   if (outcomes.size === 1) {
     const o = outcomes.values().next().value;
-    if (o === 'H') return `${home} beats ${away}`;
-    if (o === 'A') return `${away} beats ${home}`;
+    const minGD = minGoalDiffs?.get(o as RawOutcome) ?? 1;
+    if (o === 'H') {
+      if (minGD > 1) return `${home} beats ${away} by at least ${minGD} goals`;
+      return `${home} beats ${away}`;
+    }
+    if (o === 'A') {
+      if (minGD > 1) return `${away} beats ${home} by at least ${minGD} goals`;
+      return `${away} beats ${home}`;
+    }
     if (o === 'D') return `${home} and ${away} draw`;
   }
 

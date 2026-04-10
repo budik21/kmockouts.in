@@ -27,6 +27,7 @@ interface ScenariosAccordionProps {
   edgeScenariosByPosition: { [pos: number]: EnrichedCombination[] };
   probabilities: { [pos: number]: number };
   teamName: string;
+  focusTeamId?: number;
   summaries?: { [pos: number]: string };
 }
 
@@ -53,6 +54,7 @@ export default function ScenariosAccordion({
   edgeScenariosByPosition,
   probabilities,
   teamName,
+  focusTeamId,
   summaries,
 }: ScenariosAccordionProps) {
   return (
@@ -69,6 +71,7 @@ export default function ScenariosAccordion({
               combos={edgeScenariosByPosition[pos] ?? []}
               prob={probabilities[pos] ?? 0}
               summary={summaries?.[pos]}
+              focusTeamId={focusTeamId}
             />
           ))}
         </div>
@@ -77,7 +80,7 @@ export default function ScenariosAccordion({
   );
 }
 
-function PositionSection({ pos, combos, prob, summary }: { pos: number; combos: EnrichedCombination[]; prob: number; summary?: string }) {
+function PositionSection({ pos, combos, prob, summary, focusTeamId }: { pos: number; combos: EnrichedCombination[]; prob: number; summary?: string; focusTeamId?: number }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const id = `pos-${pos}`;
   const visibleCombos = combos.slice(0, visibleCount);
@@ -128,7 +131,7 @@ function PositionSection({ pos, combos, prob, summary }: { pos: number; combos: 
             <>
               <div className="scenario-grid">
                 {visibleCombos.map((combo, ci) => (
-                  <CombinationCard key={ci} combo={combo} index={ci + 1} />
+                  <CombinationCard key={ci} combo={combo} index={ci + 1} focusTeamId={focusTeamId} />
                 ))}
               </div>
               {hasMore && (
@@ -149,7 +152,7 @@ function PositionSection({ pos, combos, prob, summary }: { pos: number; combos: 
   );
 }
 
-function CombinationCard({ combo, index }: { combo: EnrichedCombination; index: number }) {
+function CombinationCard({ combo, index, focusTeamId }: { combo: EnrichedCombination; index: number; focusTeamId?: number }) {
   return (
     <div className="scenario-card">
       <div className="scenario-card-header">
@@ -157,15 +160,25 @@ function CombinationCard({ combo, index }: { combo: EnrichedCombination; index: 
       </div>
       <div className="scenario-card-body">
         {combo.matchResults.map((mr, i) => (
-          <MatchResultRow key={i} mr={mr} />
+          <MatchResultRow key={i} mr={mr} focusTeamId={focusTeamId} />
         ))}
       </div>
     </div>
   );
 }
 
-function MatchResultRow({ mr }: { mr: EnrichedMatchResult }) {
+function MatchResultRow({ mr, focusTeamId }: { mr: EnrichedMatchResult; focusTeamId?: number }) {
   const gd = mr.homeGoals - mr.awayGoals;
+  const isFocusMatch = focusTeamId != null && (mr.homeTeamId === focusTeamId || mr.awayTeamId === focusTeamId);
+  const focusIsHome = focusTeamId != null && mr.homeTeamId === focusTeamId;
+
+  // Determine left/right teams: focus team first if it's their match
+  const leftShort = (isFocusMatch && !focusIsHome) ? mr.awayTeamShort : mr.homeTeamShort;
+  const leftCode = (isFocusMatch && !focusIsHome) ? mr.awayCountryCode : mr.homeCountryCode;
+  const rightShort = (isFocusMatch && !focusIsHome) ? mr.homeTeamShort : mr.awayTeamShort;
+  const rightCode = (isFocusMatch && !focusIsHome) ? mr.homeCountryCode : mr.awayCountryCode;
+  // GD from left team's perspective
+  const leftGd = (isFocusMatch && !focusIsHome) ? -gd : gd;
 
   // Draw
   if (gd === 0) {
@@ -175,62 +188,44 @@ function MatchResultRow({ mr }: { mr: EnrichedMatchResult }) {
     return (
       <div className="scenario-match">
         <span className="scenario-team home">
-          {mr.homeTeamShort}
-          <TeamFlag countryCode={mr.homeCountryCode} className="ms-1" />
+          {leftShort}
+          <TeamFlag countryCode={leftCode} className="ms-1" />
         </span>
         <span className="scenario-gd scenario-gd-draw" title={drawTooltip} tabIndex={0}>
           {drawLabel}
         </span>
+        <span className="scenario-vs">vs.</span>
         <span className="scenario-team away">
-          <TeamFlag countryCode={mr.awayCountryCode} className="me-1" />
-          {mr.awayTeamShort}
+          <TeamFlag countryCode={rightCode} className="me-1" />
+          {rightShort}
         </span>
       </div>
     );
   }
 
   // Win/Loss
-  const absGd = Math.abs(gd);
-  const isHomeWin = gd > 0;
-  const winnerShort = isHomeWin ? mr.homeTeamShort : mr.awayTeamShort;
-  const winnerCode = isHomeWin ? mr.homeCountryCode : mr.awayCountryCode;
-  const winnerName = isHomeWin ? mr.homeTeamName : mr.awayTeamName;
-  const loserShort = isHomeWin ? mr.awayTeamShort : mr.homeTeamShort;
-  const loserCode = isHomeWin ? mr.awayCountryCode : mr.homeCountryCode;
-  const gdLabel = absGd >= 6 ? '+6' : `+${absGd}`;
+  const absGd = Math.abs(leftGd);
+  const leftWins = leftGd > 0;
+  const winnerName = leftWins
+    ? ((isFocusMatch && !focusIsHome) ? mr.awayTeamName : mr.homeTeamName)
+    : ((isFocusMatch && !focusIsHome) ? mr.homeTeamName : mr.awayTeamName);
+  const gdLabel = absGd >= 6 ? (leftWins ? '+6' : '-6') : (leftWins ? `+${absGd}` : `-${absGd}`);
   const tooltip = `${winnerName} wins by ${absGd >= 6 ? '6+' : absGd} goal${absGd === 1 ? '' : 's'} difference`;
+  const badgeVariant = leftWins ? 'win' : 'loss';
 
-  if (isHomeWin) {
-    return (
-      <div className="scenario-match">
-        <span className="scenario-team home">
-          <span className="scenario-winner-box" title={tooltip} tabIndex={0}>
-            {winnerShort}
-            <TeamFlag countryCode={winnerCode} className="ms-1" />
-            <span className="scenario-gd-badge">{gdLabel}</span>
-          </span>
-        </span>
-        <span className="scenario-team away">
-          <TeamFlag countryCode={loserCode} className="me-1" />
-          {loserShort}
-        </span>
-      </div>
-    );
-  }
-
-  // Away win
   return (
     <div className="scenario-match">
       <span className="scenario-team home">
-        {loserShort}
-        <TeamFlag countryCode={loserCode} className="ms-1" />
-      </span>
-      <span className="scenario-team away">
-        <span className="scenario-winner-box" title={tooltip} tabIndex={0}>
-          <span className="scenario-gd-badge">{gdLabel}</span>
-          <TeamFlag countryCode={winnerCode} className="me-1" />
-          {winnerShort}
+        <span className={`scenario-result-box scenario-result-box--${badgeVariant}`} title={tooltip} tabIndex={0}>
+          {leftShort}
+          <TeamFlag countryCode={leftCode} className="ms-1" />
+          <span className={`scenario-gd-badge scenario-gd-badge--${badgeVariant}`}>{gdLabel}</span>
         </span>
+      </span>
+      <span className="scenario-vs">vs.</span>
+      <span className="scenario-team away">
+        <TeamFlag countryCode={rightCode} className="me-1" />
+        {rightShort}
       </span>
     </div>
   );

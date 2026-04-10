@@ -389,6 +389,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
           edgeScenariosByPosition={enrichedEdges}
           probabilities={probs}
           teamName={team.name}
+          focusTeamId={team.id}
           summaries={scenarioSummaries}
         />
       )}
