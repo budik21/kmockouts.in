@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import TeamFlag from './TeamFlag';
 
-interface EnrichedMatchResult {
+export interface EnrichedMatchResult {
   matchId: number;
   homeTeamId: number;
   awayTeamId: number;
@@ -18,7 +18,7 @@ interface EnrichedMatchResult {
   awayCountryCode: string;
 }
 
-interface EnrichedCombination {
+export interface EnrichedCombination {
   shortKey: string;
   matchResults: EnrichedMatchResult[];
 }
@@ -29,6 +29,10 @@ interface ScenariosAccordionProps {
   teamName: string;
   focusTeamId?: number;
   summaries?: { [pos: number]: string };
+  /** Called when user clicks a scenario card to apply it */
+  onScenarioClick?: (position: number, combo: EnrichedCombination) => void;
+  /** Index of the currently applied scenario (position-combo), to highlight it */
+  appliedKey?: string | null;
 }
 
 const INITIAL_VISIBLE = 4;
@@ -56,6 +60,8 @@ export default function ScenariosAccordion({
   teamName,
   focusTeamId,
   summaries,
+  onScenarioClick,
+  appliedKey,
 }: ScenariosAccordionProps) {
   return (
     <div className="group-card mb-4">
@@ -72,15 +78,22 @@ export default function ScenariosAccordion({
               prob={probabilities[pos] ?? 0}
               summary={summaries?.[pos]}
               focusTeamId={focusTeamId}
+              onScenarioClick={onScenarioClick ? (combo) => onScenarioClick(pos, combo) : undefined}
+              appliedKey={appliedKey}
             />
           ))}
         </div>
+        {onScenarioClick && (
+          <p className="text-muted text-center mt-2 mb-0" style={{ fontSize: '0.8rem' }}>
+            Click on a scenario to apply it to the standings table above.
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-function PositionSection({ pos, combos, prob, summary, focusTeamId }: { pos: number; combos: EnrichedCombination[]; prob: number; summary?: string; focusTeamId?: number }) {
+function PositionSection({ pos, combos, prob, summary, focusTeamId, onScenarioClick, appliedKey }: { pos: number; combos: EnrichedCombination[]; prob: number; summary?: string; focusTeamId?: number; onScenarioClick?: (combo: EnrichedCombination) => void; appliedKey?: string | null }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const id = `pos-${pos}`;
   const visibleCombos = combos.slice(0, visibleCount);
@@ -130,9 +143,19 @@ function PositionSection({ pos, combos, prob, summary, focusTeamId }: { pos: num
           ) : (
             <>
               <div className="scenario-grid">
-                {visibleCombos.map((combo, ci) => (
-                  <CombinationCard key={ci} combo={combo} index={ci + 1} focusTeamId={focusTeamId} />
-                ))}
+                {visibleCombos.map((combo, ci) => {
+                  const key = `${pos}-${ci}`;
+                  return (
+                    <CombinationCard
+                      key={ci}
+                      combo={combo}
+                      index={ci + 1}
+                      focusTeamId={focusTeamId}
+                      onClick={onScenarioClick ? () => onScenarioClick(combo) : undefined}
+                      isApplied={appliedKey === key}
+                    />
+                  );
+                })}
               </div>
               {hasMore && (
                 <div className="text-center py-2">
@@ -152,11 +175,17 @@ function PositionSection({ pos, combos, prob, summary, focusTeamId }: { pos: num
   );
 }
 
-function CombinationCard({ combo, index, focusTeamId }: { combo: EnrichedCombination; index: number; focusTeamId?: number }) {
+function CombinationCard({ combo, index, focusTeamId, onClick, isApplied }: { combo: EnrichedCombination; index: number; focusTeamId?: number; onClick?: () => void; isApplied?: boolean }) {
   return (
-    <div className="scenario-card">
+    <div
+      className={`scenario-card${onClick ? ' scenario-card-clickable' : ''}${isApplied ? ' scenario-card-applied' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+    >
       <div className="scenario-card-header">
-        Scenario {index}
+        Scenario {index}{isApplied && <span className="scenario-applied-badge">Applied</span>}
       </div>
       <div className="scenario-card-body">
         {combo.matchResults.map((mr, i) => (

@@ -83,7 +83,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
             <th>Team</th>
             <th className="text-center">MP</th>
             <th className="text-center">GD</th>
-            <th className="text-center">Pts</th>
+            <th className="text-center standings-pts-col">Pts</th>
             {hasProbs && <th className="text-center">%</th>}
           </tr>
         </thead>
@@ -98,7 +98,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                 </td>
                 <td className="text-center">{s.matchesPlayed}</td>
                 <td className="text-center">{s.goalDifference > 0 ? `+${s.goalDifference}` : s.goalDifference}</td>
-                <td className="text-center fw-bold">{s.points}</td>
+                <td className="text-center fw-bold standings-pts-col">{s.points}</td>
                 {hasProbs && (
                   <td className="text-center">
                     {prob && (
@@ -135,7 +135,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
             <th className="text-center">GF</th>
             <th className="text-center">GA</th>
             <th className="text-center">GD</th>
-            <th className="text-center">Pts</th>
+            <th className="text-center standings-pts-col">Pts</th>
             {hasProbs && <th className="text-center">%</th>}
           </tr>
         </thead>
@@ -155,7 +155,7 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                 <td className="text-center">{s.goalsFor}</td>
                 <td className="text-center">{s.goalsAgainst}</td>
                 <td className="text-center">{s.goalDifference > 0 ? `+${s.goalDifference}` : s.goalDifference}</td>
-                <td className="text-center fw-bold">{s.points}</td>
+                <td className="text-center fw-bold standings-pts-col">{s.points}</td>
                 {hasProbs && (
                   <td className="text-center">
                     {prob && (

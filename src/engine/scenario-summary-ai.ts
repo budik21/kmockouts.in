@@ -44,6 +44,7 @@ CONTENT — VERY IMPORTANT:
 - When a combination requires a specific minimum goal difference (shown as "by X+ goals"), always state this threshold explicitly. These are the most interesting edge cases for the reader.
 - SIMPLIFY AGGRESSIVELY: If all combinations share the same condition for the analyzed team (e.g. the team loses in all of them), just state that one condition. Do NOT list what happens in the other match separately for each variant — say "regardless of the other result" or omit the other match entirely. Only mention the other match when its result actually matters (i.e. some outcomes of the other match lead to this position and others do not).
 - Never list multiple numbered paths that differ only in an irrelevant match result. Merge them into one statement.
+- ACCURACY IS PARAMOUNT: Before writing ANY general claim (e.g. "must win", "must not lose", "needs to beat X"), verify it against ALL provided combinations. If even ONE combination contradicts the claim, DO NOT make it. For example, if 6 out of 7 combinations show a win but 1 shows a loss, do NOT say "must win" — instead describe the different paths accurately. Over-generalizing is a serious error.
 - If a team qualifies no matter what, say so
 - If a team is eliminated no matter what, say so
 - When other matches matter, name them (e.g. "…if Germany draws or loses to Japan")
@@ -103,6 +104,63 @@ async function generateAiSummary(input: AiSummaryInput): Promise<string> {
     .map(p => `  ${p}${posLabel(p)}: ${(input.allProbabilities[p] ?? 0).toFixed(1)}%${p === input.position ? ' ← THIS POSITION' : ''}`)
     .join('\n');
 
+  // Pre-analyze own-match outcomes and group other-match conditions by own outcome
+  // This gives the AI a clear, pre-computed structure so it can't misinterpret the data
+  const ownMatchIdx = input.remainingMatches.findIndex(m => m.isTeamMatch);
+  let preComputedPaths = '';
+  if (ownMatchIdx >= 0) {
+    const ownMatch = input.remainingMatches[ownMatchIdx];
+    const teamIsHome = ownMatch.homeTeam === input.teamName;
+    const winLetter = teamIsHome ? 'H' : 'A';
+    const loseLetter = teamIsHome ? 'A' : 'H';
+    const opponent = teamIsHome ? ownMatch.awayTeam : ownMatch.homeTeam;
+    const otherMatches = input.remainingMatches.filter((_, i) => i !== ownMatchIdx);
+
+    // Group reduced patterns by own-match outcome, collect other-match conditions
+    const grouped: Record<string, Set<string>> = {};
+    for (const pattern of input.outcomePatterns) {
+      const parts = pattern.split('|');
+      const ownLetter = parts[ownMatchIdx]?.charAt(0);
+      const ownLabel = ownLetter === winLetter ? 'WIN' : ownLetter === 'D' ? 'DRAW' : 'LOSS';
+
+      if (!grouped[ownLabel]) grouped[ownLabel] = new Set();
+      // Build other-match conditions
+      const otherParts = parts.filter((_, i) => i !== ownMatchIdx);
+      const otherDesc = otherParts.map((p, i) => {
+        const m = otherMatches[i];
+        if (!m) return p;
+        const letter = p.charAt(0);
+        const gd = parseInt(p.slice(1), 10) || 0;
+        const gdNote = letter !== 'D' && gd > 1 ? ` by ${gd}+ goals` : '';
+        if (letter === 'H') return `${m.homeTeam} beats ${m.awayTeam}${gdNote}`;
+        if (letter === 'A') return `${m.awayTeam} beats ${m.homeTeam}${gdNote}`;
+        return `${m.homeTeam} draws with ${m.awayTeam}`;
+      }).join(', ');
+      grouped[ownLabel].add(otherDesc);
+    }
+
+    const pathLines: string[] = [];
+    for (const [outcome, conditions] of Object.entries(grouped)) {
+      const condArray = [...conditions];
+      const verb = outcome === 'WIN' ? `beats ${opponent}` : outcome === 'DRAW' ? `draws with ${opponent}` : `loses to ${opponent}`;
+      if (otherMatches.length === 0) {
+        pathLines.push(`  ${outcome}: ${input.teamName} ${verb} → reaches this position`);
+      } else if (condArray.length === otherMatches.length * 3 || condArray.length >= 3) {
+        // All other-match outcomes work → simplify
+        const allOutcomes = new Set(condArray.flatMap(c => [c]));
+        // Check if truly all outcomes of the other match are covered
+        pathLines.push(`  ${outcome}: ${input.teamName} ${verb}, and: ${condArray.join(' OR ')}`);
+      } else {
+        pathLines.push(`  ${outcome}: ${input.teamName} ${verb}, and: ${condArray.join(' OR ')}`);
+      }
+    }
+
+    preComputedPaths = `\nPRE-COMPUTED PATHS (use these EXACTLY — do not reinterpret the raw patterns):\n${pathLines.join('\n')}`;
+    if (grouped['LOSS']) {
+      preComputedPaths += `\n⚠️ ${input.teamName} CAN reach this position even when LOSING. Include this as a numbered path.`;
+    }
+  }
+
   const userPrompt = `Team: ${input.teamName} (Group ${input.groupId})
 Position analyzed: ${input.position}${posLabel(input.position)} — probability ${input.probability.toFixed(1)}%
 
@@ -119,6 +177,7 @@ There are ${reducedCount} distinct outcome combinations (reduced from ${input.ou
 
 All outcome combinations (with minimum required goal differences where relevant):
 ${patternExplanation}
+${preComputedPaths}
 
 Write the scenario summary for this position. Start with a probability assessment — is this likely, possible, or a long shot? How does it compare to the other positions?`;
 
@@ -260,9 +319,10 @@ interface AiSummaryCacheRow {
  */
 function hashPatterns(patterns: string[]): string {
   // Sort for determinism, then create a simple hash
+  // Version salt — bump to invalidate all cached summaries after prompt changes
   const sorted = [...patterns].sort();
   let hash = 0;
-  const str = sorted.join('|');
+  const str = 'v5:' + sorted.join('|');
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;

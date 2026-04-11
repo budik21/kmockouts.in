@@ -12,8 +12,7 @@ import type { Metadata } from 'next';
 import { slugify } from '@/lib/slugify';
 import TeamFlag from '@/app/components/TeamFlag';
 import QualifyWidgets from '@/app/components/QualifyWidgets';
-import ScenariosAccordion from '@/app/components/ScenariosAccordion';
-import GroupStandings from '@/app/components/GroupStandings';
+import TeamScenarioView from '@/app/components/TeamScenarioView';
 import MatchList from '@/app/components/MatchList';
 import NextMatchDate from '@/app/components/NextMatchDate';
 import AdBanner from '@/app/components/AdBanner';
@@ -376,26 +375,19 @@ export default async function TeamDetailPage({ params }: PageProps) {
         />
       )}
 
-      {/* Current standings */}
-      <div className="group-card mb-4">
-        <div className="group-card-header">
-          <span>Current Standings — Group {groupId}</span>
-        </div>
-        <div className="group-card-body">
-          <GroupStandings standings={standingsForDisplay} groupId={groupId} probabilities={probabilities} />
-        </div>
-      </div>
-
-      {/* Scenarios accordion — only after the team has played */}
-      {remaining.length > 0 && teamHasPlayed && (
-        <ScenariosAccordion
-          edgeScenariosByPosition={enrichedEdges}
-          probabilities={probs}
-          teamName={team.name}
-          focusTeamId={team.id}
-          summaries={scenarioSummaries}
-        />
-      )}
+      {/* Standings + Scenarios (interactive: click scenario to apply) */}
+      <TeamScenarioView
+        groupId={groupId}
+        standings={standingsForDisplay}
+        probabilities={probabilities}
+        edgeScenariosByPosition={remaining.length > 0 && teamHasPlayed ? enrichedEdges : {}}
+        scenarioProbabilities={remaining.length > 0 && teamHasPlayed ? probs : {}}
+        teamName={team.name}
+        focusTeamId={team.id}
+        summaries={remaining.length > 0 && teamHasPlayed ? scenarioSummaries : undefined}
+        teams={teams}
+        playedMatches={played}
+      />
 
       {remaining.length === 0 && (
         <div className="alert alert-success">
