@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { query } from '@/lib/db';
+import { query, queryOne } from '@/lib/db';
 import PredictionsApp from '../components/PredictionsApp';
 
 export const dynamic = 'force-dynamic';
@@ -61,6 +61,13 @@ export default async function TipsPage() {
     ORDER BY m.kick_off, m.group_id, m.id
   `);
 
+  // Check if user has any tips already (returning user vs new user)
+  const tipCountRow = await queryOne<{ cnt: string }>(
+    'SELECT COUNT(*) as cnt FROM tip WHERE user_id = $1',
+    [session.tipsterId],
+  );
+  const hasTips = parseInt(tipCountRow?.cnt || '0') > 0;
+
   const matches: TipMatch[] = rows.map((r) => ({
     id: r.id,
     groupId: r.group_id,
@@ -82,6 +89,7 @@ export default async function TipsPage() {
       userName={session.user?.name || ''}
       shareToken={session.shareToken || ''}
       tipsPublic={session.tipsPublic || false}
+      isReturningUser={hasTips}
     />
   );
 }

@@ -44,6 +44,32 @@ function formatTime(kickOff: string): string {
   } catch { return ''; }
 }
 
+/** Emoji + badge for scored predictions */
+function ScoreIndicator({ points }: { points: number }) {
+  if (points === 4) {
+    return (
+      <span className="tipovacka-result-indicator">
+        <span className="tipovacka-result-emoji" title="Exact score!">&#127919;</span>
+        <span className="tipovacka-pts tipovacka-pts-4">+4</span>
+      </span>
+    );
+  }
+  if (points === 1) {
+    return (
+      <span className="tipovacka-result-indicator">
+        <span className="tipovacka-result-emoji" title="Correct outcome">&#128077;</span>
+        <span className="tipovacka-pts tipovacka-pts-1">+1</span>
+      </span>
+    );
+  }
+  return (
+    <span className="tipovacka-result-indicator">
+      <span className="tipovacka-result-emoji" title="Wrong">&#10060;</span>
+      <span className="tipovacka-pts tipovacka-pts-0">0</span>
+    </span>
+  );
+}
+
 export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
   const [saving, setSaving] = useState<Record<number, boolean>>({});
@@ -129,7 +155,7 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
               return (
                 <div
                   key={match.id}
-                  className={`tipovacka-match-row ${locked ? 'locked' : ''} ${hasTip ? 'has-tip' : ''}`}
+                  className={`tipovacka-match-row ${locked ? 'locked' : ''} ${hasTip ? 'has-tip' : 'no-tip'}`}
                 >
                   <div className="tipovacka-match-info">
                     <span className="tipovacka-match-group">
@@ -153,9 +179,7 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
                             <span className="tipovacka-score-display">
                               {tip.homeGoals} : {tip.awayGoals}
                               {tip.points !== null && (
-                                <span className={`tipovacka-pts tipovacka-pts-${tip.points}`}>
-                                  {tip.points === 4 ? '+4' : tip.points === 1 ? '+1' : '0'}
-                                </span>
+                                <ScoreIndicator points={tip.points} />
                               )}
                             </span>
                           ) : (

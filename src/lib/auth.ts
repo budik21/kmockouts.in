@@ -1,6 +1,5 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
-import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id';
 import { query, queryOne } from './db';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -10,15 +9,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    ...(process.env.MICROSOFT_CLIENT_ID
-      ? [
-          MicrosoftEntraID({
-            clientId: process.env.MICROSOFT_CLIENT_ID!,
-            clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-            issuer: 'https://login.microsoftonline.com/common/v2.0',
-          }),
-        ]
-      : []),
   ],
   callbacks: {
     async signIn({ user }) {

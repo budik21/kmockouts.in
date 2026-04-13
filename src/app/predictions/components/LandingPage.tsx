@@ -21,7 +21,7 @@ export default function LandingPage() {
                 <div className="tipovacka-step-num">1</div>
                 <div>
                   <strong>Sign in</strong>
-                  <p>Use your Google or Microsoft account</p>
+                  <p>Use your Google account</p>
                 </div>
               </div>
               <div className="tipovacka-step">
@@ -52,18 +52,6 @@ export default function LandingPage() {
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
                 Sign in with Google
-              </button>
-              <button
-                className="tipovacka-btn tipovacka-btn-microsoft"
-                onClick={() => signIn('microsoft-entra-id', { callbackUrl: '/predictions/tips' })}
-              >
-                <svg width="20" height="20" viewBox="0 0 21 21">
-                  <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
-                  <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
-                  <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
-                  <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-                </svg>
-                Sign in with Microsoft
               </button>
             </div>
           </div>

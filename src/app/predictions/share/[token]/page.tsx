@@ -1,5 +1,5 @@
 import { query, queryOne } from '@/lib/db';
-import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import PublicTipsView from '../../components/PublicTipsView';
 import AdBanner from '@/app/components/AdBanner';
 
@@ -43,8 +43,24 @@ export default async function PublicSharePage({ params }: Props) {
     [token],
   );
 
+  // User not found or sharing revoked — show friendly message
   if (!user || !user.tips_public) {
-    notFound();
+    return (
+      <div className="container">
+        <div className="tipovacka-revoked">
+          <div className="tipovacka-revoked-icon">&#128584;</div>
+          <h2>Predictions Unavailable</h2>
+          <p>
+            {user
+              ? 'This user has set their predictions to private. Maybe they\'re still working on their hot takes!'
+              : 'This sharing link doesn\'t exist. It might have been a typo, or the crystal ball broke.'}
+          </p>
+          <Link href="/worldcup2026" className="tipovacka-revoked-link">
+            Go to World Cup 2026
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   // Get tips

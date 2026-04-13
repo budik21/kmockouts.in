@@ -7,7 +7,7 @@ import TipEditor from './TipEditor';
 import Dashboard from './Dashboard';
 import GroupComparison from './GroupComparison';
 
-type Tab = 'predictions' | 'dashboard' | 'groups';
+type Tab = 'dashboard' | 'predictions' | 'groups';
 
 interface TipData {
   homeGoals: number;
@@ -20,10 +20,12 @@ interface Props {
   userName: string;
   shareToken: string;
   tipsPublic: boolean;
+  isReturningUser: boolean;
 }
 
-export default function PredictionsApp({ matches, userName, shareToken, tipsPublic: initialPublic }: Props) {
-  const [tab, setTab] = useState<Tab>('predictions');
+export default function PredictionsApp({ matches, userName, shareToken, tipsPublic: initialPublic, isReturningUser }: Props) {
+  // New users see predictions first; returning users see dashboard first
+  const [tab, setTab] = useState<Tab>(isReturningUser ? 'dashboard' : 'predictions');
   const [tips, setTips] = useState<Record<number, TipData>>({});
   const [loading, setLoading] = useState(true);
   const [tipsPublic, setTipsPublic] = useState(initialPublic);
@@ -121,21 +123,21 @@ export default function PredictionsApp({ matches, userName, shareToken, tipsPubl
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — Dashboard is first */}
       <div className="tipovacka-tabs">
         <div className="container">
           <div className="d-flex gap-1">
-            <button
-              className={`tipovacka-tab ${tab === 'predictions' ? 'active' : ''}`}
-              onClick={() => setTab('predictions')}
-            >
-              Predictions
-            </button>
             <button
               className={`tipovacka-tab ${tab === 'dashboard' ? 'active' : ''}`}
               onClick={() => setTab('dashboard')}
             >
               Dashboard
+            </button>
+            <button
+              className={`tipovacka-tab ${tab === 'predictions' ? 'active' : ''}`}
+              onClick={() => setTab('predictions')}
+            >
+              Predictions
             </button>
             <button
               className={`tipovacka-tab ${tab === 'groups' ? 'active' : ''}`}
@@ -149,15 +151,6 @@ export default function PredictionsApp({ matches, userName, shareToken, tipsPubl
 
       {/* Content */}
       <div className="container py-3">
-        {tab === 'predictions' && (
-          <TipEditor
-            matches={matches}
-            tips={tips}
-            onTipUpdate={handleTipUpdate}
-            allGroups={allGroups}
-          />
-        )}
-
         {tab === 'dashboard' && (
           <Dashboard
             stats={stats}
@@ -166,6 +159,16 @@ export default function PredictionsApp({ matches, userName, shareToken, tipsPubl
             tipsPublic={tipsPublic}
             shareUrl={shareUrl}
             onTogglePublic={handleTogglePublic}
+            onGoToTips={() => setTab('predictions')}
+          />
+        )}
+
+        {tab === 'predictions' && (
+          <TipEditor
+            matches={matches}
+            tips={tips}
+            onTipUpdate={handleTipUpdate}
+            allGroups={allGroups}
           />
         )}
 

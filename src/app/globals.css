@@ -4035,7 +4035,7 @@ a.ranking-team-name:hover {
   height: 36px;
   border-radius: 50%;
   background: var(--wc-accent);
-  color: #fff;
+  color: #2a1a00;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4102,7 +4102,7 @@ a.ranking-team-name:hover {
 
 .tipovacka-points-badge {
   background: var(--wc-accent);
-  color: #fff;
+  color: #2a1a00;
   padding: 0.35rem 0.8rem;
   border-radius: 1rem;
   font-weight: 700;
@@ -4159,7 +4159,7 @@ a.ranking-team-name:hover {
 .tipovacka-filter-btn.active,
 .tipovacka-filter-btn:hover {
   background: var(--wc-accent);
-  color: #fff;
+  color: #2a1a00;
   border-color: var(--wc-accent);
 }
 
@@ -4312,7 +4312,7 @@ a.ranking-team-name:hover {
 
 .tipovacka-save-btn {
   background: var(--wc-accent);
-  color: #fff;
+  color: #2a1a00;
   border: none;
   border-radius: 0.35rem;
   padding: 0.3rem 0.7rem;
@@ -4566,6 +4566,84 @@ a.ranking-team-name:hover {
   padding: 1rem;
 }
 
+/* CTA button (dashboard → predictions) */
+.tipovacka-cta-btn {
+  background: var(--wc-accent);
+  color: #2a1a00;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.tipovacka-cta-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* Match row — untipped matches get dashed border */
+.tipovacka-match-row.no-tip {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+/* Score result indicator (emoji + badge next to score) */
+.tipovacka-result-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.25rem;
+}
+
+.tipovacka-result-emoji {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Sharing-revoked page */
+.tipovacka-revoked {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.tipovacka-revoked-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+}
+
+.tipovacka-revoked h2 {
+  font-weight: 700;
+  color: var(--wc-text);
+  margin-bottom: 0.75rem;
+}
+
+.tipovacka-revoked p {
+  color: var(--wc-text-muted);
+  font-size: 1.05rem;
+  max-width: 420px;
+  margin: 0 auto 1.5rem;
+  line-height: 1.6;
+}
+
+.tipovacka-revoked-link {
+  display: inline-block;
+  padding: 0.6rem 1.5rem;
+  background: var(--wc-accent);
+  color: #2a1a00;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: filter 0.15s;
+}
+
+.tipovacka-revoked-link:hover {
+  filter: brightness(1.1);
+}
+
 /* Responsive */
 @media (max-width: 576px) {
   .tipovacka-score-cards {
@@ -4586,5 +4664,10 @@ a.ranking-team-name:hover {
 
   .tipovacka-title {
     font-size: 1.8rem;
+  }
+
+  .tipovacka-cta-btn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
   }
 }

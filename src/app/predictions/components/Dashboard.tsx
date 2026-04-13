@@ -25,9 +25,10 @@ interface Props {
   tipsPublic: boolean;
   shareUrl: string;
   onTogglePublic: () => void;
+  onGoToTips: () => void;
 }
 
-export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, onTogglePublic }: Props) {
+export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, onTogglePublic, onGoToTips }: Props) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -45,6 +46,7 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
   const totalTipped = Object.keys(tips).length;
   const totalMatches = matches.length;
   const progress = totalMatches > 0 ? Math.round((totalTipped / totalMatches) * 100) : 0;
+  const allTipped = totalTipped >= totalMatches;
 
   return (
     <div>
@@ -68,17 +70,24 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
         </div>
       </div>
 
-      {/* Progress */}
+      {/* Compact progress + CTA */}
       <div className="tipovacka-progress-section mt-4">
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <strong>Predicted</strong>
-          <span>{totalTipped} / {totalMatches} matches ({progress}%)</span>
-        </div>
-        <div className="progress" style={{ height: '8px' }}>
-          <div
-            className="progress-bar"
-            style={{ width: `${progress}%`, backgroundColor: 'var(--wc-accent)' }}
-          />
+        <div className="d-flex align-items-center gap-3">
+          <div className="flex-grow-1">
+            <div className="d-flex justify-content-between align-items-center mb-1">
+              <strong style={{ fontSize: '0.85rem' }}>Predicted</strong>
+              <span style={{ fontSize: '0.8rem', color: 'var(--wc-text-muted)' }}>{totalTipped}/{totalMatches}</span>
+            </div>
+            <div className="progress" style={{ height: '6px' }}>
+              <div
+                className="progress-bar"
+                style={{ width: `${progress}%`, backgroundColor: 'var(--wc-accent)' }}
+              />
+            </div>
+          </div>
+          <button className="tipovacka-cta-btn" onClick={onGoToTips}>
+            {allTipped ? 'Review your tips' : 'Add your tips'}
+          </button>
         </div>
       </div>
 
