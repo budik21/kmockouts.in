@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { TipMatch } from '../tips/page';
 
 interface TipData {
@@ -48,30 +48,59 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
   const progress = totalMatches > 0 ? Math.round((totalTipped / totalMatches) * 100) : 0;
   const allTipped = totalTipped >= totalMatches;
 
+  // Hide CTA if all group-stage matches have already kicked off
+  const allMatchesStarted = useMemo(() => {
+    if (matches.length === 0) return true;
+    const lastKickOff = Math.max(...matches.map((m) => new Date(m.kickOff).getTime()));
+    return Date.now() > lastKickOff;
+  }, [matches]);
+
   return (
     <div>
-      {/* Score cards */}
-      <div className="tipovacka-score-cards">
-        <div className="tipovacka-score-card tipovacka-score-total">
-          <div className="tipovacka-score-card-value">{stats.totalPoints}</div>
-          <div className="tipovacka-score-card-label">Total Points</div>
+      {/* Score cards — qualify-widget pattern */}
+      <div className="row g-3 mb-4">
+        <div className="col-6 col-md-3">
+          <div className="tipovacka-stat-widget tipovacka-stat-total">
+            <div className="tipovacka-stat-body">
+              <span className="tipovacka-stat-value">{stats.totalPoints}</span>
+            </div>
+            <div className="tipovacka-stat-footer">Total Points</div>
+          </div>
         </div>
-        <div className="tipovacka-score-card tipovacka-score-exact">
-          <div className="tipovacka-score-card-value">{stats.exact}</div>
-          <div className="tipovacka-score-card-label">Exact Score (+4)</div>
+        <div className="col-6 col-md-3">
+          <div className="tipovacka-stat-widget tipovacka-stat-exact">
+            <div className="tipovacka-stat-body">
+              <span className="tipovacka-stat-value">{stats.exact}</span>
+            </div>
+            <div className="tipovacka-stat-footer">
+              <span>Exact Score</span>
+            </div>
+          </div>
         </div>
-        <div className="tipovacka-score-card tipovacka-score-outcome">
-          <div className="tipovacka-score-card-value">{stats.outcome}</div>
-          <div className="tipovacka-score-card-label">Correct Outcome (+1)</div>
+        <div className="col-6 col-md-3">
+          <div className="tipovacka-stat-widget tipovacka-stat-outcome">
+            <div className="tipovacka-stat-body">
+              <span className="tipovacka-stat-value">{stats.outcome}</span>
+            </div>
+            <div className="tipovacka-stat-footer">
+              <span>Correct Outcome</span>
+            </div>
+          </div>
         </div>
-        <div className="tipovacka-score-card tipovacka-score-wrong">
-          <div className="tipovacka-score-card-value">{stats.wrong}</div>
-          <div className="tipovacka-score-card-label">Wrong (0)</div>
+        <div className="col-6 col-md-3">
+          <div className="tipovacka-stat-widget tipovacka-stat-wrong">
+            <div className="tipovacka-stat-body">
+              <span className="tipovacka-stat-value">{stats.wrong}</span>
+            </div>
+            <div className="tipovacka-stat-footer">
+              <span>Wrong</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Compact progress + CTA */}
-      <div className="tipovacka-progress-section mt-4">
+      <div className="tipovacka-progress-section">
         <div className="d-flex align-items-center gap-3">
           <div className="flex-grow-1">
             <div className="d-flex justify-content-between align-items-center mb-1">
@@ -85,9 +114,11 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
               />
             </div>
           </div>
-          <button className="tipovacka-cta-btn" onClick={onGoToTips}>
-            {allTipped ? 'Review your tips' : 'Add your tips'}
-          </button>
+          {!allMatchesStarted && (
+            <button className="tipovacka-cta-btn" onClick={onGoToTips}>
+              {allTipped ? 'Review your tips' : 'Add your tips'}
+            </button>
+          )}
         </div>
       </div>
 

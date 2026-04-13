@@ -44,32 +44,6 @@ function formatTime(kickOff: string): string {
   } catch { return ''; }
 }
 
-/** Emoji + badge for scored predictions */
-function ScoreIndicator({ points }: { points: number }) {
-  if (points === 4) {
-    return (
-      <span className="tipovacka-result-indicator">
-        <span className="tipovacka-result-emoji" title="Exact score!">&#127919;</span>
-        <span className="tipovacka-pts tipovacka-pts-4">+4</span>
-      </span>
-    );
-  }
-  if (points === 1) {
-    return (
-      <span className="tipovacka-result-indicator">
-        <span className="tipovacka-result-emoji" title="Correct outcome">&#128077;</span>
-        <span className="tipovacka-pts tipovacka-pts-1">+1</span>
-      </span>
-    );
-  }
-  return (
-    <span className="tipovacka-result-indicator">
-      <span className="tipovacka-result-emoji" title="Wrong">&#10060;</span>
-      <span className="tipovacka-pts tipovacka-pts-0">0</span>
-    </span>
-  );
-}
-
 export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
   const [saving, setSaving] = useState<Record<number, boolean>>({});
@@ -151,76 +125,45 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
               const hasTip = !!tip;
               const isSaving = saving[match.id];
               const isSaved = saved[match.id];
+              const isFinished = match.status === 'FINISHED' && match.homeGoals !== null;
+              const hasScore = hasTip && tip.points !== null;
 
               return (
                 <div
                   key={match.id}
-                  className={`tipovacka-match-row ${locked ? 'locked' : ''} ${hasTip ? 'has-tip' : 'no-tip'}`}
+                  className={`tipovacka-match-row ${locked ? 'locked' : ''} ${hasTip ? 'has-tip' : 'no-tip'} ${hasScore ? `scored scored-${tip.points}` : ''}`}
                 >
-                  <div className="tipovacka-match-info">
-                    <span className="tipovacka-match-group">
-                      {match.groupId}
-                    </span>
-                    <span className="tipovacka-match-time">
-                      {formatTime(match.kickOff)}
-                    </span>
-                  </div>
-
-                  <div className="tipovacka-match-teams">
-                    <div className="tipovacka-team tipovacka-team-home">
+                  {/* Header: group + teams + time */}
+                  <div className="tipovacka-match-header-row">
+                    <span className="tipovacka-match-group">{match.groupId}</span>
+                    <span className="tipovacka-match-team-labels">
                       <FlagIcon code={match.homeTeam.countryCode} />
-                      <span className="tipovacka-team-name">{match.homeTeam.shortName}</span>
-                    </div>
-
-                    <div className="tipovacka-score-input">
-                      {locked ? (
-                        <div className="tipovacka-score-locked">
-                          {hasTip ? (
-                            <span className="tipovacka-score-display">
-                              {tip.homeGoals} : {tip.awayGoals}
-                              {tip.points !== null && (
-                                <ScoreIndicator points={tip.points} />
-                              )}
-                            </span>
-                          ) : (
-                            <span className="tipovacka-no-tip">-</span>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <ArrowStepper
-                            value={homeGoals}
-                            onChange={(v) => onTipUpdate(match.id, v ?? 0, awayGoals)}
-                            min={0}
-                            max={15}
-                          />
-                          <span className="tipovacka-score-separator">:</span>
-                          <ArrowStepper
-                            value={awayGoals}
-                            onChange={(v) => onTipUpdate(match.id, homeGoals, v ?? 0)}
-                            min={0}
-                            max={15}
-                          />
-                        </>
-                      )}
-                    </div>
-
-                    <div className="tipovacka-team tipovacka-team-away">
-                      <span className="tipovacka-team-name">{match.awayTeam.shortName}</span>
+                      <span>{match.homeTeam.shortName}</span>
+                      <span className="tipovacka-match-vs">vs</span>
+                      <span>{match.awayTeam.shortName}</span>
                       <FlagIcon code={match.awayTeam.countryCode} />
-                    </div>
+                    </span>
+                    <span className="tipovacka-match-time">{formatTime(match.kickOff)}</span>
                   </div>
 
-                  {/* Real result for finished matches */}
-                  {match.status === 'FINISHED' && match.homeGoals !== null && (
-                    <div className="tipovacka-real-result">
-                      Result: {match.homeGoals}:{match.awayGoals}
-                    </div>
-                  )}
-
-                  {/* Save button */}
+                  {/* Editable match — not locked yet */}
                   {!locked && (
-                    <div className="tipovacka-match-actions">
+                    <div className="tipovacka-edit-row">
+                      <div className="tipovacka-edit-scores">
+                        <ArrowStepper
+                          value={homeGoals}
+                          onChange={(v) => onTipUpdate(match.id, v ?? 0, awayGoals)}
+                          min={0}
+                          max={15}
+                        />
+                        <span className="tipovacka-score-separator">:</span>
+                        <ArrowStepper
+                          value={awayGoals}
+                          onChange={(v) => onTipUpdate(match.id, homeGoals, v ?? 0)}
+                          min={0}
+                          max={15}
+                        />
+                      </div>
                       <button
                         className={`tipovacka-save-btn ${isSaved ? 'saved' : ''}`}
                         onClick={() => handleSave(match.id)}
@@ -228,6 +171,57 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
                       >
                         {isSaving ? '...' : isSaved ? 'Saved' : 'Save'}
                       </button>
+                    </div>
+                  )}
+
+                  {/* Locked match with evaluation — 3-column strip */}
+                  {locked && (isFinished || hasTip) && (
+                    <div className="tipovacka-eval-strip">
+                      {/* Prediction */}
+                      <div className="tipovacka-eval-cell">
+                        <div className="tipovacka-eval-label">Prediction</div>
+                        <div className="tipovacka-eval-value">
+                          {hasTip ? `${tip.homeGoals} : ${tip.awayGoals}` : '—'}
+                        </div>
+                      </div>
+
+                      {/* Actual result */}
+                      <div className="tipovacka-eval-cell">
+                        <div className="tipovacka-eval-label">Result</div>
+                        <div className="tipovacka-eval-value">
+                          {isFinished ? `${match.homeGoals} : ${match.awayGoals}` : '—'}
+                        </div>
+                      </div>
+
+                      {/* Score indicator */}
+                      <div className="tipovacka-eval-cell tipovacka-eval-score-cell">
+                        {hasScore ? (
+                          <>
+                            <div className="tipovacka-eval-label">Points</div>
+                            <div className={`tipovacka-eval-badge tipovacka-eval-badge-${tip.points}`}>
+                              {tip.points === 4 && <><span className="tipovacka-eval-emoji">&#127919;</span> +4</>}
+                              {tip.points === 1 && <><span className="tipovacka-eval-emoji">&#128077;</span> +1</>}
+                              {tip.points === 0 && <><span className="tipovacka-eval-emoji">&#10060;</span> 0</>}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="tipovacka-eval-label">Points</div>
+                            <div className="tipovacka-eval-value tipovacka-eval-pending">
+                              {hasTip ? 'Pending' : '—'}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Locked, no tip, not finished — just show dash */}
+                  {locked && !isFinished && !hasTip && (
+                    <div className="tipovacka-eval-strip">
+                      <div className="tipovacka-eval-cell" style={{ flex: 1 }}>
+                        <div className="tipovacka-eval-value" style={{ color: 'var(--wc-text-muted)' }}>No prediction</div>
+                      </div>
                     </div>
                   )}
                 </div>

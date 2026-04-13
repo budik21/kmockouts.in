@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import { query, queryOne } from './db';
+import { slugify } from './slugify';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -14,13 +15,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async signIn({ user }) {
       // Upsert tipster_user on every sign-in
       if (user.email) {
-        const token = generateShareToken();
+        const token = generateShareToken(user.name || user.email.split('@')[0]);
         await query(
           `INSERT INTO tipster_user (email, name, image, share_token)
            VALUES ($1, $2, $3, $4)
            ON CONFLICT (email) DO UPDATE SET
              name = EXCLUDED.name,
-             image = EXCLUDED.image`,
+             image = EXCLUDED.image,
+             share_token = EXCLUDED.share_token`,
           [user.email, user.name || '', user.image || '', token],
         );
       }
@@ -50,11 +52,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 });
 
-function generateShareToken(): string {
+/**
+ * Generate a share token like "radek-budar-a3f7x2"
+ * Slugified user name + 6-char random suffix for uniqueness.
+ */
+function generateShareToken(name: string): string {
+  const slug = slugify(name) || 'user';
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 10; i++) {
-    token += chars[Math.floor(Math.random() * chars.length)];
+  let hash = '';
+  for (let i = 0; i < 6; i++) {
+    hash += chars[Math.floor(Math.random() * chars.length)];
   }
-  return token;
+  return `${slug}-${hash}`;
 }

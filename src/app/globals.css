@@ -4182,35 +4182,62 @@ a.ranking-team-name:hover {
 }
 
 .tipovacka-match-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);
   border-radius: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.tipovacka-match-row.locked {
-  opacity: 0.75;
+  overflow: hidden;
 }
 
 .tipovacka-match-row.has-tip {
   border-left: 3px solid var(--wc-accent);
 }
 
-.tipovacka-match-info {
+.tipovacka-match-row.no-tip {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.tipovacka-match-row.scored-4 {
+  border-left: 3px solid var(--prob-first);
+}
+
+.tipovacka-match-row.scored-1 {
+  border-left: 3px solid var(--prob-second);
+}
+
+.tipovacka-match-row.scored-0 {
+  border-left: 3px solid var(--prob-out);
+}
+
+/* Match header row: group badge + teams + time */
+.tipovacka-match-header-row {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  min-width: 40px;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
 }
 
 .tipovacka-match-group {
   font-weight: 700;
   font-size: 0.8rem;
   color: var(--wc-accent);
+  min-width: 16px;
+}
+
+.tipovacka-match-team-labels {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.tipovacka-match-vs {
+  color: var(--wc-text-muted);
+  font-weight: 400;
+  font-size: 0.75rem;
+  margin: 0 0.1rem;
 }
 
 .tipovacka-match-time {
@@ -4218,35 +4245,16 @@ a.ranking-team-name:hover {
   color: var(--wc-text-muted);
 }
 
-.tipovacka-match-teams {
+/* Edit row (unlocked matches) */
+.tipovacka-edit-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex: 1;
   justify-content: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem 0.5rem;
 }
 
-.tipovacka-team {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 60px;
-}
-
-.tipovacka-team-home {
-  justify-content: flex-end;
-}
-
-.tipovacka-team-away {
-  justify-content: flex-start;
-}
-
-.tipovacka-team-name {
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-
-.tipovacka-score-input {
+.tipovacka-edit-scores {
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -4258,29 +4266,94 @@ a.ranking-team-name:hover {
   margin: 0 0.15rem;
 }
 
-.tipovacka-score-locked {
-  min-width: 70px;
-  text-align: center;
+.tipovacka-save-btn {
+  background: var(--wc-accent);
+  color: #2a1a00;
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-.tipovacka-score-display {
+.tipovacka-save-btn:hover { filter: brightness(1.1); }
+.tipovacka-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.tipovacka-save-btn.saved { background: var(--prob-first); color: #fff; }
+
+/* 3-column evaluation strip for scored matches */
+.tipovacka-eval-strip {
+  display: flex;
+  border-top: 1px solid var(--wc-border);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-bs-theme="dark"] .tipovacka-eval-strip {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tipovacka-eval-cell {
+  flex: 1;
+  text-align: center;
+  padding: 0.4rem 0.35rem;
+}
+
+.tipovacka-eval-cell + .tipovacka-eval-cell {
+  border-left: 1px solid var(--wc-border);
+}
+
+.tipovacka-eval-label {
+  font-size: 0.6rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--wc-text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.tipovacka-eval-value {
+  font-weight: 700;
   font-size: 0.9rem;
 }
 
-.tipovacka-no-tip {
+.tipovacka-eval-pending {
   color: var(--wc-text-muted);
+  font-weight: 400;
+  font-size: 0.8rem;
 }
 
-.tipovacka-real-result {
-  font-size: 0.75rem;
-  color: var(--wc-text-muted);
-  width: 100%;
-  text-align: center;
-  margin-top: -0.25rem;
+/* Score badges in eval strip */
+.tipovacka-eval-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.35rem;
+  font-weight: 700;
+  font-size: 0.85rem;
 }
 
-/* Points badges */
+.tipovacka-eval-emoji {
+  font-size: 0.9rem;
+}
+
+.tipovacka-eval-badge-4 {
+  background: var(--prob-first);
+  color: #fff;
+}
+
+.tipovacka-eval-badge-1 {
+  background: var(--prob-second);
+  color: #fff;
+}
+
+.tipovacka-eval-badge-0 {
+  background: var(--prob-out);
+  color: #fff;
+}
+
+/* Points badges (dashboard recent tips) */
 .tipovacka-pts {
   display: inline-block;
   padding: 0.1rem 0.4rem;
@@ -4296,8 +4369,8 @@ a.ranking-team-name:hover {
 }
 
 .tipovacka-pts-1 {
-  background: var(--prob-third);
-  color: #000;
+  background: var(--prob-second);
+  color: #fff;
 }
 
 .tipovacka-pts-0 {
@@ -4305,37 +4378,43 @@ a.ranking-team-name:hover {
   color: #fff;
 }
 
-/* Save button */
-.tipovacka-match-actions {
-  margin-left: auto;
+/* Dashboard stat widgets (qualify-widget pattern) */
+.tipovacka-stat-widget {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  text-align: center;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-surface);
 }
 
-.tipovacka-save-btn {
-  background: var(--wc-accent);
-  color: #2a1a00;
-  border: none;
-  border-radius: 0.35rem;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.8rem;
+.tipovacka-stat-body {
+  padding: 1rem 0.5rem 0.5rem;
+}
+
+.tipovacka-stat-value {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tipovacka-stat-footer {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--wc-text-muted);
 }
 
-.tipovacka-save-btn:hover {
-  filter: brightness(1.1);
+[data-bs-theme="dark"] .tipovacka-stat-footer {
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.tipovacka-save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+.tipovacka-stat-total .tipovacka-stat-value { color: var(--wc-accent); }
+.tipovacka-stat-exact .tipovacka-stat-value { color: var(--prob-first); }
+.tipovacka-stat-outcome .tipovacka-stat-value { color: var(--prob-second); }
+.tipovacka-stat-wrong .tipovacka-stat-value { color: var(--prob-out); }
 
-.tipovacka-save-btn.saved {
-  background: var(--prob-first);
-}
-
-/* Dashboard score cards */
+/* Public page still uses old score-cards — keep them */
 .tipovacka-score-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -4345,31 +4424,40 @@ a.ranking-team-name:hover {
 
 .tipovacka-score-cards-sm {
   max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .tipovacka-score-card {
   text-align: center;
-  padding: 1rem 0.5rem;
   border-radius: 0.75rem;
+  overflow: hidden;
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);
 }
 
 .tipovacka-score-card-value {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 800;
   line-height: 1;
+  padding: 0.75rem 0.5rem 0.25rem;
 }
 
 .tipovacka-score-card-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 600;
   color: var(--wc-text-muted);
-  margin-top: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-bs-theme="dark"] .tipovacka-score-card-label {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .tipovacka-score-total .tipovacka-score-card-value { color: var(--wc-accent); }
 .tipovacka-score-exact .tipovacka-score-card-value { color: var(--prob-first); }
-.tipovacka-score-outcome .tipovacka-score-card-value { color: var(--prob-third); }
+.tipovacka-score-outcome .tipovacka-score-card-value { color: var(--prob-second); }
 .tipovacka-score-wrong .tipovacka-score-card-value { color: var(--prob-out); }
 
 /* Toggle switch */
@@ -4582,25 +4670,6 @@ a.ranking-team-name:hover {
 
 .tipovacka-cta-btn:hover {
   filter: brightness(1.1);
-}
-
-/* Match row — untipped matches get dashed border */
-.tipovacka-match-row.no-tip {
-  border-style: dashed;
-  opacity: 0.85;
-}
-
-/* Score result indicator (emoji + badge next to score) */
-.tipovacka-result-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-left: 0.25rem;
-}
-
-.tipovacka-result-emoji {
-  font-size: 1rem;
-  line-height: 1;
 }
 
 /* Sharing-revoked page */
