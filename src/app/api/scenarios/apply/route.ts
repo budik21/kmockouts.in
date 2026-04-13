@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { applyScenario } from '@/lib/apply-scenario';
 import { recalculateAllProbabilities } from '@/lib/probability-cache';
+import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,9 @@ export async function POST(request: NextRequest) {
     await query('DELETE FROM ai_summary_cache');
 
     await recalculateAllProbabilities();
+
+    // Recalculate tip points (scenario changes match results → tips need rescoring)
+    await recalculateAllTipPoints();
 
     // Purge ISR cache for all pages that show match results / probabilities
     revalidatePath('/worldcup2026', 'layout');

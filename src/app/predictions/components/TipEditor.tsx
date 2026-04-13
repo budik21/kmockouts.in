@@ -46,13 +46,20 @@ function formatTime(kickOff: string): string {
 
 export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
+  const [untippedOnly, setUntippedOnly] = useState(false);
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<Record<number, boolean>>({});
 
   const filteredMatches = useMemo(() => {
-    if (groupFilter === 'ALL') return matches;
-    return matches.filter((m) => m.groupId === groupFilter);
-  }, [matches, groupFilter]);
+    let result = matches;
+    if (groupFilter !== 'ALL') {
+      result = result.filter((m) => m.groupId === groupFilter);
+    }
+    if (untippedOnly) {
+      result = result.filter((m) => !tips[m.id]);
+    }
+    return result;
+  }, [matches, groupFilter, untippedOnly, tips]);
 
   // Group by date
   const matchesByDate = useMemo(() => {
@@ -110,6 +117,19 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
             {g}
           </button>
         ))}
+      </div>
+
+      {/* Untipped-only toggle */}
+      <div className="tipovacka-untipped-toggle mb-3">
+        <label className="tipovacka-toggle">
+          <input
+            type="checkbox"
+            checked={untippedOnly}
+            onChange={() => setUntippedOnly((v) => !v)}
+          />
+          <span className="tipovacka-toggle-slider" />
+        </label>
+        <span className="tipovacka-untipped-label">Show matches without prediction only</span>
       </div>
 
       {/* Matches */}

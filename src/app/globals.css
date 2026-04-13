@@ -4144,6 +4144,16 @@ a.ranking-team-name:hover {
   gap: 0.35rem;
 }
 
+.tipovacka-untipped-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tipovacka-untipped-label {
+  font-size: 0.85rem;
+  color: var(--wc-text-muted);
+}
+
 .tipovacka-filter-btn {
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);
