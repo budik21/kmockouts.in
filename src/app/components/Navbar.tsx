@@ -127,6 +127,14 @@ export default function Navbar() {
             >
               📊 FIFA Ranking
             </a>
+            <hr className="offcanvas-divider" />
+            <a
+              href="/predictions"
+              className="nav-link offcanvas-nav-link"
+              onClick={navigateAndClose('/predictions')}
+            >
+              🎯 Predictions
+            </a>
             <a
               href="#"
               className="nav-link offcanvas-nav-link"

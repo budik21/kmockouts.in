@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { recalculateAllProbabilities, pregenerateBestThirdSummaries } from '@/lib/probability-cache';
+import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 
 interface UpdateBody {
   matchId: number;
@@ -65,10 +66,17 @@ export async function POST(request: NextRequest) {
       [groupId],
     );
 
-    // Fire recalculation asynchronously (all groups + best-third + AI summaries)
+    // Fire recalculation asynchronously (all groups + best-third + AI summaries + tip points)
     recalculateAllProbabilities()
       .then(async () => {
         console.log(`[admin] Recalculated all probabilities (triggered by group ${groupId})`);
+        // Recalculate tip points for all users
+        try {
+          const tipResult = await recalculateAllTipPoints();
+          console.log(`[admin] Recalculated tip points: ${tipResult} tips updated`);
+        } catch (err) {
+          console.error('[admin] Tip recalculation failed:', err);
+        }
         // Pre-generate AI summaries so users don't wait on first page load
         try {
           await pregenerateBestThirdSummaries();

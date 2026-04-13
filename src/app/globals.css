@@ -3983,3 +3983,608 @@ a.ranking-team-name:hover {
   border-top: 1px solid var(--wc-border);
   pointer-events: none;
 }
+
+/* ============================================================
+   Predictions — Score Prediction Game Styles
+   ============================================================ */
+
+.tipovacka-landing {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+}
+
+.tipovacka-hero-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.tipovacka-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--wc-text);
+  margin-bottom: 0.5rem;
+}
+
+.tipovacka-subtitle {
+  font-size: 1.1rem;
+  color: var(--wc-text-muted);
+  max-width: 500px;
+  margin: 0 auto 2rem;
+  line-height: 1.6;
+}
+
+/* Onboarding steps */
+.tipovacka-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 2rem auto;
+  max-width: 380px;
+  text-align: left;
+}
+
+.tipovacka-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.tipovacka-step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--wc-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.tipovacka-step p {
+  margin: 0.2rem 0 0;
+  color: var(--wc-text-muted);
+  font-size: 0.9rem;
+}
+
+/* Auth buttons */
+.tipovacka-auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tipovacka-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--wc-surface);
+  color: var(--wc-text);
+}
+
+.tipovacka-btn:hover {
+  background: var(--wc-accent);
+  color: #fff;
+  border-color: var(--wc-accent);
+}
+
+/* App header */
+.tipovacka-app-header {
+  background: var(--wc-primary);
+  color: #fff;
+  padding: 1.25rem 0;
+}
+
+.tipovacka-app-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.tipovacka-app-user {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.tipovacka-points-badge {
+  background: var(--wc-accent);
+  color: #fff;
+  padding: 0.35rem 0.8rem;
+  border-radius: 1rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* Tabs */
+.tipovacka-tabs {
+  background: var(--wc-surface);
+  border-bottom: 1px solid var(--wc-border);
+  padding: 0.5rem 0 0;
+}
+
+.tipovacka-tab {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tipovacka-tab:hover {
+  color: var(--wc-text);
+}
+
+.tipovacka-tab.active {
+  color: var(--wc-accent);
+  border-bottom-color: var(--wc-accent);
+}
+
+/* Group filter buttons */
+.tipovacka-group-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tipovacka-filter-btn {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tipovacka-filter-btn.active,
+.tipovacka-filter-btn:hover {
+  background: var(--wc-accent);
+  color: #fff;
+  border-color: var(--wc-accent);
+}
+
+/* Date header */
+.tipovacka-date-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--wc-border);
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Match rows */
+.tipovacka-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tipovacka-match-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tipovacka-match-row.locked {
+  opacity: 0.75;
+}
+
+.tipovacka-match-row.has-tip {
+  border-left: 3px solid var(--wc-accent);
+}
+
+.tipovacka-match-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 40px;
+}
+
+.tipovacka-match-group {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--wc-accent);
+}
+
+.tipovacka-match-time {
+  font-size: 0.7rem;
+  color: var(--wc-text-muted);
+}
+
+.tipovacka-match-teams {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.tipovacka-team {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 60px;
+}
+
+.tipovacka-team-home {
+  justify-content: flex-end;
+}
+
+.tipovacka-team-away {
+  justify-content: flex-start;
+}
+
+.tipovacka-team-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.tipovacka-score-input {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tipovacka-score-separator {
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 0 0.15rem;
+}
+
+.tipovacka-score-locked {
+  min-width: 70px;
+  text-align: center;
+}
+
+.tipovacka-score-display {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tipovacka-no-tip {
+  color: var(--wc-text-muted);
+}
+
+.tipovacka-real-result {
+  font-size: 0.75rem;
+  color: var(--wc-text-muted);
+  width: 100%;
+  text-align: center;
+  margin-top: -0.25rem;
+}
+
+/* Points badges */
+.tipovacka-pts {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 0.35rem;
+}
+
+.tipovacka-pts-4 {
+  background: var(--prob-first);
+  color: #fff;
+}
+
+.tipovacka-pts-1 {
+  background: var(--prob-third);
+  color: #000;
+}
+
+.tipovacka-pts-0 {
+  background: var(--prob-out);
+  color: #fff;
+}
+
+/* Save button */
+.tipovacka-match-actions {
+  margin-left: auto;
+}
+
+.tipovacka-save-btn {
+  background: var(--wc-accent);
+  color: #fff;
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tipovacka-save-btn:hover {
+  filter: brightness(1.1);
+}
+
+.tipovacka-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tipovacka-save-btn.saved {
+  background: var(--prob-first);
+}
+
+/* Dashboard score cards */
+.tipovacka-score-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.tipovacka-score-cards-sm {
+  max-width: 500px;
+}
+
+.tipovacka-score-card {
+  text-align: center;
+  padding: 1rem 0.5rem;
+  border-radius: 0.75rem;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+}
+
+.tipovacka-score-card-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tipovacka-score-card-label {
+  font-size: 0.75rem;
+  color: var(--wc-text-muted);
+  margin-top: 0.35rem;
+}
+
+.tipovacka-score-total .tipovacka-score-card-value { color: var(--wc-accent); }
+.tipovacka-score-exact .tipovacka-score-card-value { color: var(--prob-first); }
+.tipovacka-score-outcome .tipovacka-score-card-value { color: var(--prob-third); }
+.tipovacka-score-wrong .tipovacka-score-card-value { color: var(--prob-out); }
+
+/* Toggle switch */
+.tipovacka-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.tipovacka-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.tipovacka-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--wc-border);
+  border-radius: 24px;
+  transition: 0.2s;
+}
+
+.tipovacka-toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.tipovacka-toggle input:checked + .tipovacka-toggle-slider {
+  background: var(--wc-accent);
+}
+
+.tipovacka-toggle input:checked + .tipovacka-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* Share URL */
+.tipovacka-share-url {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 500px;
+}
+
+.tipovacka-share-url input {
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  border-color: var(--wc-border);
+}
+
+/* Recent tips */
+.tipovacka-recent-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tipovacka-recent-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.65rem;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.tipovacka-recent-group {
+  font-weight: 700;
+  color: var(--wc-accent);
+  min-width: 18px;
+}
+
+.tipovacka-recent-teams {
+  flex: 1;
+}
+
+.tipovacka-recent-tip {
+  font-weight: 600;
+}
+
+.tipovacka-recent-real {
+  color: var(--wc-text-muted);
+  font-size: 0.8rem;
+}
+
+/* Group comparison */
+.tipovacka-table-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.tipovacka-standings-table {
+  background: var(--wc-surface);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.tipovacka-standings-table thead th {
+  font-size: 0.75rem;
+  color: var(--wc-text-muted);
+  border-bottom: 2px solid var(--wc-border);
+  background: var(--wc-surface);
+}
+
+.tipovacka-standings-table tbody td {
+  font-size: 0.85rem;
+  border-color: var(--wc-border);
+  color: var(--wc-text);
+}
+
+.tipovacka-qualified {
+  background: rgba(25, 135, 84, 0.08) !important;
+}
+
+/* Compare match rows */
+.tipovacka-compare-match {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.tipovacka-compare-team {
+  font-weight: 600;
+  font-size: 0.85rem;
+  min-width: 40px;
+}
+
+.tipovacka-compare-scores {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.tipovacka-compare-real {
+  font-weight: 600;
+}
+
+.tipovacka-compare-vs {
+  color: var(--wc-text-muted);
+}
+
+.tipovacka-compare-tip {
+  font-weight: 600;
+}
+
+.tipovacka-compare-tip.exact { color: var(--prob-first); }
+.tipovacka-compare-tip.outcome { color: var(--prob-third); }
+.tipovacka-compare-tip.wrong { color: var(--prob-out); }
+
+.tipovacka-compare-na {
+  color: var(--wc-text-muted);
+}
+
+/* Public page header */
+.tipovacka-public-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.tipovacka-public-header h2 {
+  font-weight: 700;
+  color: var(--wc-text);
+}
+
+/* Progress section */
+.tipovacka-progress-section {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.tipovacka-share-section {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .tipovacka-score-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tipovacka-score-card-value {
+    font-size: 1.5rem;
+  }
+
+  .tipovacka-match-teams {
+    gap: 0.25rem;
+  }
+
+  .tipovacka-team-name {
+    font-size: 0.75rem;
+  }
+
+  .tipovacka-title {
+    font-size: 1.8rem;
+  }
+}

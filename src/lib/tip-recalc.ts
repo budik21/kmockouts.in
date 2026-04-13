@@ -1,0 +1,35 @@
+import { query } from './db';
+import { calculateTipPoints } from './tip-scoring';
+
+/**
+ * Recalculate points for ALL tips based on current match results.
+ * Returns number of tips updated.
+ */
+export async function recalculateAllTipPoints(): Promise<number> {
+  const tips = await query<{
+    tip_id: number;
+    tip_home: number;
+    tip_away: number;
+    real_home: number | null;
+    real_away: number | null;
+    match_status: string;
+  }>(
+    `SELECT t.id as tip_id, t.home_goals as tip_home, t.away_goals as tip_away,
+            m.home_goals as real_home, m.away_goals as real_away, m.status as match_status
+     FROM tip t
+     JOIN match m ON t.match_id = m.id`,
+  );
+
+  let updated = 0;
+  for (const tip of tips) {
+    const points =
+      tip.match_status === 'FINISHED'
+        ? calculateTipPoints(tip.tip_home, tip.tip_away, tip.real_home, tip.real_away)
+        : null;
+
+    await query('UPDATE tip SET points = $1 WHERE id = $2', [points, tip.tip_id]);
+    updated++;
+  }
+
+  return updated;
+}

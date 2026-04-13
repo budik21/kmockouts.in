@@ -186,6 +186,35 @@ export async function initializeSchema(): Promise<void> {
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (group_id, team_id, position)
     );
+
+    -- Tipovacka: registered users
+    CREATE TABLE IF NOT EXISTS tipster_user (
+      id            SERIAL PRIMARY KEY,
+      email         TEXT NOT NULL UNIQUE,
+      name          TEXT NOT NULL DEFAULT '',
+      image         TEXT NOT NULL DEFAULT '',
+      share_token   TEXT UNIQUE,
+      tips_public   BOOLEAN NOT NULL DEFAULT false,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tipster_user_share ON tipster_user(share_token);
+
+    -- Tipovacka: individual match predictions
+    CREATE TABLE IF NOT EXISTS tip (
+      id            SERIAL PRIMARY KEY,
+      user_id       INTEGER NOT NULL REFERENCES tipster_user(id) ON DELETE CASCADE,
+      match_id      INTEGER NOT NULL REFERENCES match(id) ON DELETE CASCADE,
+      home_goals    INTEGER NOT NULL,
+      away_goals    INTEGER NOT NULL,
+      points        INTEGER,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, match_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tip_user ON tip(user_id);
+    CREATE INDEX IF NOT EXISTS idx_tip_match ON tip(match_id);
   `);
 
   // ---- Seed knockout third-place combinations (FIFA Annex C) ----
