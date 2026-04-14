@@ -4779,6 +4779,25 @@ a.ranking-team-name:hover {
   filter: brightness(1.1);
 }
 
+/* Responsive team names: full on desktop, short on mobile */
+.tipovacka-team-full { display: inline; }
+.tipovacka-team-short { display: none; }
+
+/* Match meta line (venue + date/time) */
+.tipovacka-match-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0.4rem;
+  font-size: 0.7rem;
+  color: var(--wc-text-muted);
+}
+
+.tipovacka-match-meta span + span::before {
+  content: '\00b7';
+  margin-right: 0.5rem;
+}
+
 /* Responsive */
 @media (max-width: 576px) {
   .tipovacka-score-cards {
@@ -4796,6 +4815,9 @@ a.ranking-team-name:hover {
   .tipovacka-team-name {
     font-size: 0.75rem;
   }
+
+  .tipovacka-team-full { display: none; }
+  .tipovacka-team-short { display: inline; }
 
   .tipovacka-title {
     font-size: 1.8rem;

@@ -152,9 +152,9 @@ export default async function PublicSharePage({ params }: Props) {
         </div>
       </div>
 
-      <AdBanner slot="predictions-share" />
-
       <PublicTipsView matches={matches} tips={tips} userName={firstName} shareToken={token} />
+
+      <AdBanner slot="predictions-share" />
     </div>
   );
 }

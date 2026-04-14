@@ -70,6 +70,25 @@ function FlagIcon({ code }: { code: string }) {
   return <span className={`${cls} flag-sm`} />;
 }
 
+function formatDate(kickOff: string): string {
+  try {
+    return new Date(kickOff).toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+  } catch { return ''; }
+}
+
+function formatTime(kickOff: string): string {
+  try {
+    return new Date(kickOff).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch { return ''; }
+}
+
 export default function PublicTipsView({ matches, tips, userName, shareToken }: Props) {
   const allGroups = useMemo(() => {
     const groups = new Set(matches.map((m) => m.groupId));
@@ -200,32 +219,75 @@ export default function PublicTipsView({ matches, tips, userName, shareToken }: 
         </table>
       </div>
 
-      {/* Match results */}
+      {/* Match results — card + eval strip layout */}
       <h6 className="tipovacka-table-label">Predictions</h6>
-      {groupMatches.map((m) => {
-        const tip = tips[m.id];
-        return (
-          <div key={m.id} className="tipovacka-compare-match">
-            <span className="tipovacka-compare-team">{m.homeTeam.shortName}</span>
-            <div className="tipovacka-compare-scores">
-              {tip ? (
-                <span className={`tipovacka-compare-tip ${tip.points === 4 ? 'exact' : tip.points === 1 ? 'outcome' : tip.points === 0 ? 'wrong' : ''}`}>
-                  {tip.homeGoals}:{tip.awayGoals}
+      <div className="tipovacka-matches-list">
+        {groupMatches.map((m) => {
+          const tip = tips[m.id];
+          const hasTip = !!tip;
+          const isFinished = m.status === 'FINISHED' && m.homeGoals !== null;
+          const hasScore = hasTip && tip.points !== null;
+
+          return (
+            <div
+              key={m.id}
+              className={`tipovacka-match-row ${hasTip ? 'has-tip' : 'no-tip'} ${hasScore ? `scored scored-${tip.points}` : ''}`}
+            >
+              {/* Header: teams + venue/time */}
+              <div className="tipovacka-match-header-row">
+                <span className="tipovacka-match-team-labels">
+                  <FlagIcon code={m.homeTeam.countryCode} />
+                  <span className="tipovacka-team-full">{m.homeTeam.name}</span>
+                  <span className="tipovacka-team-short">{m.homeTeam.shortName}</span>
+                  <span className="tipovacka-match-vs">vs</span>
+                  <span className="tipovacka-team-full">{m.awayTeam.name}</span>
+                  <span className="tipovacka-team-short">{m.awayTeam.shortName}</span>
+                  <FlagIcon code={m.awayTeam.countryCode} />
                 </span>
-              ) : (
-                <span className="tipovacka-compare-na">-</span>
-              )}
-              {m.status === 'FINISHED' && m.homeGoals !== null && (
-                <>
-                  <span className="tipovacka-compare-vs">/</span>
-                  <span className="tipovacka-compare-real">{m.homeGoals}:{m.awayGoals}</span>
-                </>
-              )}
+              </div>
+              <div className="tipovacka-match-meta">
+                {m.venue && <span>{m.venue}</span>}
+                <span>{formatDate(m.kickOff)}, {formatTime(m.kickOff)}</span>
+              </div>
+
+              {/* 3-column eval strip */}
+              <div className="tipovacka-eval-strip">
+                <div className="tipovacka-eval-cell">
+                  <div className="tipovacka-eval-label">Prediction</div>
+                  <div className="tipovacka-eval-value">
+                    {hasTip ? `${tip.homeGoals} : ${tip.awayGoals}` : '—'}
+                  </div>
+                </div>
+                <div className="tipovacka-eval-cell">
+                  <div className="tipovacka-eval-label">Result</div>
+                  <div className="tipovacka-eval-value">
+                    {isFinished ? `${m.homeGoals} : ${m.awayGoals}` : '—'}
+                  </div>
+                </div>
+                <div className="tipovacka-eval-cell tipovacka-eval-score-cell">
+                  {hasScore ? (
+                    <>
+                      <div className="tipovacka-eval-label">Points</div>
+                      <div className={`tipovacka-eval-badge tipovacka-eval-badge-${tip.points}`}>
+                        {tip.points === 4 && <><span className="tipovacka-eval-emoji">&#127919;</span> +4</>}
+                        {tip.points === 1 && <><span className="tipovacka-eval-emoji">&#128077;</span> +1</>}
+                        {tip.points === 0 && <><span className="tipovacka-eval-emoji">&#10060;</span> 0</>}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="tipovacka-eval-label">Points</div>
+                      <div className="tipovacka-eval-value tipovacka-eval-pending">
+                        {hasTip ? 'Pending' : '—'}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
-            <span className="tipovacka-compare-team text-end">{m.awayTeam.shortName}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
