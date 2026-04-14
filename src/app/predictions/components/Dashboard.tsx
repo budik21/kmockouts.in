@@ -79,47 +79,35 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
     return Date.now() > lastKickOff;
   }, [matches]);
 
+  const scored = stats.exact + stats.outcome + stats.wrong;
+  const pct = (n: number) => scored > 0 ? Math.round((n / scored) * 100) : 0;
+
   return (
     <div>
-      {/* Score cards — qualify-widget pattern */}
-      <div className="row g-3 mb-4">
-        <div className="col-6 col-md-3">
-          <div className="tipovacka-stat-widget tipovacka-stat-total">
-            <div className="tipovacka-stat-body">
-              <span className="tipovacka-stat-value">{stats.totalPoints}</span>
-            </div>
-            <div className="tipovacka-stat-footer">Total Points</div>
-          </div>
+      {/* Score cards — matching public profile layout */}
+      <div className="tipovacka-score-cards tipovacka-score-cards-wide mb-4">
+        <div className="tipovacka-score-card tipovacka-score-matches">
+          <div className="tipovacka-score-card-value">{totalMatches}</div>
+          <div className="tipovacka-score-card-label">Matches total</div>
         </div>
-        <div className="col-6 col-md-3">
-          <div className="tipovacka-stat-widget tipovacka-stat-exact">
-            <div className="tipovacka-stat-body">
-              <span className="tipovacka-stat-value">{stats.exact}</span>
-            </div>
-            <div className="tipovacka-stat-footer">
-              <span>Exact Score</span>
-            </div>
-          </div>
+        <div className="tipovacka-score-card tipovacka-score-exact">
+          <div className="tipovacka-score-card-value">{stats.exact}</div>
+          <div className="tipovacka-score-card-pct">{pct(stats.exact)}%</div>
+          <div className="tipovacka-score-card-label">Exact Score</div>
         </div>
-        <div className="col-6 col-md-3">
-          <div className="tipovacka-stat-widget tipovacka-stat-outcome">
-            <div className="tipovacka-stat-body">
-              <span className="tipovacka-stat-value">{stats.outcome}</span>
-            </div>
-            <div className="tipovacka-stat-footer">
-              <span>Correct Outcome</span>
-            </div>
-          </div>
+        <div className="tipovacka-score-card tipovacka-score-outcome">
+          <div className="tipovacka-score-card-value">{stats.outcome}</div>
+          <div className="tipovacka-score-card-pct">{pct(stats.outcome)}%</div>
+          <div className="tipovacka-score-card-label">Result Match</div>
         </div>
-        <div className="col-6 col-md-3">
-          <div className="tipovacka-stat-widget tipovacka-stat-wrong">
-            <div className="tipovacka-stat-body">
-              <span className="tipovacka-stat-value">{stats.wrong}</span>
-            </div>
-            <div className="tipovacka-stat-footer">
-              <span>Wrong</span>
-            </div>
-          </div>
+        <div className="tipovacka-score-card tipovacka-score-wrong">
+          <div className="tipovacka-score-card-value">{stats.wrong}</div>
+          <div className="tipovacka-score-card-pct">{pct(stats.wrong)}%</div>
+          <div className="tipovacka-score-card-label">Wrong</div>
+        </div>
+        <div className="tipovacka-score-card tipovacka-score-points">
+          <div className="tipovacka-score-card-value">{stats.totalPoints}</div>
+          <div className="tipovacka-score-card-label">Points</div>
         </div>
       </div>
 
