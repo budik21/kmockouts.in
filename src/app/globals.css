@@ -4208,11 +4208,11 @@ a.ranking-team-name:hover {
 }
 
 .tipovacka-match-row.scored-4 {
-  border-left: 3px solid var(--prob-first);
+  border-left: 3px solid #15803d;
 }
 
 .tipovacka-match-row.scored-1 {
-  border-left: 3px solid var(--prob-second);
+  border-left: 3px solid #86efac;
 }
 
 .tipovacka-match-row.scored-0 {
@@ -4474,6 +4474,8 @@ a.ranking-team-name:hover {
 }
 
 .tipovacka-score-card {
+  display: flex;
+  flex-direction: column;
   text-align: center;
   border-radius: 0.75rem;
   overflow: hidden;
@@ -4505,6 +4507,7 @@ a.ranking-team-name:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: auto;
 }
 
 [data-bs-theme="dark"] .tipovacka-score-card-label {
