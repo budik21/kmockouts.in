@@ -4463,8 +4463,8 @@ a.ranking-team-name:hover {
 }
 
 .tipovacka-stat-total .tipovacka-stat-value { color: var(--wc-accent); }
-.tipovacka-stat-exact .tipovacka-stat-value { color: var(--prob-first); }
-.tipovacka-stat-outcome .tipovacka-stat-value { color: var(--prob-second); }
+.tipovacka-stat-exact .tipovacka-stat-value { color: #15803d; }
+.tipovacka-stat-outcome .tipovacka-stat-value { color: #4ade80; }
 .tipovacka-stat-wrong .tipovacka-stat-value { color: var(--prob-out); }
 
 /* Public page score-cards */
@@ -4524,8 +4524,8 @@ a.ranking-team-name:hover {
 }
 
 .tipovacka-score-matches .tipovacka-score-card-value { color: var(--wc-text); }
-.tipovacka-score-exact .tipovacka-score-card-value { color: var(--prob-first); }
-.tipovacka-score-outcome .tipovacka-score-card-value { color: var(--prob-second); }
+.tipovacka-score-exact .tipovacka-score-card-value { color: #15803d; }
+.tipovacka-score-outcome .tipovacka-score-card-value { color: #4ade80; }
 .tipovacka-score-wrong .tipovacka-score-card-value { color: var(--prob-out); }
 
 .tipovacka-score-points {
