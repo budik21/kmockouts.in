@@ -4219,6 +4219,15 @@ a.ranking-team-name:hover {
   border-left: 3px solid var(--prob-out);
 }
 
+.tipovacka-match-row.missed {
+  border-left: 3px solid #6b7280;
+}
+
+.tipovacka-eval-icon-missed {
+  background: #6b7280;
+  color: #fff;
+}
+
 /* Match header row: group badge + teams + time */
 .tipovacka-match-header-row {
   display: flex;

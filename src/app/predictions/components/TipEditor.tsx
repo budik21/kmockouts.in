@@ -151,7 +151,7 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
               return (
                 <div
                   key={match.id}
-                  className={`tipovacka-match-row ${locked ? 'locked' : ''} ${hasTip ? 'has-tip' : 'no-tip'} ${hasScore ? `scored scored-${tip.points}` : ''}`}
+                  className={`tipovacka-match-row ${locked ? 'locked' : ''} ${hasTip ? 'has-tip' : 'no-tip'} ${hasScore ? `scored scored-${tip.points}` : ''} ${isFinished && !hasTip ? 'missed' : ''}`}
                 >
                   {/* Header: group + teams + time */}
                   <div className="tipovacka-match-header-row">
@@ -207,6 +207,11 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
                             {tip.points === 0 && (
                               <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/></svg>
                             )}
+                          </span>
+                        )}
+                        {isFinished && !hasTip && (
+                          <span className="tipovacka-eval-icon tipovacka-eval-icon-missed">
+                            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.075 1.362a5 5 0 015.85 0l.018.013c.08.06.17.142.252.232a.75.75 0 01-1.13.99A1.473 1.473 0 009.5 2.5C9.5 1.977 9.053 1.5 8 1.5S6.5 1.977 6.5 2.5c0 .163-.024.288-.065.397l-.018.044c-.052.117-.14.256-.313.442l-.146.153C5.592 3.912 5 4.624 5 6c0 .75.25 1.25.75 1.75S7 8.75 8 8.75a.75.75 0 010 1.5c-1.25 0-2-.5-2.75-1.25S4 7.25 4 6c0-1.875.875-2.875 1.375-3.375l.1-.106c.1-.108.15-.172.178-.236A.608.608 0 005.5 2.5c0-.457.171-.846.557-1.125l.018-.013zM8 13a1 1 0 100-2 1 1 0 000 2z"/></svg>
                           </span>
                         )}
                       </div>

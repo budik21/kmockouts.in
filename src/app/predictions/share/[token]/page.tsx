@@ -122,7 +122,7 @@ export default async function PublicSharePage({ params }: Props) {
   return (
     <div className="container py-4">
       <div className="tipovacka-public-header">
-        <h2>Predictions by {user.name}</h2>
+        <h2>World Cup Predictions by {user.name}</h2>
         <div className="tipovacka-score-cards tipovacka-score-cards-wide">
           <div className="tipovacka-score-card tipovacka-score-matches">
             <div className="tipovacka-score-card-value">{totalMatches}</div>
