@@ -4334,31 +4334,62 @@ a.ranking-team-name:hover {
 }
 
 /* Score badges in eval strip */
+.tipovacka-eval-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tipovacka-eval-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tipovacka-eval-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
 .tipovacka-eval-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
   padding: 0.15rem 0.5rem;
   border-radius: 0.35rem;
   font-weight: 700;
   font-size: 0.85rem;
 }
 
-.tipovacka-eval-emoji {
-  font-size: 0.9rem;
+.tipovacka-eval-badge-4 {
+  background: #15803d;
+  color: #fff;
 }
 
-.tipovacka-eval-badge-4 {
-  background: var(--prob-first);
+.tipovacka-eval-icon-4 {
+  background: #15803d;
   color: #fff;
 }
 
 .tipovacka-eval-badge-1 {
-  background: var(--prob-second);
-  color: #fff;
+  background: #86efac;
+  color: #166534;
+}
+
+.tipovacka-eval-icon-1 {
+  background: #86efac;
+  color: #6b7280;
 }
 
 .tipovacka-eval-badge-0 {
+  background: var(--prob-out);
+  color: #fff;
+}
+
+.tipovacka-eval-icon-0 {
   background: var(--prob-out);
   color: #fff;
 }
