@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import type { TipMatch } from '../tips/page';
 
 interface TipData {
@@ -12,6 +12,8 @@ interface TipData {
 interface Props {
   matches: TipMatch[];
   tips: Record<number, TipData>;
+  userName: string;
+  shareToken: string;
 }
 
 interface StandingRow {
@@ -68,13 +70,55 @@ function FlagIcon({ code }: { code: string }) {
   return <span className={`${cls} flag-sm`} />;
 }
 
-export default function PublicTipsView({ matches, tips }: Props) {
+export default function PublicTipsView({ matches, tips, userName, shareToken }: Props) {
   const allGroups = useMemo(() => {
     const groups = new Set(matches.map((m) => m.groupId));
     return Array.from(groups).sort();
   }, [matches]);
 
+  // Read initial group from URL hash
+  const getGroupFromHash = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const hash = window.location.hash.replace('#', '');
+    if (hash && allGroups.includes(hash)) return hash;
+    return null;
+  }, [allGroups]);
+
   const [selectedGroup, setSelectedGroup] = useState(allGroups[0] || 'A');
+  const [copied, setCopied] = useState(false);
+
+  // Set group from hash on mount
+  useEffect(() => {
+    const fromHash = getGroupFromHash();
+    if (fromHash) setSelectedGroup(fromHash);
+  }, [getGroupFromHash]);
+
+  // Update hash when group changes
+  const handleGroupChange = useCallback((group: string) => {
+    setSelectedGroup(group);
+    window.location.hash = group;
+  }, []);
+
+  // Listen for hash changes (browser back/forward)
+  useEffect(() => {
+    const onHashChange = () => {
+      const fromHash = getGroupFromHash();
+      if (fromHash) setSelectedGroup(fromHash);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [getGroupFromHash]);
+
+  const shareUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/predictions/share/${shareToken}#${selectedGroup}`;
+  }, [shareToken, selectedGroup]);
+
+  const handleShare = useCallback(async () => {
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [shareUrl]);
 
   const groupMatches = useMemo(
     () => matches.filter((m) => m.groupId === selectedGroup),
@@ -97,14 +141,29 @@ export default function PublicTipsView({ matches, tips }: Props) {
           <button
             key={g}
             className={`tipovacka-filter-btn ${selectedGroup === g ? 'active' : ''}`}
-            onClick={() => setSelectedGroup(g)}
+            onClick={() => handleGroupChange(g)}
           >
             {g}
           </button>
         ))}
       </div>
 
-      <h5 className="mb-3">Group {selectedGroup} — Predicted</h5>
+      <div className="tipovacka-group-header">
+        <h5 className="mb-0">{userName}&apos;s prediction of Group {selectedGroup}</h5>
+        <button className="tipovacka-share-btn" onClick={handleShare} title="Copy link to this group">
+          {copied ? (
+            <>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+              Copied!
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3.75 2A1.75 1.75 0 002 3.75v8.5c0 .966.784 1.75 1.75 1.75h2.5a.75.75 0 000-1.5h-2.5a.25.25 0 01-.25-.25v-8.5a.25.25 0 01.25-.25h5.5a.25.25 0 01.25.25v1a.75.75 0 001.5 0v-1A1.75 1.75 0 009.25 2h-5.5z"/><path d="M6.75 6A1.75 1.75 0 005 7.75v5.5c0 .966.784 1.75 1.75 1.75h5.5A1.75 1.75 0 0014 13.25v-5.5A1.75 1.75 0 0012.25 6h-5.5zM6.5 7.75a.25.25 0 01.25-.25h5.5a.25.25 0 01.25.25v5.5a.25.25 0 01-.25.25h-5.5a.25.25 0 01-.25-.25v-5.5z"/></svg>
+              Share
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Standings table */}
       <div className="table-responsive mb-4">

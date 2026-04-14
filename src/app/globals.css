@@ -4649,6 +4649,62 @@ a.ranking-team-name:hover {
   color: var(--wc-text);
 }
 
+/* Match progress bar (public share page) */
+.tipovacka-match-progress {
+  margin-top: 1.25rem;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tipovacka-match-progress-label {
+  font-size: 0.8rem;
+  color: var(--wc-text-muted);
+  margin-bottom: 0.35rem;
+  text-align: center;
+}
+
+.tipovacka-match-progress-bar {
+  height: 8px;
+  background: var(--wc-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.tipovacka-match-progress-fill {
+  height: 100%;
+  background: var(--wc-accent);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* Group header with share button */
+.tipovacka-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.tipovacka-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--wc-text);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.tipovacka-share-btn:hover {
+  background: var(--wc-border);
+}
+
 /* Progress section */
 .tipovacka-progress-section {
   background: var(--wc-surface);

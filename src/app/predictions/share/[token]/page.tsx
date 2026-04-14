@@ -110,6 +110,13 @@ export default async function PublicSharePage({ params }: Props) {
   }
   const totalPoints = exact * 4 + outcome;
 
+  // Match progress
+  const totalMatches = matches.length;
+  const playedMatches = matches.filter((m) => m.status === 'FINISHED').length;
+
+  // User first name for title
+  const firstName = user.name.split(' ')[0];
+
   return (
     <div className="container py-4">
       <div className="tipovacka-public-header">
@@ -121,22 +128,33 @@ export default async function PublicSharePage({ params }: Props) {
           </div>
           <div className="tipovacka-score-card tipovacka-score-exact">
             <div className="tipovacka-score-card-value">{exact}</div>
-            <div className="tipovacka-score-card-label">Exact</div>
+            <div className="tipovacka-score-card-label">Exact Score Match</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-outcome">
             <div className="tipovacka-score-card-value">{outcome}</div>
-            <div className="tipovacka-score-card-label">+1</div>
+            <div className="tipovacka-score-card-label">Match Result Match</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-wrong">
             <div className="tipovacka-score-card-value">{wrong}</div>
-            <div className="tipovacka-score-card-label">Wrong</div>
+            <div className="tipovacka-score-card-label">Wrong tips</div>
+          </div>
+        </div>
+        <div className="tipovacka-match-progress">
+          <div className="tipovacka-match-progress-label">
+            {playedMatches} / {totalMatches} matches played
+          </div>
+          <div className="tipovacka-match-progress-bar">
+            <div
+              className="tipovacka-match-progress-fill"
+              style={{ width: `${totalMatches ? (playedMatches / totalMatches) * 100 : 0}%` }}
+            />
           </div>
         </div>
       </div>
 
       <AdBanner slot="predictions-share" />
 
-      <PublicTipsView matches={matches} tips={tips} />
+      <PublicTipsView matches={matches} tips={tips} userName={firstName} shareToken={token} />
     </div>
   );
 }
