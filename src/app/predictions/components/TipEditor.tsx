@@ -47,19 +47,35 @@ function formatTime(kickOff: string): string {
 export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
   const [untippedOnly, setUntippedOnly] = useState(false);
+  // Snapshot of untipped match IDs — frozen when filter is toggled on
+  const [untippedSnapshot, setUntippedSnapshot] = useState<Set<number> | null>(null);
   const [saving, setSaving] = useState<Record<number, boolean>>({});
   const [saved, setSaved] = useState<Record<number, boolean>>({});
+
+  const handleUntippedToggle = useCallback(() => {
+    setUntippedOnly((prev) => {
+      const next = !prev;
+      if (next) {
+        // Snapshot current untipped IDs
+        const ids = new Set(matches.filter((m) => !tips[m.id]).map((m) => m.id));
+        setUntippedSnapshot(ids);
+      } else {
+        setUntippedSnapshot(null);
+      }
+      return next;
+    });
+  }, [matches, tips]);
 
   const filteredMatches = useMemo(() => {
     let result = matches;
     if (groupFilter !== 'ALL') {
       result = result.filter((m) => m.groupId === groupFilter);
     }
-    if (untippedOnly) {
-      result = result.filter((m) => !tips[m.id]);
+    if (untippedOnly && untippedSnapshot) {
+      result = result.filter((m) => untippedSnapshot.has(m.id));
     }
     return result;
-  }, [matches, groupFilter, untippedOnly, tips]);
+  }, [matches, groupFilter, untippedOnly, untippedSnapshot]);
 
   // Group by date
   const matchesByDate = useMemo(() => {
@@ -125,7 +141,7 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
           <input
             type="checkbox"
             checked={untippedOnly}
-            onChange={() => setUntippedOnly((v) => !v)}
+            onChange={handleUntippedToggle}
           />
           <span className="tipovacka-toggle-slider" />
         </label>
@@ -140,8 +156,8 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
             {dateMatches.map((match) => {
               const locked = isMatchLocked(match);
               const tip = tips[match.id];
-              const homeGoals = tip?.homeGoals ?? 0;
-              const awayGoals = tip?.awayGoals ?? 0;
+              const homeGoals = tip ? tip.homeGoals : null;
+              const awayGoals = tip ? tip.awayGoals : null;
               const hasTip = !!tip;
               const isSaving = saving[match.id];
               const isSaved = saved[match.id];
@@ -172,16 +188,18 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
                       <div className="tipovacka-edit-scores">
                         <ArrowStepper
                           value={homeGoals}
-                          onChange={(v) => onTipUpdate(match.id, v ?? 0, awayGoals)}
+                          onChange={(v) => onTipUpdate(match.id, v ?? 0, awayGoals ?? 0)}
                           min={0}
                           max={15}
+                          nullable
                         />
                         <span className="tipovacka-score-separator">:</span>
                         <ArrowStepper
                           value={awayGoals}
-                          onChange={(v) => onTipUpdate(match.id, homeGoals, v ?? 0)}
+                          onChange={(v) => onTipUpdate(match.id, homeGoals ?? 0, v ?? 0)}
                           min={0}
                           max={15}
+                          nullable
                         />
                       </div>
                       <button
