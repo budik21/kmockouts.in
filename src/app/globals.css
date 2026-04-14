@@ -4896,3 +4896,109 @@ a.ranking-team-name:hover {
     padding: 0.4rem 0.75rem;
   }
 }
+
+/* Leaderboard */
+.leaderboard-table {
+  background: var(--wc-surface);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.leaderboard-table thead th {
+  font-size: 0.75rem;
+  color: var(--wc-text-muted);
+  border-bottom: 2px solid var(--wc-border);
+  background: var(--wc-surface);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.leaderboard-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.leaderboard-sortable:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.leaderboard-sort-arrow {
+  margin-left: 0.25rem;
+  font-size: 0.7rem;
+}
+
+.leaderboard-sort-arrow.muted {
+  opacity: 0.3;
+}
+
+.leaderboard-exact { color: #15803d; font-weight: 600; }
+.leaderboard-outcome { color: #4ade80; font-weight: 600; }
+.leaderboard-wrong { color: var(--prob-out); font-weight: 600; }
+
+.leaderboard-points-col {
+  background: rgba(var(--wc-accent-rgb, 212, 175, 55), 0.08);
+  color: var(--wc-accent);
+  border-left: 2px solid var(--wc-accent);
+  border-right: 2px solid var(--wc-accent);
+}
+
+.leaderboard-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.leaderboard-profile-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 0.35rem;
+  color: var(--wc-accent);
+  transition: all 0.15s;
+}
+
+.leaderboard-profile-link:hover {
+  background: var(--wc-accent);
+  color: #2a1a00;
+}
+
+.leaderboard-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.leaderboard-pager-btn {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--wc-text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.leaderboard-pager-btn:hover:not(:disabled) {
+  background: var(--wc-border);
+}
+
+.leaderboard-pager-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.leaderboard-pager-info {
+  font-size: 0.85rem;
+  color: var(--wc-text-muted);
+}
+
+.leaderboard-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--wc-text-muted);
+}
