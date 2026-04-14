@@ -113,6 +113,8 @@ export default async function PublicSharePage({ params }: Props) {
   // Match progress
   const totalMatches = matches.length;
   const playedMatches = matches.filter((m) => m.status === 'FINISHED').length;
+  const scored = exact + outcome + wrong;
+  const pct = (n: number) => scored > 0 ? Math.round((n / scored) * 100) : 0;
 
   // User first name for title
   const firstName = user.name.split(' ')[0];
@@ -121,22 +123,29 @@ export default async function PublicSharePage({ params }: Props) {
     <div className="container py-4">
       <div className="tipovacka-public-header">
         <h2>Predictions by {user.name}</h2>
-        <div className="tipovacka-score-cards tipovacka-score-cards-sm">
-          <div className="tipovacka-score-card tipovacka-score-total">
-            <div className="tipovacka-score-card-value">{totalPoints}</div>
-            <div className="tipovacka-score-card-label">Points</div>
+        <div className="tipovacka-score-cards tipovacka-score-cards-wide">
+          <div className="tipovacka-score-card tipovacka-score-matches">
+            <div className="tipovacka-score-card-value">{totalMatches}</div>
+            <div className="tipovacka-score-card-label">Matches total</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-exact">
             <div className="tipovacka-score-card-value">{exact}</div>
-            <div className="tipovacka-score-card-label">Exact Score Match</div>
+            <div className="tipovacka-score-card-pct">{pct(exact)}%</div>
+            <div className="tipovacka-score-card-label">Exact Score</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-outcome">
             <div className="tipovacka-score-card-value">{outcome}</div>
-            <div className="tipovacka-score-card-label">Match Result Match</div>
+            <div className="tipovacka-score-card-pct">{pct(outcome)}%</div>
+            <div className="tipovacka-score-card-label">Result Match</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-wrong">
             <div className="tipovacka-score-card-value">{wrong}</div>
-            <div className="tipovacka-score-card-label">Wrong tips</div>
+            <div className="tipovacka-score-card-pct">{pct(wrong)}%</div>
+            <div className="tipovacka-score-card-label">Wrong</div>
+          </div>
+          <div className="tipovacka-score-card tipovacka-score-points">
+            <div className="tipovacka-score-card-value">{totalPoints}</div>
+            <div className="tipovacka-score-card-label">Points</div>
           </div>
         </div>
         <div className="tipovacka-match-progress">

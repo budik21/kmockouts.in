@@ -250,8 +250,22 @@ export default function PublicTipsView({ matches, tips, userName, shareToken }: 
                 <span>{formatDate(m.kickOff)}, {formatTime(m.kickOff)}</span>
               </div>
 
-              {/* 3-column eval strip */}
+              {/* Eval strip with leading icon */}
               <div className="tipovacka-eval-strip">
+                {/* Score icon */}
+                <div className="tipovacka-eval-icon-cell">
+                  {hasScore && (
+                    <span className={`tipovacka-eval-icon tipovacka-eval-icon-${tip.points}`}>
+                      {(tip.points === 4 || tip.points === 1) && (
+                        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+                      )}
+                      {tip.points === 0 && (
+                        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/></svg>
+                      )}
+                    </span>
+                  )}
+                </div>
+
                 <div className="tipovacka-eval-cell">
                   <div className="tipovacka-eval-label">Prediction</div>
                   <div className="tipovacka-eval-value">
@@ -268,21 +282,11 @@ export default function PublicTipsView({ matches, tips, userName, shareToken }: 
                   {hasScore ? (
                     <>
                       <div className="tipovacka-eval-label">Points</div>
-                      <div className="tipovacka-eval-result">
-                        <span className={`tipovacka-eval-icon tipovacka-eval-icon-${tip.points}`}>
-                          {(tip.points === 4 || tip.points === 1) && (
-                            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
-                          )}
-                          {tip.points === 0 && (
-                            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/></svg>
-                          )}
-                        </span>
-                        <span className={`tipovacka-eval-badge tipovacka-eval-badge-${tip.points}`}>
-                          {tip.points === 4 && '+4'}
-                          {tip.points === 1 && '+1'}
-                          {tip.points === 0 && '0'}
-                        </span>
-                      </div>
+                      <span className={`tipovacka-eval-badge tipovacka-eval-badge-${tip.points}`}>
+                        {tip.points === 4 && '+4'}
+                        {tip.points === 1 && '+1'}
+                        {tip.points === 0 && '0'}
+                      </span>
                     </>
                   ) : (
                     <>

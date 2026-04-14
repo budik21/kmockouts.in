@@ -4334,10 +4334,13 @@ a.ranking-team-name:hover {
 }
 
 /* Score badges in eval strip */
-.tipovacka-eval-result {
-  display: inline-flex;
+.tipovacka-eval-icon-cell {
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  width: 40px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--wc-border);
 }
 
 .tipovacka-eval-icon {
@@ -4455,7 +4458,7 @@ a.ranking-team-name:hover {
 .tipovacka-stat-outcome .tipovacka-stat-value { color: var(--prob-second); }
 .tipovacka-stat-wrong .tipovacka-stat-value { color: var(--prob-out); }
 
-/* Public page still uses old score-cards — keep them */
+/* Public page score-cards */
 .tipovacka-score-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -4463,8 +4466,9 @@ a.ranking-team-name:hover {
   margin-top: 1rem;
 }
 
-.tipovacka-score-cards-sm {
-  max-width: 500px;
+.tipovacka-score-cards-wide {
+  grid-template-columns: repeat(5, 1fr);
+  max-width: 680px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -4475,31 +4479,48 @@ a.ranking-team-name:hover {
   overflow: hidden;
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);
+  min-width: 0;
 }
 
 .tipovacka-score-card-value {
   font-size: 1.75rem;
   font-weight: 800;
   line-height: 1;
-  padding: 0.75rem 0.5rem 0.25rem;
+  padding: 0.75rem 0.25rem 0.15rem;
+}
+
+.tipovacka-score-card-pct {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  padding-bottom: 0.15rem;
 }
 
 .tipovacka-score-card-label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: var(--wc-text-muted);
-  padding: 0.35rem 0.5rem;
+  padding: 0.3rem 0.25rem;
   background: rgba(0, 0, 0, 0.06);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 [data-bs-theme="dark"] .tipovacka-score-card-label {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.tipovacka-score-total .tipovacka-score-card-value { color: var(--wc-accent); }
+.tipovacka-score-matches .tipovacka-score-card-value { color: var(--wc-text); }
 .tipovacka-score-exact .tipovacka-score-card-value { color: var(--prob-first); }
 .tipovacka-score-outcome .tipovacka-score-card-value { color: var(--prob-second); }
 .tipovacka-score-wrong .tipovacka-score-card-value { color: var(--prob-out); }
+
+.tipovacka-score-points {
+  border: 2px solid var(--wc-accent);
+  box-shadow: 0 0 8px rgba(var(--wc-accent-rgb, 212, 175, 55), 0.3);
+}
+.tipovacka-score-points .tipovacka-score-card-value { color: var(--wc-accent); }
 
 /* Toggle switch */
 .tipovacka-toggle {
@@ -4833,6 +4854,10 @@ a.ranking-team-name:hover {
 @media (max-width: 576px) {
   .tipovacka-score-cards {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tipovacka-score-cards-wide {
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .tipovacka-score-card-value {
