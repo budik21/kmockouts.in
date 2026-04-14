@@ -28,6 +28,30 @@ interface Props {
   onGoToTips: () => void;
 }
 
+function FlagIcon({ code }: { code: string }) {
+  if (!code) return <span>?</span>;
+  const cls = code.length > 2
+    ? `fi fi-${code.slice(0, 2).toLowerCase()} fis fi-${code.toLowerCase()}`
+    : `fi fi-${code.toLowerCase()}`;
+  return <span className={`${cls} flag-sm`} />;
+}
+
+function formatDate(kickOff: string): string {
+  try {
+    return new Date(kickOff).toLocaleDateString('en-GB', {
+      weekday: 'short', day: 'numeric', month: 'short',
+    });
+  } catch { return ''; }
+}
+
+function formatTime(kickOff: string): string {
+  try {
+    return new Date(kickOff).toLocaleTimeString('en-GB', {
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return ''; }
+}
+
 export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, onTogglePublic, onGoToTips }: Props) {
   const [copied, setCopied] = useState(false);
 
@@ -152,24 +176,61 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
       {scoredTips.length > 0 && (
         <div className="mt-4">
           <h5>Recent Scored Predictions</h5>
-          <div className="tipovacka-recent-tips">
+          <div className="tipovacka-matches-list">
             {scoredTips.map((match) => {
               const tip = tips[match.id];
+              const hasScore = tip.points !== null;
               return (
-                <div key={match.id} className="tipovacka-recent-tip-row">
-                  <span className="tipovacka-recent-group">{match.groupId}</span>
-                  <span className="tipovacka-recent-teams">
-                    {match.homeTeam.shortName} vs {match.awayTeam.shortName}
-                  </span>
-                  <span className="tipovacka-recent-tip">
-                    {tip.homeGoals}:{tip.awayGoals}
-                  </span>
-                  <span className="tipovacka-recent-real">
-                    ({match.homeGoals}:{match.awayGoals})
-                  </span>
-                  <span className={`tipovacka-pts tipovacka-pts-${tip.points}`}>
-                    {tip.points === 4 ? '+4' : tip.points === 1 ? '+1' : '0'}
-                  </span>
+                <div
+                  key={match.id}
+                  className={`tipovacka-match-row ${hasScore ? `scored scored-${tip.points}` : ''}`}
+                >
+                  <div className="tipovacka-match-header-row">
+                    <span className="tipovacka-match-group">{match.groupId}</span>
+                    <span className="tipovacka-match-team-labels">
+                      <FlagIcon code={match.homeTeam.countryCode} />
+                      <span className="tipovacka-team-full">{match.homeTeam.name}</span>
+                      <span className="tipovacka-team-short">{match.homeTeam.shortName}</span>
+                      <span className="tipovacka-match-vs">vs</span>
+                      <span className="tipovacka-team-full">{match.awayTeam.name}</span>
+                      <span className="tipovacka-team-short">{match.awayTeam.shortName}</span>
+                      <FlagIcon code={match.awayTeam.countryCode} />
+                    </span>
+                  </div>
+                  <div className="tipovacka-match-meta">
+                    {match.venue && <span>{match.venue}</span>}
+                    <span>{formatDate(match.kickOff)}, {formatTime(match.kickOff)}</span>
+                  </div>
+                  <div className="tipovacka-eval-strip">
+                    <div className="tipovacka-eval-icon-cell">
+                      {hasScore && (
+                        <span className={`tipovacka-eval-icon tipovacka-eval-icon-${tip.points}`}>
+                          {(tip.points === 4 || tip.points === 1) && (
+                            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+                          )}
+                          {tip.points === 0 && (
+                            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/></svg>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    <div className="tipovacka-eval-cell">
+                      <div className="tipovacka-eval-label">Prediction</div>
+                      <div className="tipovacka-eval-value">{tip.homeGoals} : {tip.awayGoals}</div>
+                    </div>
+                    <div className="tipovacka-eval-cell">
+                      <div className="tipovacka-eval-label">Result</div>
+                      <div className="tipovacka-eval-value">{match.homeGoals} : {match.awayGoals}</div>
+                    </div>
+                    <div className="tipovacka-eval-cell tipovacka-eval-score-cell">
+                      <div className="tipovacka-eval-label">Points</div>
+                      <span className={`tipovacka-eval-badge tipovacka-eval-badge-${tip.points}`}>
+                        {tip.points === 4 && '+4'}
+                        {tip.points === 1 && '+1'}
+                        {tip.points === 0 && '0'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               );
             })}
