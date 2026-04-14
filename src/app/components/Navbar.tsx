@@ -136,6 +136,13 @@ export default function Navbar() {
               🎯 Predictions
             </a>
             <a
+              href="/predictions/leaderboard"
+              className="nav-link offcanvas-nav-link"
+              onClick={navigateAndClose('/predictions/leaderboard')}
+            >
+              🏅 Leaderboard
+            </a>
+            <a
               href="#"
               className="nav-link offcanvas-nav-link"
               onClick={(e) => {

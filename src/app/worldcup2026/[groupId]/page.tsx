@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { cachedQuery } from '@/lib/cached-db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
@@ -40,8 +40,7 @@ function parseGroupSlug(slug: string): GroupId | null {
   return ALL_GROUPS.includes(groupId) ? groupId : null;
 }
 
-// ISR — group standings update only after a match ends.
-export const revalidate = 60;
+// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
 
 // Pre-build all 12 group pages so ISR caching kicks in immediately.
 export function generateStaticParams() {
@@ -57,7 +56,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const groupId = parseGroupSlug(slug);
   if (!groupId) return { title: 'Group not found' };
 
-  const teamRows = await query<TeamRow>(
+  const teamRows = await cachedQuery<TeamRow>(
     'SELECT name FROM team WHERE group_id = $1 ORDER BY id',
     [groupId],
   );
@@ -110,8 +109,8 @@ export default async function GroupDetailPage({ params }: PageProps) {
     );
   }
 
-  const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
-  const matchRows = await query<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
+  const teamRows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
+  const matchRows = await cachedQuery<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
 
   const teams = teamRows.map(rowToTeam);
   const allMatches = matchRows.map(rowToMatch);

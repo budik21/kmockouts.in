@@ -1,4 +1,5 @@
 import { query } from '@/lib/db';
+import { cachedQuery } from '@/lib/cached-db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
@@ -49,8 +50,7 @@ function parseGroupSlug(slug: string): GroupId | null {
   return ALL_GROUPS.includes(groupId) ? groupId : null;
 }
 
-// ISR — team data only changes after a match ends.
-export const revalidate = 60;
+// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
 
 // Pre-build all 48 team pages so the first request hits a cached version.
 export async function generateStaticParams() {
@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { groupId: slug, teamId: rawTeamId } = await params;
   const groupId = parseGroupSlug(slug);
   if (!groupId) return { title: 'Team not found' };
-  const rows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1', [groupId]);
+  const rows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1', [groupId]);
   const team = rows.find((r) => slugify(r.name) === rawTeamId.toLowerCase());
   if (!team) return { title: 'Team not found' };
 
@@ -114,8 +114,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
     return <main className="container py-4"><h2>Group not found</h2></main>;
   }
 
-  const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
-  const matchRows = await query<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
+  const teamRows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
+  const matchRows = await cachedQuery<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
 
   const teams = teamRows.map(rowToTeam);
   const allMatches = matchRows.map(rowToMatch);
@@ -178,8 +178,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
         const third = standings.find((s) => s.position === 3);
         if (third) thirdPlaced.push({ groupId: gid, standing: third });
       } else {
-        const gTeamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
-        const gMatchRows = await query<MatchRow>(
+        const gTeamRows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
+        const gMatchRows = await cachedQuery<MatchRow>(
           "SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round",
           [gid],
         );

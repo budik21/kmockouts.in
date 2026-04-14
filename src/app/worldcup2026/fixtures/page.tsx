@@ -1,12 +1,11 @@
-import { query } from '@/lib/db';
+import { cachedQuery } from '@/lib/cached-db';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import FixturesCalendar from '@/app/components/FixturesCalendar';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 
-// ISR — fixtures only change a few times per day after match results are recorded.
-export const revalidate = 60;
+// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
 
 export const metadata: Metadata = {
   title: 'FIFA World Cup 2026 Fixtures, Results & Schedule',
@@ -95,7 +94,7 @@ export interface FixtureDay {
 }
 
 export default async function FixturesPage() {
-  const rows = await query<FixtureRow>(`
+  const rows = await cachedQuery<FixtureRow>(`
     SELECT m.id, m.group_id, m.round,
       m.home_goals, m.away_goals, m.venue, m.kick_off, m.status,
       ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,

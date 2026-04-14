@@ -1,11 +1,10 @@
-import { query } from '@/lib/db';
+import { cachedQuery } from '@/lib/cached-db';
 import type { Metadata } from 'next';
 import FifaRankingClient from './FifaRankingClient';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 
-// ISR — FIFA ranking is scraped daily, refresh roughly every 30 minutes.
-export const revalidate = 60;
+// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
 
 export const metadata: Metadata = {
   title: 'FIFA Ranking 2026 — All World Cup Soccer Teams Sorted by Rank',
@@ -38,11 +37,11 @@ interface RankingTeam {
 }
 
 export default async function FifaRankingPage() {
-  const teams = await query<RankingTeam>(
+  const teams = await cachedQuery<RankingTeam>(
     'SELECT id, name, short_name, country_code, group_id, fifa_ranking FROM team ORDER BY fifa_ranking ASC NULLS LAST'
   );
 
-  const logRows = await query<{ source_date: string | null }>(
+  const logRows = await cachedQuery<{ source_date: string | null }>(
     "SELECT source_date FROM scrape_log WHERE source = 'fifa-ranking' AND source_date IS NOT NULL ORDER BY id DESC LIMIT 1"
   );
   const rankingDate = logRows[0]?.source_date ?? null;

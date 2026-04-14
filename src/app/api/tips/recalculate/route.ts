@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { query } from '@/lib/db';
 import { calculateTipPoints } from '@/lib/tip-scoring';
+import { LEADERBOARD_TAG } from '@/lib/cache-tags';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +35,9 @@ export async function POST() {
     await query('UPDATE tip SET points = $1 WHERE id = $2', [points, tip.tip_id]);
     updated++;
   }
+
+  // Invalidate the public leaderboard cache so new scores show up immediately.
+  revalidateTag(LEADERBOARD_TAG, 'max');
 
   return NextResponse.json({ updated });
 }

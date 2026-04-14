@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { cachedQuery } from '@/lib/cached-db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match, TeamStanding } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
@@ -17,8 +17,7 @@ import { SITE_URL } from '@/lib/seo';
 
 const AD_SLOT_BEST_THIRD = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
-// ISR — best-third standings change a few times per day after match results.
-export const revalidate = 60;
+// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
 
 export const metadata: Metadata = {
   title:
@@ -70,12 +69,12 @@ export default async function BestThirdPlacedPage() {
   let hasRemainingMatches = false; // Track if any group still has unplayed matches
 
   for (const gid of ALL_GROUPS) {
-    const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
-    const finishedRows = await query<MatchRow>(
+    const teamRows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
+    const finishedRows = await cachedQuery<MatchRow>(
       "SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round",
       [gid],
     );
-    const allMatchRows = await query<MatchRow>(
+    const allMatchRows = await cachedQuery<MatchRow>(
       'SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off',
       [gid],
     );

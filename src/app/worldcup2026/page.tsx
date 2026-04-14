@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { cachedQuery } from '@/lib/cached-db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
@@ -40,10 +40,9 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
-// ISR: data only changes a few times per day after a match ends.
-// Re-render at most every 10 minutes — admin actions trigger fresh requests
-// and Next.js will revalidate in the background.
-export const revalidate = 60;
+// Tag-based on-demand revalidation: this page is cached indefinitely
+// and invalidated via `revalidateTag(WC_TAG)` in admin mutation endpoints
+// (src/app/api/admin/match/update, src/app/api/scenarios/apply).
 
 export const metadata: Metadata = {
   title: 'FIFA World Cup 2026 Bracket, Standings & Knockout Tracker',
@@ -91,9 +90,9 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
   const cachedProbs = await getAllCachedProbsOrCompute();
 
   for (const gid of ALL_GROUPS) {
-    const teamRows = await query<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
-    const matchRows = await query<MatchRow>("SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round", [gid]);
-    const allMatchRows = await query<MatchRow>('SELECT * FROM match WHERE group_id = $1', [gid]);
+    const teamRows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
+    const matchRows = await cachedQuery<MatchRow>("SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round", [gid]);
+    const allMatchRows = await cachedQuery<MatchRow>('SELECT * FROM match WHERE group_id = $1', [gid]);
     const teams = teamRows.map(rowToTeam);
     const matches = matchRows.map(rowToMatch);
     const standings = calculateStandings({ teams, matches });
@@ -188,7 +187,7 @@ interface NewsRow {
 
 async function getNewsArticles() {
   try {
-    const rows = await query<NewsRow>(
+    const rows = await cachedQuery<NewsRow>(
       'SELECT id, external_url, title, image_url, published_at FROM news_article ORDER BY published_at DESC NULLS LAST, id DESC LIMIT 10'
     );
     return rows.map((r) => ({

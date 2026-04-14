@@ -1,10 +1,12 @@
-import { query } from '@/lib/db';
+import { cachedQuery } from '@/lib/cached-db';
+import { LEADERBOARD_TAG } from '@/lib/cache-tags';
 import type { Metadata } from 'next';
 import AdBanner from '@/app/components/AdBanner';
 import LeaderboardTable from './LeaderboardTable';
 import { SITE_URL } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic';
+// Tag-based on-demand revalidation via `revalidateTag(LEADERBOARD_TAG)`,
+// triggered from /api/tips/recalculate and admin match/scenarios endpoints.
 
 export const metadata: Metadata = {
   title: 'Predictions Leaderboard — FIFA World Cup 2026',
@@ -41,7 +43,8 @@ interface DbRow {
 }
 
 export default async function LeaderboardPage() {
-  const rows = await query<DbRow>(`
+  const rows = await cachedQuery<DbRow>(
+    `
     SELECT
       u.share_token,
       u.name,
@@ -54,7 +57,10 @@ export default async function LeaderboardPage() {
     LEFT JOIN tip t ON t.user_id = u.id
     WHERE u.tips_public = true
     GROUP BY u.id, u.share_token, u.name
-  `);
+  `,
+    [],
+    [LEADERBOARD_TAG],
+  );
 
   const data: LeaderboardRow[] = rows.map((r) => {
     const exact = parseInt(r.exact, 10);
