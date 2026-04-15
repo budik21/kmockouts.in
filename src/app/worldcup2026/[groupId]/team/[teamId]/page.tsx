@@ -16,6 +16,9 @@ import QualifyWidgets from '@/app/components/QualifyWidgets';
 import TeamScenarioView from '@/app/components/TeamScenarioView';
 import MatchList from '@/app/components/MatchList';
 import NextMatchDate from '@/app/components/NextMatchDate';
+import ProjectedOpponent from '@/app/components/ProjectedOpponent';
+import { resolveKnockoutBracket } from '@/engine/knockout-resolver';
+import { ROUND_LABELS } from '@/lib/knockout-bracket';
 import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
@@ -273,6 +276,73 @@ export default async function TeamDetailPage({ params }: PageProps) {
     }
   }
 
+  // Compute projected knockout opponent based on current standings across all groups
+  let projectedOpponent: {
+    roundLabel: string;
+    opponent: { name: string; countryCode: string } | null;
+    opponentPlaceholder: string;
+    kickOff: string | null;
+    venue: string | null;
+    matchNumber: number;
+  } | null = null;
+
+  if (teamHasPlayed) {
+    const groupStates = [];
+    // Track whether every group has completed round 1
+    let allGroupsRound1Done = true;
+    for (const gid of ALL_GROUPS) {
+      let gAllMatches: Match[];
+      let gTeams: Team[];
+      let gStandings: ReturnType<typeof calculateStandings>;
+      let gPlayed: Match[];
+      if (gid === groupId) {
+        gAllMatches = allMatches;
+        gTeams = teams;
+        gStandings = standings;
+        gPlayed = played;
+      } else {
+        const gTeamRows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
+        const gMatchRows = await cachedQuery<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round', [gid]);
+        gTeams = gTeamRows.map(rowToTeam);
+        gAllMatches = gMatchRows.map(rowToMatch);
+        gPlayed = gAllMatches.filter((m) => m.status === 'FINISHED');
+        gStandings = calculateStandings({ teams: gTeams, matches: gPlayed });
+      }
+      groupStates.push({
+        groupId: gid,
+        teams: gTeams,
+        standings: gStandings,
+        matchesPlayed: gPlayed.length,
+        totalMatches: gAllMatches.length,
+      });
+      const round1 = gAllMatches.filter((m) => m.round === 1);
+      if (round1.length === 0 || round1.some((m) => m.status !== 'FINISHED')) {
+        allGroupsRound1Done = false;
+      }
+    }
+
+    if (allGroupsRound1Done) {
+      const bracket = await resolveKnockoutBracket(groupStates);
+      const r32 = bracket.rounds.r32;
+      const match = r32.find(
+        (m) => m.home.resolved?.team.id === team.id || m.away.resolved?.team.id === team.id,
+      );
+      if (match) {
+        const isHome = match.home.resolved?.team.id === team.id;
+        const opponentSlot = isHome ? match.away : match.home;
+        const opp = opponentSlot.resolved?.team ?? null;
+        projectedOpponent = {
+          roundLabel: ROUND_LABELS.r32,
+          opponent: opp ? { name: opp.name, countryCode: opp.countryCode } : null,
+          opponentPlaceholder: opponentSlot.placeholder,
+          kickOff: match.kickOff,
+          venue: match.venue,
+          matchNumber: match.matchNumber,
+        };
+      }
+    }
+  }
+
   const groupSlug = `group-${groupId.toLowerCase()}`;
   const teamRemaining = remaining
     .filter((m) => m.homeTeamId === team.id || m.awayTeamId === team.id)
@@ -372,6 +442,19 @@ export default async function TeamDetailPage({ params }: PageProps) {
           teamName={team.name}
           bestThirdRank={bestThirdRank}
           bestThirdQualifies={bestThirdQualifies}
+        />
+      )}
+
+      {/* Projected knockout opponent based on current group + 3rd-place standings */}
+      {projectedOpponent && (
+        <ProjectedOpponent
+          roundLabel={projectedOpponent.roundLabel}
+          opponent={projectedOpponent.opponent}
+          opponentPlaceholder={projectedOpponent.opponentPlaceholder}
+          kickOff={projectedOpponent.kickOff}
+          venue={projectedOpponent.venue}
+          teamName={team.name}
+          matchNumber={projectedOpponent.matchNumber}
         />
       )}
 

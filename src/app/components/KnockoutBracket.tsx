@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import KnockoutMatchCard from './KnockoutMatchCard';
 import KnockoutRound from './KnockoutRound';
 
@@ -56,6 +57,9 @@ export default function KnockoutBracket() {
   const [data, setData] = useState<BracketResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeRound, setActiveRound] = useState('r32');
+  const searchParams = useSearchParams();
+  const highlightParam = searchParams?.get('highlight');
+  const highlightMatch = highlightParam ? parseInt(highlightParam, 10) : null;
 
   useEffect(() => {
     fetch('/api/knockout-bracket')
@@ -63,6 +67,23 @@ export default function KnockoutBracket() {
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+
+  // Scroll the highlighted match into view after data renders
+  useEffect(() => {
+    if (!data || !highlightMatch) return;
+    // Wait for layout; pick the visible card (desktop or mobile view)
+    requestAnimationFrame(() => {
+      const cards = document.querySelectorAll<HTMLElement>(
+        `[data-match-number="${highlightMatch}"]`,
+      );
+      for (const el of cards) {
+        if (el.offsetParent !== null) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          break;
+        }
+      }
+    });
+  }, [data, highlightMatch]);
 
   if (loading) {
     return (
@@ -124,30 +145,30 @@ export default function KnockoutBracket() {
         <div className="ko-tree-bracket">
           {/* Left half → SF M101 → Final */}
           <div className="ko-tree-half ko-tree-half-left">
-            <TreeRound matches={LEFT_R32.map(getMatch)} round="r32" />
-            <TreeRound matches={LEFT_R16.map(getMatch)} round="r16" />
-            <TreeRound matches={LEFT_QF.map(getMatch)} round="qf" />
-            <TreeRound matches={LEFT_SF.map(getMatch)} round="sf" />
+            <TreeRound matches={LEFT_R32.map(getMatch)} round="r32" pulseMatch={highlightMatch} />
+            <TreeRound matches={LEFT_R16.map(getMatch)} round="r16" pulseMatch={highlightMatch} />
+            <TreeRound matches={LEFT_QF.map(getMatch)} round="qf" pulseMatch={highlightMatch} />
+            <TreeRound matches={LEFT_SF.map(getMatch)} round="sf" pulseMatch={highlightMatch} />
           </div>
 
           {/* Center: Final + 3rd place */}
           <div className="ko-tree-center">
             <div className="ko-tree-center-match">
               <div className="ko-tree-center-label">Final</div>
-              <MatchCard match={getMatch(104)} highlight />
+              <MatchCard match={getMatch(104)} highlight pulse={highlightMatch === 104} />
             </div>
             <div className="ko-tree-center-match">
               <div className="ko-tree-center-label">3rd Place</div>
-              <MatchCard match={getMatch(103)} />
+              <MatchCard match={getMatch(103)} pulse={highlightMatch === 103} />
             </div>
           </div>
 
           {/* Right half → SF M102 → Final */}
           <div className="ko-tree-half ko-tree-half-right">
-            <TreeRound matches={RIGHT_R32.map(getMatch)} round="r32" />
-            <TreeRound matches={RIGHT_R16.map(getMatch)} round="r16" />
-            <TreeRound matches={RIGHT_QF.map(getMatch)} round="qf" />
-            <TreeRound matches={RIGHT_SF.map(getMatch)} round="sf" />
+            <TreeRound matches={RIGHT_R32.map(getMatch)} round="r32" pulseMatch={highlightMatch} />
+            <TreeRound matches={RIGHT_R16.map(getMatch)} round="r16" pulseMatch={highlightMatch} />
+            <TreeRound matches={RIGHT_QF.map(getMatch)} round="qf" pulseMatch={highlightMatch} />
+            <TreeRound matches={RIGHT_SF.map(getMatch)} round="sf" pulseMatch={highlightMatch} />
           </div>
         </div>
       </div>
@@ -172,6 +193,7 @@ export default function KnockoutBracket() {
             roundId={id}
             label={label}
             matches={data.rounds[id] || []}
+            pulseMatch={highlightMatch}
           />
         ))}
       </div>
@@ -181,25 +203,26 @@ export default function KnockoutBracket() {
 
 // ── Sub-components ───────────────────────────────────────────
 
-function TreeRound({ matches, round }: { matches: MatchData[]; round: string }) {
+function TreeRound({ matches, round, pulseMatch }: { matches: MatchData[]; round: string; pulseMatch: number | null }) {
   return (
     <div className={`ko-tree-round ko-tree-round-${round}`}>
       {matches.map((m) => (
         <div key={m.matchNumber} className="ko-tree-match">
-          <MatchCard match={m} />
+          <MatchCard match={m} pulse={pulseMatch === m.matchNumber} />
         </div>
       ))}
     </div>
   );
 }
 
-function MatchCard({ match, highlight }: { match: MatchData; highlight?: boolean }) {
+function MatchCard({ match, highlight, pulse }: { match: MatchData; highlight?: boolean; pulse?: boolean }) {
   return (
     <KnockoutMatchCard
       matchNumber={match.matchNumber}
       home={match.home}
       away={match.away}
       highlight={highlight}
+      pulse={pulse}
       kickOff={match.kickOff}
       venue={match.venue}
     />

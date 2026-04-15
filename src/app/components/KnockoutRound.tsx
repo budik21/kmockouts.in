@@ -21,9 +21,10 @@ interface KnockoutRoundProps {
   roundId: string;
   label: string;
   matches: MatchData[];
+  pulseMatch?: number | null;
 }
 
-export default function KnockoutRound({ roundId, label, matches }: KnockoutRoundProps) {
+export default function KnockoutRound({ roundId, label, matches, pulseMatch }: KnockoutRoundProps) {
   if (matches.length === 0) return null;
 
   return (
@@ -38,6 +39,7 @@ export default function KnockoutRound({ roundId, label, matches }: KnockoutRound
             away={m.away}
             kickOff={m.kickOff}
             venue={m.venue}
+            pulse={pulseMatch === m.matchNumber}
           />
         ))}
       </div>
