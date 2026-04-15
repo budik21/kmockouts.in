@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import GroupStandings, { TeamProbData } from './GroupStandings';
 import AdBanner from './AdBanner';
+import NextMatchesRow, { NextMatchDisplay } from './NextMatchesRow';
 
 interface GroupData {
   groupId: string;
@@ -19,6 +20,7 @@ interface GroupData {
     points: number;
   }[];
   probabilities?: Record<number, TeamProbData>;
+  nextMatches?: NextMatchDisplay[];
 }
 
 interface GroupOverviewProps {
@@ -52,6 +54,9 @@ export default function GroupOverview({ groups, adSlot }: GroupOverviewProps) {
                 compact
                 probabilities={group.probabilities}
               />
+              {group.nextMatches && group.nextMatches.length > 0 && (
+                <NextMatchesRow matches={group.nextMatches} />
+              )}
             </div>
           </div>
         </Link>

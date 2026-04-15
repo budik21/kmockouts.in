@@ -21,6 +21,36 @@ import { SITE_URL } from '@/lib/seo';
 const AD_SLOT_BETWEEN_GROUPS = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 const AD_SLOT_BEFORE_THIRD   = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
+interface ScheduledMatchRow {
+  id: number;
+  kick_off: string;
+  venue: string;
+  home_name: string;
+  home_short: string;
+  home_cc: string;
+  away_name: string;
+  away_short: string;
+  away_cc: string;
+}
+
+function formatMatchDateTime(iso: string): string {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  return `${date}, ${time} UTC`;
+}
+
+function formatMatchCountdown(iso: string, nowMs: number): string {
+  const diff = new Date(iso).getTime() - nowMs;
+  if (diff <= 0) return '';
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  if (days > 0) return `in ${days}d ${hours}h`;
+  if (hours > 0) return `in ${hours}h ${mins}m`;
+  return `in ${mins}m`;
+}
+
 function rowToTeam(row: TeamRow): Team {
   return {
     id: row.id, name: row.name, shortName: row.short_name,
@@ -94,6 +124,17 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
     const teamRows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
     const matchRows = await cachedQuery<MatchRow>("SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round", [gid]);
     const allMatchRows = await cachedQuery<MatchRow>('SELECT * FROM match WHERE group_id = $1', [gid]);
+    const scheduledRows = await cachedQuery<ScheduledMatchRow>(
+      `SELECT m.id, m.kick_off, m.venue,
+              ht.name AS home_name, ht.short_name AS home_short, ht.country_code AS home_cc,
+              at2.name AS away_name, at2.short_name AS away_short, at2.country_code AS away_cc
+         FROM match m
+         JOIN team ht ON m.home_team_id = ht.id
+         JOIN team at2 ON m.away_team_id = at2.id
+        WHERE m.group_id = $1 AND m.status = 'SCHEDULED'
+        ORDER BY m.kick_off ASC`,
+      [gid],
+    );
     const teams = teamRows.map(rowToTeam);
     const matches = matchRows.map(rowToMatch);
     const standings = calculateStandings({ teams, matches });
@@ -147,6 +188,27 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
         points: s.points,
       })),
       probabilities,
+      nextMatches: (() => {
+        const nowMs = Date.now();
+        const upcoming = scheduledRows.filter((r) => new Date(r.kick_off).getTime() > nowMs);
+        if (upcoming.length === 0) return [];
+        const minKickOff = upcoming.reduce(
+          (min, r) => Math.min(min, new Date(r.kick_off).getTime()),
+          Number.POSITIVE_INFINITY,
+        );
+        return upcoming
+          .filter((r) => new Date(r.kick_off).getTime() === minKickOff)
+          .map((r) => ({
+            id: r.id,
+            homeShort: r.home_short,
+            homeCc: r.home_cc,
+            awayShort: r.away_short,
+            awayCc: r.away_cc,
+            venue: r.venue,
+            dateTimeText: formatMatchDateTime(r.kick_off),
+            countdownText: formatMatchCountdown(r.kick_off, nowMs),
+          }));
+      })(),
     };
   }
 

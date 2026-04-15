@@ -84,8 +84,10 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
 
   return (
     <div>
+      {/* Top dashboard row: score cards + progress + share (one row on desktop) */}
+      <div className="tipovacka-dashboard-row mb-4">
       {/* Score cards — matching public profile layout */}
-      <div className="tipovacka-score-cards tipovacka-score-cards-wide mb-4">
+      <div className="tipovacka-score-cards tipovacka-score-cards-wide">
         <div className="tipovacka-score-card tipovacka-score-matches">
           <div className="tipovacka-score-card-value">{totalMatches}</div>
           <div className="tipovacka-score-card-label">Matches total</div>
@@ -112,7 +114,7 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
       </div>
 
       {/* Compact progress + CTA */}
-      <div className="tipovacka-progress-section">
+      <div className="tipovacka-progress-section tipovacka-dashboard-row-item">
         <div className="d-flex align-items-center gap-3">
           <div className="flex-grow-1">
             <div className="d-flex justify-content-between align-items-center mb-1">
@@ -135,7 +137,7 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
       </div>
 
       {/* Share settings */}
-      <div className="tipovacka-share-section mt-4">
+      <div className="tipovacka-share-section tipovacka-dashboard-row-item">
         <h5>Sharing</h5>
         <div className="d-flex align-items-center gap-3 mb-2">
           <label className="tipovacka-toggle">
@@ -158,6 +160,7 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
             </button>
           </div>
         )}
+      </div>
       </div>
 
       {/* Recent scored tips */}
