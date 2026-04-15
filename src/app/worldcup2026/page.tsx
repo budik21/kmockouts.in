@@ -12,6 +12,7 @@ import BestThirdTable from '@/app/components/BestThirdTable';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import NewsWidget from '@/app/components/NewsWidget';
 import Countdown from '@/app/components/Countdown';
+import PickemPromoBar from '@/app/components/PickemPromoBar';
 import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
@@ -287,6 +288,10 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      <div className="container mt-3">
+        <PickemPromoBar />
+      </div>
 
       <main className="container">
         <NewsWidget articles={articles} />
