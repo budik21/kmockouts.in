@@ -12,7 +12,6 @@ import BestThirdTable from '@/app/components/BestThirdTable';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import NewsWidget from '@/app/components/NewsWidget';
 import Countdown from '@/app/components/Countdown';
-import PickemPromoBar from '@/app/components/PickemPromoBar';
 import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
@@ -348,12 +347,11 @@ export default async function HomePage() {
           <Link href="/worldcup2026/how-to-clinch-play-off-worldcup2026" className="hero-clinch-link">
             How to Clinch a Play-Off Spot &rarr;
           </Link>
+          <Link href="/predictions" className="hero-pickem-btn">
+            🏆 Play Pick&apos;em — predict all 48 matches
+          </Link>
         </div>
       </section>
-
-      <div className="container mt-3">
-        <PickemPromoBar />
-      </div>
 
       <main className="container">
         <NewsWidget articles={articles} />

@@ -177,6 +177,27 @@ a { color: inherit; text-decoration: none; }
   text-decoration: underline;
 }
 
+.hero-pickem-btn {
+  display: inline-block;
+  margin-top: 0.9rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--wc-accent);
+  border: 1px solid color-mix(in srgb, var(--wc-accent) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wc-accent) 8%, transparent);
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  text-decoration: none;
+}
+
+.hero-pickem-btn:hover {
+  background: color-mix(in srgb, var(--wc-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--wc-accent) 70%, transparent);
+  color: var(--wc-accent);
+  text-decoration: none;
+}
+
 @media (max-width: 576px) {
   .countdown {
     padding: 0.4rem 0.75rem;
@@ -190,6 +211,10 @@ a { color: inherit; text-decoration: none; }
   }
   .hero-clinch-link {
     font-size: 0.75rem;
+  }
+  .hero-pickem-btn {
+    font-size: 0.72rem;
+    padding: 0.3rem 0.75rem;
   }
 }
 
