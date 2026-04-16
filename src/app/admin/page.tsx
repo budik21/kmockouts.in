@@ -1,96 +1,110 @@
-import { query } from '@/lib/db';
-import MatchEditor from './components/MatchEditor';
+import { redirect } from 'next/navigation';
+import { auth, signIn } from '@/lib/auth';
 
-interface AdminMatchRow {
-  id: number;
-  group_id: string;
-  round: number;
-  home_team_id: number;
-  away_team_id: number;
-  home_goals: number | null;
-  away_goals: number | null;
-  home_yc: number;
-  home_yc2: number;
-  home_rc_direct: number;
-  home_yc_rc: number;
-  away_yc: number;
-  away_yc2: number;
-  away_rc_direct: number;
-  away_yc_rc: number;
-  venue: string;
-  kick_off: string;
-  status: string;
-  home_name: string;
-  home_short: string;
-  home_cc: string;
-  away_name: string;
-  away_short: string;
-  away_cc: string;
-}
+const SUPERADMIN_EMAIL = 'radek.budar@gmail.com';
 
-export interface AdminMatch {
-  id: number;
-  groupId: string;
-  round: number;
-  homeTeamId: number;
-  awayTeamId: number;
-  homeGoals: number | null;
-  awayGoals: number | null;
-  homeYc: number;
-  homeYc2: number;
-  homeRcDirect: number;
-  homeYcRc: number;
-  awayYc: number;
-  awayYc2: number;
-  awayRcDirect: number;
-  awayYcRc: number;
-  venue: string;
-  kickOff: string;
-  status: string;
-  homeTeam: { name: string; shortName: string; countryCode: string };
-  awayTeam: { name: string; shortName: string; countryCode: string };
-}
+export const dynamic = 'force-dynamic';
 
-export default async function AdminPage() {
-  const rows = await query<AdminMatchRow>(`
-    SELECT m.*,
-      ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
-      at2.name as away_name, at2.short_name as away_short, at2.country_code as away_cc
-    FROM match m
-    JOIN team ht ON m.home_team_id = ht.id
-    JOIN team at2 ON m.away_team_id = at2.id
-    ORDER BY m.kick_off, m.group_id, m.id
-  `);
+export default async function AdminLandingPage() {
+  const isDev = process.env.NODE_ENV === 'development';
+  const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
-  const matches: AdminMatch[] = rows.map((r) => ({
-    id: r.id,
-    groupId: r.group_id,
-    round: r.round,
-    homeTeamId: r.home_team_id,
-    awayTeamId: r.away_team_id,
-    homeGoals: r.home_goals,
-    awayGoals: r.away_goals,
-    homeYc: r.home_yc,
-    homeYc2: r.home_yc2,
-    homeRcDirect: r.home_rc_direct,
-    homeYcRc: r.home_yc_rc,
-    awayYc: r.away_yc,
-    awayYc2: r.away_yc2,
-    awayRcDirect: r.away_rc_direct,
-    awayYcRc: r.away_yc_rc,
-    venue: r.venue,
-    kickOff: r.kick_off,
-    status: r.status,
-    homeTeam: { name: r.home_name, shortName: r.home_short, countryCode: r.home_cc },
-    awayTeam: { name: r.away_name, shortName: r.away_short, countryCode: r.away_cc },
-  }));
+  // Dev bypass: go straight to dashboard so local work isn't blocked on OAuth.
+  if (!googleConfigured || isDev) {
+    redirect('/admin/dashboard');
+  }
+
+  let session;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
+
+  if (session?.isAdmin) {
+    redirect('/admin/dashboard');
+  }
+
+  const signedInButNotAdmin = !!session && !session.isAdmin;
 
   return (
-    <div className="container py-3">
-      <h1 className="mb-3" style={{ color: 'var(--wc-text)', fontSize: '1.5rem' }}>
-        Match Administration
-      </h1>
-      <MatchEditor initialMatches={matches} />
-    </div>
+    <main className="container py-5">
+      <div className="row justify-content-center">
+        <div className="col-md-8 col-lg-6">
+          <div
+            className="p-4 rounded"
+            style={{
+              backgroundColor: 'var(--wc-surface)',
+              border: '1px solid var(--wc-border)',
+            }}
+          >
+            <div style={{ fontSize: '3rem', textAlign: 'center' }}>🔐</div>
+            <h1
+              className="text-center mb-3"
+              style={{ color: 'var(--wc-text)', fontSize: '1.6rem' }}
+            >
+              Admin Section
+            </h1>
+
+            <p style={{ color: 'var(--wc-text-muted)' }}>
+              This is the admin section of Knockouts.in. After you sign in, you can:
+            </p>
+            <ul style={{ color: 'var(--wc-text-muted)' }}>
+              <li>Add administrators</li>
+              <li>Enter match results</li>
+              <li>Simulate group-stage and pick&apos;em results</li>
+            </ul>
+
+            {signedInButNotAdmin ? (
+              <div
+                className="p-3 rounded mt-3 mb-3"
+                style={{
+                  backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                  border: '1px solid rgba(220, 53, 69, 0.3)',
+                  color: 'var(--wc-text)',
+                }}
+              >
+                <strong>Not authorized.</strong> You are signed in as{' '}
+                <code>{session?.user?.email}</code>, but that address is not on the admin
+                whitelist.
+              </div>
+            ) : (
+              <form
+                action={async () => {
+                  'use server';
+                  await signIn('google', { redirectTo: '/admin/dashboard' });
+                }}
+                className="mt-4"
+              >
+                <button
+                  type="submit"
+                  className="btn w-100"
+                  style={{
+                    backgroundColor: 'var(--wc-accent)',
+                    color: '#fff',
+                    padding: '0.7rem',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Verify identity with Google
+                </button>
+              </form>
+            )}
+
+            <p
+              className="text-center mt-3 mb-0"
+              style={{ color: 'var(--wc-text-muted)', fontSize: '0.85rem' }}
+            >
+              Need access? Contact superadmin at{' '}
+              <a href={`mailto:${SUPERADMIN_EMAIL}`} style={{ color: 'var(--wc-accent)' }}>
+                {SUPERADMIN_EMAIL}
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }

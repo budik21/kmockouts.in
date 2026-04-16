@@ -114,13 +114,6 @@ export default function Navbar() {
               🏟️ Knockout Bracket
             </a>
             <a
-              href="/worldcup2026/scenarios"
-              className="nav-link offcanvas-nav-link"
-              onClick={navigateAndClose('/worldcup2026/scenarios')}
-            >
-              🧪 Scenarios
-            </a>
-            <a
               href="/worldcup2026/fifa-ranking"
               className="nav-link offcanvas-nav-link"
               onClick={navigateAndClose('/worldcup2026/fifa-ranking')}
@@ -152,14 +145,6 @@ export default function Navbar() {
               }}
             >
               💬 Feedback
-            </a>
-            <hr className="offcanvas-divider" />
-            <a
-              href="/admin"
-              className="nav-link offcanvas-nav-link"
-              onClick={navigateAndClose('/admin')}
-            >
-              ⚙️ Administration
             </a>
           </nav>
           <hr className="offcanvas-divider" />

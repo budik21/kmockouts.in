@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import type { AdminMatch } from '../page';
+import type { AdminMatch } from '../dashboard/page';
 import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from '@/app/components/CardIcons';
 import ArrowStepper from '@/app/components/ArrowStepper';
 
