@@ -71,7 +71,9 @@ export default function LeaderboardTable({ rows }: Props) {
   if (rows.length === 0) {
     return (
       <div className="leaderboard-empty">
-        <p>No public predictors yet. Be the first!</p>
+        <p>
+          No public predictors yet. <Link href="/predictions">Be the first!</Link>
+        </p>
       </div>
     );
   }
