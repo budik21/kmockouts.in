@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { requireAdminApi } from '@/lib/admin-auth';
 import { recalculateAllProbabilities } from '@/lib/probability-cache';
 
 /**
@@ -8,14 +8,8 @@ import { recalculateAllProbabilities } from '@/lib/probability-cache';
  * Called by the scraper after updating match results, or manually.
  */
 export async function POST() {
-  const isDev = process.env.NODE_ENV === 'development';
-  const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-  if (googleConfigured && !isDev) {
-    const session = await auth();
-    if (!session?.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  }
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
 
   try {
     const start = Date.now();

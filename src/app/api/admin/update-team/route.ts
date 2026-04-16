@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { query, queryOne, getPool } from '@/lib/db';
+import { requireAdminApi } from '@/lib/admin-auth';
+import { queryOne, getPool } from '@/lib/db';
 
 /**
  * POST /api/admin/update-team
@@ -9,14 +9,8 @@ import { query, queryOne, getPool } from '@/lib/db';
  * Updates a placeholder team once playoff results are known.
  */
 export async function POST(request: NextRequest) {
-  const isDev = process.env.NODE_ENV === 'development';
-  const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-  if (googleConfigured && !isDev) {
-    const session = await auth();
-    if (!session?.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  }
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
 
   try {
     const body = await request.json();

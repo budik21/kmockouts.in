@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
+import { requireAdminApi } from '@/lib/admin-auth';
 import { applyScenario } from '@/lib/apply-scenario';
 import { recalculateAllProbabilities } from '@/lib/probability-cache';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
@@ -12,9 +13,12 @@ export const dynamic = 'force-dynamic';
  * POST /api/scenarios/apply
  * Body: { scenarioId: number }  (0 = reset to clean state)
  *
- * Applies a scenario by updating match results in the DB.
+ * Applies a scenario by updating match results in the DB. Admin-only.
  */
 export async function POST(request: NextRequest) {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await request.json();
     const scenarioId: number = body.scenarioId;

@@ -6,14 +6,6 @@ const SUPERADMIN_EMAIL = 'radek.budar@gmail.com';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminLandingPage() {
-  const isDev = process.env.NODE_ENV === 'development';
-  const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-
-  // Dev bypass: go straight to dashboard so local work isn't blocked on OAuth.
-  if (!googleConfigured || isDev) {
-    redirect('/admin/dashboard');
-  }
-
   let session;
   try {
     session = await auth();

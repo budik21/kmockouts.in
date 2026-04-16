@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
+import { requireAdminApi } from '@/lib/admin-auth';
 import { query } from '@/lib/db';
 import { calculateTipPoints } from '@/lib/tip-scoring';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
@@ -8,9 +9,12 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Recalculate points for all tips on finished matches.
- * Called after admin updates match results.
+ * Called after admin updates match results. Admin-only.
  */
 export async function POST() {
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
+
   const tips = await query<{
     tip_id: number;
     tip_home: number;

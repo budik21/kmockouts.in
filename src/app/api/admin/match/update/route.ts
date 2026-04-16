@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
-import { auth } from '@/lib/auth';
+import { requireAdminApi } from '@/lib/admin-auth';
 import { query, queryOne } from '@/lib/db';
 import { recalculateAllProbabilities, pregenerateBestThirdSummaries } from '@/lib/probability-cache';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
@@ -21,16 +21,20 @@ interface UpdateBody {
   status: string;
 }
 
+const MAX_GOALS = 19;
+const MAX_CARDS = 11;
+
+function isValidGoalCount(v: unknown): v is number | null {
+  return v === null || (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= MAX_GOALS);
+}
+
+function isValidCardCount(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= MAX_CARDS;
+}
+
 export async function POST(request: NextRequest) {
-  // Auth check (skip in development)
-  const isDev = process.env.NODE_ENV === 'development';
-  const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
-  if (googleConfigured && !isDev) {
-    const session = await auth();
-    if (!session?.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-  }
+  const unauthorized = await requireAdminApi();
+  if (unauthorized) return unauthorized;
 
   try {
     const body: UpdateBody = await request.json();
@@ -38,6 +42,21 @@ export async function POST(request: NextRequest) {
 
     if (!matchId || !['SCHEDULED', 'LIVE', 'FINISHED'].includes(status)) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+    }
+
+    if (!isValidGoalCount(homeGoals) || !isValidGoalCount(awayGoals)) {
+      return NextResponse.json(
+        { error: `Goals must be an integer between 0 and ${MAX_GOALS} (or null)` },
+        { status: 400 },
+      );
+    }
+
+    const cardValues = [homeYc, homeYc2, homeRcDirect, homeYcRc, awayYc, awayYc2, awayRcDirect, awayYcRc];
+    if (!cardValues.every(isValidCardCount)) {
+      return NextResponse.json(
+        { error: `Card counts must be integers between 0 and ${MAX_CARDS}` },
+        { status: 400 },
+      );
     }
 
     // Get group_id for the match
