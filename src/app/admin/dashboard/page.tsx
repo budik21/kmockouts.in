@@ -118,7 +118,7 @@ export default async function AdminDashboardPage() {
         <form
           action={async () => {
             'use server';
-            await signOut({ redirectTo: '/worldcup2026' });
+            await signOut({ redirectTo: '/admin' });
           }}
         >
           <button
