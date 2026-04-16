@@ -62,7 +62,7 @@ export default function ScenariosPage() {
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="breadcrumb">
           <li className="breadcrumb-item">
-            <Link href="/worldcup2026">Home</Link>
+            <Link href="/admin/dashboard">Admin</Link>
           </li>
           <li className="breadcrumb-item active" aria-current="page">
             Scenarios

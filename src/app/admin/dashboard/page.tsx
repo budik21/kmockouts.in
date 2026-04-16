@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
+import { signOut } from '@/lib/auth';
 import MatchEditor from '../components/MatchEditor';
 
 interface AdminMatchRow {
@@ -110,9 +111,29 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="container py-3">
-      <h1 className="mb-3" style={{ color: 'var(--wc-text)', fontSize: '1.5rem' }}>
-        Admin Dashboard
-      </h1>
+      <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <h1 style={{ color: 'var(--wc-text)', fontSize: '1.5rem', margin: 0 }}>
+          Admin Dashboard
+        </h1>
+        <form
+          action={async () => {
+            'use server';
+            await signOut({ redirectTo: '/worldcup2026' });
+          }}
+        >
+          <button
+            type="submit"
+            className="btn btn-sm"
+            style={{
+              backgroundColor: 'var(--wc-surface)',
+              color: 'var(--wc-text)',
+              border: '1px solid var(--wc-border)',
+            }}
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
 
       {/* Quick-action cards */}
       <div className="row g-3 mb-4">

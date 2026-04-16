@@ -72,7 +72,7 @@ export default function UsersClient({ initialEmails, superadmin }: Props) {
         <button
           type="submit"
           className="btn"
-          style={{ backgroundColor: 'var(--wc-accent)', color: '#fff' }}
+          style={{ backgroundColor: 'var(--wc-accent)', color: '#2a1a00', fontWeight: 600 }}
           disabled={pending}
         >
           Add admin
@@ -110,7 +110,7 @@ export default function UsersClient({ initialEmails, superadmin }: Props) {
                 {isSuperadmin && (
                   <span
                     className="ms-2 badge"
-                    style={{ backgroundColor: 'var(--wc-accent)', color: '#fff' }}
+                    style={{ backgroundColor: 'var(--wc-accent)', color: '#2a1a00' }}
                   >
                     superadmin
                   </span>

@@ -76,7 +76,7 @@ export default function SimulateClient() {
         <button
           type="button"
           className="btn"
-          style={{ backgroundColor: 'var(--wc-accent)', color: '#fff' }}
+          style={{ backgroundColor: 'var(--wc-accent)', color: '#2a1a00', fontWeight: 600 }}
           onClick={simulate}
           disabled={busy !== null}
         >
