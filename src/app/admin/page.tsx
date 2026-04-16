@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { auth, signIn } from '@/lib/auth';
+import { auth, signIn, signOut } from '@/lib/auth';
 
 const SUPERADMIN_EMAIL = 'radek.budar@gmail.com';
 
@@ -56,18 +56,44 @@ export default async function AdminLandingPage() {
             </ul>
 
             {signedInButNotAdmin ? (
-              <div
-                className="p-3 rounded mt-3 mb-3"
-                style={{
-                  backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                  border: '1px solid rgba(220, 53, 69, 0.3)',
-                  color: 'var(--wc-text)',
-                }}
-              >
-                <strong>Not authorized.</strong> You are signed in as{' '}
-                <code>{session?.user?.email}</code>, but that address is not on the admin
-                whitelist.
-              </div>
+              <>
+                <div
+                  className="p-3 rounded mt-3 mb-3 d-flex gap-2"
+                  style={{
+                    backgroundColor: 'rgba(255, 193, 7, 0.12)',
+                    border: '1px solid rgba(255, 193, 7, 0.4)',
+                    color: 'var(--wc-text)',
+                  }}
+                >
+                  <div style={{ fontSize: '1.4rem', lineHeight: 1 }}>⚠️</div>
+                  <div>
+                    <strong>Not authorized.</strong> You are signed in as{' '}
+                    <strong>{session?.user?.email}</strong>, but that address is not on the
+                    admin whitelist.
+                  </div>
+                </div>
+                <form
+                  action={async () => {
+                    'use server';
+                    await signOut({ redirectTo: '/admin' });
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="btn w-100"
+                    style={{
+                      backgroundColor: 'var(--wc-surface)',
+                      color: 'var(--wc-text)',
+                      border: '1px solid var(--wc-border)',
+                      padding: '0.7rem',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </form>
+              </>
             ) : (
               <form
                 action={async () => {
@@ -87,7 +113,7 @@ export default async function AdminLandingPage() {
                     fontWeight: 600,
                   }}
                 >
-                  Verify identity with Google
+                  Sign in with Google
                 </button>
               </form>
             )}
