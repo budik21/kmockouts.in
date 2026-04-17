@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 interface PickemActionsProps {
   isSuperadmin: boolean;
@@ -58,55 +59,121 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
     }
   };
 
+  const actionCardStyle = {
+    padding: '1.5rem',
+    marginBottom: '1rem',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid var(--wc-border)',
+    borderRadius: '0.375rem',
+  };
+
+  const actionTitleStyle = {
+    color: 'var(--wc-text)',
+    fontSize: '1.05rem',
+    fontWeight: 600,
+    marginBottom: '0.5rem',
+  };
+
+  const actionDescStyle = {
+    color: 'var(--wc-text-muted)',
+    fontSize: '0.9rem',
+    marginBottom: '1rem',
+    lineHeight: 1.5,
+  };
+
+  const disabledStyle = {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  };
+
   return (
     <>
-      <div
-        className="p-3 rounded mb-4"
-        style={{
-          backgroundColor: 'var(--wc-surface)',
-          border: '1px solid var(--wc-border)',
-        }}
-      >
-        <h2 style={{ color: 'var(--wc-text)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>
-          Pick&apos;em Management
-        </h2>
-
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {isSuperadmin && (
-            <button
-              className="btn btn-danger"
-              onClick={() => setShowClearModal(true)}
-              disabled={isLoading}
-            >
-              🗑️ Clear all results (Superadmin)
-            </button>
-          )}
-
-          <button
-            className="btn btn-warning"
-            onClick={() => setShowRecalcModal(true)}
-            disabled={isLoading || !isSuperadmin}
-            title={!isSuperadmin ? 'Admin can recalculate' : ''}
-          >
-            🔄 Recalculate leaderboard
-          </button>
+      {/* Simulation action */}
+      <div style={actionCardStyle}>
+        <div style={actionTitleStyle}>Populate test data</div>
+        <div style={actionDescStyle}>
+          Fill the leaderboard with 130 test tipsters with random predictions. All start with 0 points until you recalculate scores.
         </div>
+        <Link
+          href="/admin/simulate-pickem"
+          style={{
+            display: 'inline-block',
+            padding: '0.5rem 1rem',
+            backgroundColor: 'var(--wc-accent)',
+            color: '#2a1a00',
+            fontWeight: 600,
+            borderRadius: '0.25rem',
+            textDecoration: 'none',
+          }}
+        >
+          Go to Simulator →
+        </Link>
+      </div>
 
-        {message && (
-          <div
+      {/* Recalculate action */}
+      <div style={actionCardStyle}>
+        <div style={actionTitleStyle}>Recalculate leaderboard</div>
+        <div style={actionDescStyle}>
+          Rescore all tipster predictions based on current match results. Run this after updating results to refresh the leaderboard.
+        </div>
+        <button
+          onClick={() => setShowRecalcModal(true)}
+          disabled={isLoading}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: 'var(--wc-accent)',
+            color: '#2a1a00',
+            fontWeight: 600,
+            border: 'none',
+            borderRadius: '0.25rem',
+            cursor: 'pointer',
+          }}
+        >
+          Recalculate
+        </button>
+      </div>
+
+      {/* Clear all results action (superadmin only) */}
+      {isSuperadmin && (
+        <div style={actionCardStyle}>
+          <div style={actionTitleStyle}>Clear all results</div>
+          <div style={actionDescStyle}>
+            Completely reset the pick&apos;em game. Deletes all match results, tips, and caches. All tipsters return to 0 points. This action cannot be undone.
+          </div>
+          <button
+            onClick={() => setShowClearModal(true)}
+            disabled={isLoading}
             style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
+              padding: '0.5rem 1rem',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              fontWeight: 600,
+              border: 'none',
               borderRadius: '0.25rem',
-              backgroundColor: message.type === 'success' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-              color: message.type === 'success' ? '#4caf50' : '#f44336',
-              fontSize: '0.9rem',
+              cursor: 'pointer',
             }}
           >
-            {message.text}
-          </div>
-        )}
-      </div>
+            Clear all results
+          </button>
+        </div>
+      )}
+
+      {message && (
+        <div
+          style={{
+            marginTop: '1rem',
+            padding: '0.75rem',
+            borderRadius: '0.25rem',
+            backgroundColor: message.type === 'success' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+            color: message.type === 'success' ? '#4caf50' : '#f44336',
+            fontSize: '0.9rem',
+          }}
+        >
+          {message.text}
+        </div>
+      )}
+    </>
+  );
 
       {/* Clear all results modal */}
       {showClearModal && (
