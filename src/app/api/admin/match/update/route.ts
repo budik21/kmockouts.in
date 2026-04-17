@@ -86,6 +86,16 @@ export async function POST(request: NextRequest) {
       [groupId],
     );
 
+    // Purge cache immediately so match results and standings reflect the DB update right away.
+    // revalidateTag only works within an active Next.js request context (AsyncLocalStorage).
+    // Background .then() callbacks run after the response is sent and the context is closed,
+    // so any revalidateTag calls there are silently ignored. We therefore invalidate here
+    // (within the request scope) and again after recalculation via the internal endpoint.
+    revalidateTag(WC_TAG, 'max');
+    revalidateTag(LEADERBOARD_TAG, 'max');
+
+    const origin = new URL(request.url).origin;
+
     // Fire recalculation asynchronously (all groups + best-third + AI summaries + tip points)
     recalculateAllProbabilities()
       .then(async () => {
@@ -103,9 +113,18 @@ export async function POST(request: NextRequest) {
         } catch (err) {
           console.error('[admin] AI summary pregeneration failed:', err);
         }
-        // Purge tagged caches so pages reflect new results immediately
-        revalidateTag(WC_TAG, 'max');
-        revalidateTag(LEADERBOARD_TAG, 'max');
+        // Purge cache again via a fresh HTTP request so the updated probability data
+        // (written to DB by recalculateAllProbabilities above) is also reflected.
+        // A direct revalidateTag() call here would be a no-op because the original
+        // request context has already closed.
+        try {
+          await fetch(`${origin}/api/internal/revalidate`, {
+            method: 'POST',
+            headers: { 'x-internal-secret': process.env.AUTH_SECRET ?? '' },
+          });
+        } catch (err) {
+          console.error('[admin] Post-recalculation cache purge failed:', err);
+        }
         await query('UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1', [groupId]);
       })
       .catch(async (err) => {
