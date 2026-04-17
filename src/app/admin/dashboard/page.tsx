@@ -1,11 +1,9 @@
-import Link from 'next/link';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
-import MatchEditor from '../components/MatchEditor';
-import PickemActions from '../components/PickemActions';
+import DashboardTabs from '../components/DashboardTabs';
 
 interface AdminMatchRow {
   id: number;
@@ -57,7 +55,7 @@ export interface AdminMatch {
   awayTeam: { name: string; shortName: string; countryCode: string };
 }
 
-interface PickemStatsRow {
+export interface PickemStatsRow {
   total: string;
   with_consent: string;
   without_consent: string;
@@ -77,7 +75,7 @@ export default async function AdminDashboardPage() {
 
   const isSuperadmin = session?.user?.email === SUPERADMIN_EMAIL;
 
-  const [matchRows, statsRows] = await Promise.all([
+  const [matchRows, statsRows, adminUserRows] = await Promise.all([
     query<AdminMatchRow>(`
       SELECT m.*,
         ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
@@ -93,6 +91,9 @@ export default async function AdminDashboardPage() {
         COUNT(*) FILTER (WHERE tips_public = true)::text AS with_consent,
         COUNT(*) FILTER (WHERE tips_public = false)::text AS without_consent
       FROM tipster_user
+    `),
+    query<{ email: string }>(`
+      SELECT email FROM admin_user ORDER BY email
     `),
   ]);
 
@@ -120,6 +121,7 @@ export default async function AdminDashboardPage() {
   }));
 
   const stats = statsRows[0] ?? { total: '0', with_consent: '0', without_consent: '0' };
+  const adminEmails = adminUserRows.map((r) => r.email);
 
   return (
     <div className="container py-3">
@@ -147,91 +149,13 @@ export default async function AdminDashboardPage() {
         </form>
       </div>
 
-      {/* Quick-action cards */}
-      <div className="row g-3 mb-4">
-        <div className="col-sm-6 col-lg-4">
-          <Link
-            href="/admin/users"
-            className="d-block p-3 rounded text-decoration-none h-100"
-            style={{ backgroundColor: 'var(--wc-surface)', color: 'var(--wc-text)', border: '1px solid var(--wc-border)' }}
-          >
-            <div style={{ fontSize: '1.6rem' }}>👥</div>
-            <div className="fw-semibold">Administrators</div>
-            <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.85rem' }}>
-              Add or remove admin access by e-mail.
-            </div>
-          </Link>
-        </div>
-        <div className="col-sm-6 col-lg-4">
-          <Link
-            href="/worldcup2026/scenarios"
-            className="d-block p-3 rounded text-decoration-none h-100"
-            style={{ backgroundColor: 'var(--wc-surface)', color: 'var(--wc-text)', border: '1px solid var(--wc-border)' }}
-          >
-            <div style={{ fontSize: '1.6rem' }}>🧪</div>
-            <div className="fw-semibold">Group-stage scenarios</div>
-            <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.85rem' }}>
-              Simulate group results and preview qualification outcomes.
-            </div>
-          </Link>
-        </div>
-        <div className="col-sm-6 col-lg-4">
-          <Link
-            href="/admin/simulate-pickem"
-            className="d-block p-3 rounded text-decoration-none h-100"
-            style={{ backgroundColor: 'var(--wc-surface)', color: 'var(--wc-text)', border: '1px solid var(--wc-border)' }}
-          >
-            <div style={{ fontSize: '1.6rem' }}>🎯</div>
-            <div className="fw-semibold">Pick&apos;em simulation</div>
-            <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.85rem' }}>
-              Populate 55 test tipsters to stress-test the public leaderboard.
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* Pick'em stats widget */}
-      <div
-        className="p-3 rounded mb-4"
-        style={{ backgroundColor: 'var(--wc-surface)', border: '1px solid var(--wc-border)' }}
-      >
-        <div className="d-flex align-items-baseline justify-content-between mb-2">
-          <h2 style={{ color: 'var(--wc-text)', fontSize: '1.1rem', margin: 0 }}>
-            Pick&apos;em tipsters
-          </h2>
-          <Link href="/predictions/leaderboard" style={{ fontSize: '0.85rem' }}>
-            View public leaderboard →
-          </Link>
-        </div>
-        <div className="row g-3">
-          <div className="col-4">
-            <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>Total</div>
-            <div style={{ color: 'var(--wc-text)', fontSize: '1.6rem', fontWeight: 600 }}>
-              {stats.total}
-            </div>
-          </div>
-          <div className="col-4">
-            <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>With consent</div>
-            <div style={{ color: 'var(--wc-accent)', fontSize: '1.6rem', fontWeight: 600 }}>
-              {stats.with_consent}
-            </div>
-          </div>
-          <div className="col-4">
-            <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>Without consent</div>
-            <div style={{ color: 'var(--wc-text)', fontSize: '1.6rem', fontWeight: 600, opacity: 0.6 }}>
-              {stats.without_consent}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pick'em management actions */}
-      <PickemActions isSuperadmin={isSuperadmin} />
-
-      <h2 style={{ color: 'var(--wc-text)', fontSize: '1.2rem' }} className="mb-2">
-        Match results
-      </h2>
-      <MatchEditor initialMatches={matches} />
+      <DashboardTabs
+        initialMatches={matches}
+        pickemsStats={stats}
+        isSuperadmin={isSuperadmin}
+        adminEmails={adminEmails}
+        superadminEmail={SUPERADMIN_EMAIL}
+      />
     </div>
   );
 }
