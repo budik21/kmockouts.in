@@ -48,10 +48,44 @@ export default function DashboardTabs({
     paddingTop: '2rem',
   };
 
+  const tabNavStyle: React.CSSProperties = {
+    borderBottom: '1px solid var(--wc-border)',
+    marginBottom: '0.5rem',
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    display: 'flex',
+    whiteSpace: 'nowrap',
+    scrollBehavior: 'smooth',
+    WebkitOverflowScrolling: 'touch',
+    position: 'relative',
+  };
+
   return (
     <>
-      {/* Tab navigation */}
-      <div style={{ borderBottom: '1px solid var(--wc-border)', marginBottom: '0.5rem' }}>
+      <style>{`
+        .admin-tabs-nav {
+          scrollbar-width: thin;
+          scrollbar-color: var(--wc-border) transparent;
+        }
+        .admin-tabs-nav::-webkit-scrollbar {
+          height: 3px;
+        }
+        .admin-tabs-nav::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .admin-tabs-nav::-webkit-scrollbar-thumb {
+          background: var(--wc-border);
+          border-radius: 2px;
+        }
+        @media (max-width: 768px) {
+          .admin-tabs-nav {
+            mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+          }
+        }
+      `}</style>
+      {/* Tab navigation - horizontally scrollable on mobile */}
+      <div style={tabNavStyle} className="admin-tabs-nav">
         <button onClick={() => setActiveTab('matches')} style={tabButtonStyle(activeTab === 'matches')}>
           Match Results
         </button>
