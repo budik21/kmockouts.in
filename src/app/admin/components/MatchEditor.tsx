@@ -217,8 +217,12 @@ export default function MatchEditor({
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleClearResults = async () => {
+    // Close modal immediately
+    setShowClearModal(false);
+    // Show processing message on dashboard
     setIsClearing(true);
-    setMessage(null);
+    setMessage({ type: 'success', text: 'Data erasure is being processed...' });
+
     try {
       const res = await fetch('/api/admin/pickem/clear-results', { method: 'POST' });
       const data = await res.json();
@@ -227,15 +231,16 @@ export default function MatchEditor({
         throw new Error(data.error || 'Failed to clear results');
       }
 
-      setMessage({ type: 'success', text: data.message });
-      setShowClearModal(false);
-      window.location.reload();
+      setMessage({ type: 'success', text: 'Data was erased' });
+      setTimeout(() => {
+        setMessage(null);
+        window.location.reload();
+      }, 5000);
     } catch (err) {
       setMessage({
         type: 'error',
         text: err instanceof Error ? err.message : 'Unknown error',
       });
-    } finally {
       setIsClearing(false);
     }
   };
