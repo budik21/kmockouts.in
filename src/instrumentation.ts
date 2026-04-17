@@ -22,19 +22,5 @@ export async function register() {
     } catch (e) {
       console.error('[instrumentation] Failed to sync match schedule:', e);
     }
-
-    // Apply the active scenario so the homepage shows data immediately (default: scenario 2)
-    const { readActiveScenarioId, applyScenario } = await import('./lib/apply-scenario');
-    const { recalculateAllProbabilities } = await import('./lib/probability-cache');
-    const scenarioId = readActiveScenarioId() || 2;
-    if (scenarioId > 0) {
-      try {
-        const applied = await applyScenario(scenarioId);
-        await recalculateAllProbabilities();
-        console.log(`[instrumentation] Applied scenario ${scenarioId} (${applied} matches)`);
-      } catch (e) {
-        console.error(`[instrumentation] Failed to apply scenario ${scenarioId}:`, e);
-      }
-    }
   }
 }
