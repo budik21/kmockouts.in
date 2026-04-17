@@ -108,7 +108,7 @@ export default function DashboardTabs({
             <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1.5rem' }}>
               Match Results
             </h2>
-            <MatchEditor initialMatches={initialMatches} />
+            <MatchEditor initialMatches={initialMatches} isSuperadmin={isSuperadmin} />
           </div>
         )}
 

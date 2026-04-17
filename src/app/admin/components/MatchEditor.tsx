@@ -6,6 +6,11 @@ import type { AdminMatch } from '../dashboard/page';
 import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from '@/app/components/CardIcons';
 import ArrowStepper from '@/app/components/ArrowStepper';
 
+interface MatchEditorProps {
+  initialMatches: AdminMatch[];
+  isSuperadmin?: boolean;
+}
+
 interface MatchState {
   homeGoals: number | null;
   awayGoals: number | null;
@@ -203,10 +208,36 @@ function MatchCard({
 
 export default function MatchEditor({
   initialMatches,
-}: {
-  initialMatches: AdminMatch[];
-}) {
+  isSuperadmin = false,
+}: MatchEditorProps) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleClearResults = async () => {
+    setIsClearing(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/pickem/clear-results', { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to clear results');
+      }
+
+      setMessage({ type: 'success', text: data.message });
+      setShowClearModal(false);
+      window.location.reload();
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Unknown error',
+      });
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const groups = useMemo(() => {
     const ids = Array.from(new Set(initialMatches.map((m) => m.groupId))).sort();
@@ -319,6 +350,41 @@ export default function MatchEditor({
 
   return (
     <div className="admin-match-list">
+      {/* Delete all results button (superadmin only) */}
+      {isSuperadmin && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <button
+            onClick={() => setShowClearModal(true)}
+            disabled={isClearing}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              fontWeight: 600,
+              border: 'none',
+              borderRadius: '0.25rem',
+              cursor: 'pointer',
+            }}
+          >
+            {isClearing ? 'Clearing...' : '🗑️ Delete all results'}
+          </button>
+          {message && (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                padding: '0.75rem',
+                borderRadius: '0.25rem',
+                backgroundColor: message.type === 'success' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                color: message.type === 'success' ? '#4caf50' : '#f44336',
+                fontSize: '0.9rem',
+              }}
+            >
+              {message.text}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="admin-group-filter">
         <button
           className={`btn btn-sm ${groupFilter === 'ALL' ? 'btn-primary' : 'btn-outline-secondary'}`}
@@ -332,7 +398,7 @@ export default function MatchEditor({
             className={`btn btn-sm ${groupFilter === g ? 'btn-primary' : 'btn-outline-secondary'}`}
             onClick={() => setGroupFilter(g)}
           >
-            Group {g}
+            {g}
           </button>
         ))}
       </div>
@@ -366,6 +432,93 @@ export default function MatchEditor({
           </div>
         );
       })}
+
+      {/* Delete all results modal */}
+      {showClearModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+          }}
+          onClick={() => !isClearing && setShowClearModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--wc-surface)',
+              color: 'var(--wc-text)',
+              maxWidth: '500px',
+              width: '90%',
+              border: '1px solid var(--wc-border)',
+              borderRadius: '0.375rem',
+              padding: '2rem',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.3rem' }}>
+              ⚠️ Delete all match results?
+            </h3>
+
+            <div style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+              <p>
+                This action will <strong>delete all match results</strong> and recalculate all tipster scores to 0 points.
+              </p>
+              <p style={{ marginBottom: '0.75rem' }}>
+                <strong>This will:</strong>
+              </p>
+              <ul style={{ marginBottom: '1rem', paddingLeft: '1.5rem' }}>
+                <li>Clear all match scores (reset to no result)</li>
+                <li>Recalculate all tipster tips to 0 points</li>
+                <li>Clear AI prediction interpretations</li>
+                <li>Refresh all caches</li>
+              </ul>
+              <p style={{ marginBottom: 0, color: 'var(--wc-accent)' }}>
+                Tipster accounts and their predictions remain intact. This action cannot be undone.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowClearModal(false)}
+                disabled={isClearing}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'var(--wc-surface)',
+                  color: 'var(--wc-text)',
+                  border: '1px solid var(--wc-border)',
+                  borderRadius: '0.25rem',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearResults}
+                disabled={isClearing}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.25rem',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {isClearing ? 'Deleting...' : 'Delete all results'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
