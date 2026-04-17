@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { AdminMatch } from '../dashboard/page';
 import type { PickemStatsRow } from '../dashboard/page';
+import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 import MatchEditor from './MatchEditor';
 import PickemActions from './PickemActions';
 import UsersClient from '../users/UsersClient';
+import ScenarioPicker from '@/app/components/ScenarioPicker';
 
 interface DashboardTabsProps {
   initialMatches: AdminMatch[];
@@ -14,6 +16,8 @@ interface DashboardTabsProps {
   isSuperadmin: boolean;
   adminEmails: string[];
   superadminEmail: string;
+  scenarios: ScenarioMeta[];
+  activeScenario: number | null;
 }
 
 export default function DashboardTabs({
@@ -22,56 +26,43 @@ export default function DashboardTabs({
   isSuperadmin,
   adminEmails,
   superadminEmail,
+  scenarios,
+  activeScenario,
 }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users'>('matches');
 
-  const tabStyle = (isActive: boolean) => ({
-    padding: '0.75rem 1.5rem',
+  const tabButtonStyle = (isActive: boolean) => ({
+    background: 'none',
     border: 'none',
-    backgroundColor: isActive ? 'var(--wc-accent)' : 'var(--wc-surface)',
-    color: isActive ? '#2a1a00' : 'var(--wc-text)',
+    color: 'var(--wc-text)',
+    fontSize: '1rem',
+    fontWeight: 500,
     cursor: 'pointer',
-    fontWeight: isActive ? 600 : 500,
-    borderTopLeftRadius: '0.375rem',
-    borderTopRightRadius: '0.375rem',
+    padding: '0.75rem 1.5rem 0.75rem 0',
+    marginRight: '1.5rem',
+    borderBottom: isActive ? '2px solid var(--wc-accent)' : '2px solid transparent',
+    transition: 'border-color 0.2s',
   });
 
   const contentStyle = {
-    backgroundColor: 'var(--wc-surface)',
-    border: '1px solid var(--wc-border)',
-    borderTop: 'none',
-    borderBottomLeftRadius: '0.375rem',
-    borderBottomRightRadius: '0.375rem',
-    padding: '2rem',
+    paddingTop: '2rem',
   };
 
   return (
     <>
-      {/* Tab buttons */}
-      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--wc-border)', marginBottom: 0 }}>
-        <button
-          onClick={() => setActiveTab('matches')}
-          style={tabStyle(activeTab === 'matches')}
-        >
-          📋 Match Results
+      {/* Tab navigation */}
+      <div style={{ borderBottom: '1px solid var(--wc-border)', marginBottom: '0.5rem' }}>
+        <button onClick={() => setActiveTab('matches')} style={tabButtonStyle(activeTab === 'matches')}>
+          Match Results
         </button>
-        <button
-          onClick={() => setActiveTab('scenarios')}
-          style={tabStyle(activeTab === 'scenarios')}
-        >
-          🧪 Scenarios
+        <button onClick={() => setActiveTab('scenarios')} style={tabButtonStyle(activeTab === 'scenarios')}>
+          Scenarios
         </button>
-        <button
-          onClick={() => setActiveTab('pickem')}
-          style={tabStyle(activeTab === 'pickem')}
-        >
-          🎯 Pick&apos;em
+        <button onClick={() => setActiveTab('pickem')} style={tabButtonStyle(activeTab === 'pickem')}>
+          Pick&apos;em
         </button>
-        <button
-          onClick={() => setActiveTab('users')}
-          style={tabStyle(activeTab === 'users')}
-        >
-          👥 User Management
+        <button onClick={() => setActiveTab('users')} style={tabButtonStyle(activeTab === 'users')}>
+          User Management
         </button>
       </div>
 
@@ -90,19 +81,14 @@ export default function DashboardTabs({
         {/* Scenarios tab */}
         {activeTab === 'scenarios' && (
           <div>
-            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1.5rem' }}>
-              Group-Stage Scenarios
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
+              Test Scenarios
             </h2>
             <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
-              Simulate group results and preview qualification outcomes.
+              Select a match data scenario to explore the tournament at different stages. Switching scenarios
+              updates all results, recalculates probabilities, and regenerates AI commentary.
             </p>
-            <Link
-              href="/worldcup2026/scenarios"
-              className="btn"
-              style={{ backgroundColor: 'var(--wc-accent)', color: '#2a1a00', fontWeight: 600 }}
-            >
-              Go to Scenarios →
-            </Link>
+            <ScenarioPicker scenarios={scenarios} active={activeScenario} />
           </div>
         )}
 
@@ -159,20 +145,16 @@ export default function DashboardTabs({
               <p style={{ color: 'var(--wc-text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
                 Fill the leaderboard with test data to stress-test the system.
               </p>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link
-                  href="/admin/simulate-pickem"
-                  className="btn"
-                  style={{
-                    backgroundColor: 'var(--wc-accent)',
-                    color: '#2a1a00',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  Go to Simulator →
-                </Link>
-              </div>
+              <Link
+                href="/admin/simulate-pickem"
+                style={{
+                  color: 'var(--wc-accent)',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                }}
+              >
+                Go to Simulator →
+              </Link>
             </div>
 
             {/* Management Actions */}
@@ -186,6 +168,9 @@ export default function DashboardTabs({
             <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1.5rem' }}>
               Administrator Management
             </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Users whose Google e-mail matches any of these addresses will be granted admin access after signing in.
+            </p>
             <UsersClient initialEmails={adminEmails} superadmin={superadminEmail} />
           </div>
         )}

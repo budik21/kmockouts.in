@@ -1,9 +1,12 @@
+import fs from 'fs';
+import path from 'path';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
 import DashboardTabs from '../components/DashboardTabs';
+import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
 interface AdminMatchRow {
   id: number;
@@ -63,6 +66,39 @@ export interface PickemStatsRow {
 
 export const dynamic = 'force-dynamic';
 
+function readScenarios(): { scenarios: ScenarioMeta[]; active: number | null } {
+  const scenariosDir = path.join(process.cwd(), 'data', 'scenarios');
+  const files = fs
+    .readdirSync(scenariosDir)
+    .filter((f) => f.endsWith('.json'))
+    .sort();
+
+  const scenarios: ScenarioMeta[] = [];
+  for (const file of files) {
+    try {
+      const content = JSON.parse(fs.readFileSync(path.join(scenariosDir, file), 'utf-8'));
+      scenarios.push({
+        id: content.id,
+        name: content.name,
+        description: content.description,
+        matchCount: content.results?.length ?? 0,
+      });
+    } catch {
+      // skip malformed
+    }
+  }
+
+  const flagPath = path.join(scenariosDir, '.active');
+  let active: number | null = null;
+  if (fs.existsSync(flagPath)) {
+    const val = fs.readFileSync(flagPath, 'utf-8').trim();
+    const n = parseInt(val, 10);
+    active = !isNaN(n) && n > 0 ? n : null;
+  }
+
+  return { scenarios, active };
+}
+
 export default async function AdminDashboardPage() {
   await requireAdmin();
 
@@ -74,6 +110,7 @@ export default async function AdminDashboardPage() {
   }
 
   const isSuperadmin = session?.user?.email === SUPERADMIN_EMAIL;
+  const { scenarios, active: activeScenario } = readScenarios();
 
   const [matchRows, statsRows, adminUserRows] = await Promise.all([
     query<AdminMatchRow>(`
@@ -155,6 +192,8 @@ export default async function AdminDashboardPage() {
         isSuperadmin={isSuperadmin}
         adminEmails={adminEmails}
         superadminEmail={SUPERADMIN_EMAIL}
+        scenarios={scenarios}
+        activeScenario={activeScenario}
       />
     </div>
   );
