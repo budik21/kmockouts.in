@@ -50,7 +50,7 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
   const handleSimulate = async () => {
     if (
       !confirm(
-        'This will DELETE all existing pick'em data (tipsters + tips) and insert 130 fake tipsters with random tips. Continue?',
+        "This will DELETE all existing pick'em data (tipsters + tips) and insert 130 fake tipsters with random tips. Continue?",
       )
     ) {
       return;
