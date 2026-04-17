@@ -172,8 +172,6 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
           {message.text}
         </div>
       )}
-    </>
-  );
 
       {/* Clear all results modal */}
       {showClearModal && (
