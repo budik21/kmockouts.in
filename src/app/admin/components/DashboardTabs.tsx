@@ -171,26 +171,6 @@ export default function DashboardTabs({
               </div>
             </div>
 
-            {/* Simulation & Management */}
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ color: 'var(--wc-text)', fontSize: '1.1rem', marginBottom: '1rem' }}>
-                Simulation
-              </h3>
-              <p style={{ color: 'var(--wc-text-muted)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                Fill the leaderboard with test data to stress-test the system.
-              </p>
-              <Link
-                href="/admin/simulate-pickem"
-                style={{
-                  color: 'var(--wc-accent)',
-                  textDecoration: 'underline',
-                  cursor: 'pointer',
-                }}
-              >
-                Go to Simulator →
-              </Link>
-            </div>
-
             {/* Management Actions */}
             <PickemActions isSuperadmin={isSuperadmin} />
           </div>

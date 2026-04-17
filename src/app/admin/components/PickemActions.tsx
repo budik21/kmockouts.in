@@ -1,10 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface PickemActionsProps {
   isSuperadmin: boolean;
+}
+
+interface SimResult {
+  usersInserted: number;
+  tipsInserted: number;
+  withConsent: number;
+  withoutConsent: number;
 }
 
 export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
@@ -12,6 +19,10 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
   const [showRecalcModal, setShowRecalcModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [, startTransition] = useTransition();
+  const router = useRouter();
+
+  const refresh = () => startTransition(() => router.refresh());
 
   const handleClearResults = async () => {
     setIsLoading(true);
@@ -36,6 +47,40 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
     }
   };
 
+  const handleSimulate = async () => {
+    if (
+      !confirm(
+        'This will DELETE all existing pick'em data (tipsters + tips) and insert 130 fake tipsters with random tips. Continue?',
+      )
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/pickem/simulate', { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Simulation failed');
+      }
+
+      const result = data as SimResult;
+      setMessage({
+        type: 'success',
+        text: `Inserted ${result.usersInserted} tipsters (${result.withConsent} with consent, ${result.withoutConsent} without) and ${result.tipsInserted} tips.`,
+      });
+      refresh();
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Unknown error',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleRecalculate = async () => {
     setIsLoading(true);
     setMessage(null);
@@ -49,6 +94,7 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
 
       setMessage({ type: 'success', text: data.message });
       setShowRecalcModal(false);
+      refresh();
     } catch (err) {
       setMessage({
         type: 'error',
@@ -94,20 +140,21 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
         <div style={actionDescStyle}>
           Fill the leaderboard with 130 test tipsters with random predictions. All start with 0 points until you recalculate scores.
         </div>
-        <Link
-          href="/admin/simulate-pickem"
+        <button
+          onClick={handleSimulate}
+          disabled={isLoading}
           style={{
-            display: 'inline-block',
             padding: '0.5rem 1rem',
             backgroundColor: 'var(--wc-accent)',
             color: '#2a1a00',
             fontWeight: 600,
+            border: 'none',
             borderRadius: '0.25rem',
-            textDecoration: 'none',
+            cursor: 'pointer',
           }}
         >
-          Go to Simulator →
-        </Link>
+          {isLoading ? 'Populating...' : 'Populate test data'}
+        </button>
       </div>
 
       {/* Recalculate action */}
