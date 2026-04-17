@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     // `unstable_cache` + tag-based revalidation (see src/lib/cache-tags.ts),
     // so this does not hit the DB — it only ensures users don't see stale
     // RSC that the browser still had in memory after an admin invalidation.
-    staleTimes: { dynamic: 0, static: 0 },
+    staleTimes: { dynamic: 0, static: 30 },
   },
 };
 
