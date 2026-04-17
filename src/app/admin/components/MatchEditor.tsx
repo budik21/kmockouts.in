@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { AdminMatch } from '../dashboard/page';
 import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from '@/app/components/CardIcons';
 import ArrowStepper from '@/app/components/ArrowStepper';
+import Spinner from './Spinner';
 
 interface MatchEditorProps {
   initialMatches: AdminMatch[];
@@ -353,21 +354,25 @@ export default function MatchEditor({
       {/* Delete all results button (superadmin only) */}
       {isSuperadmin && (
         <div style={{ marginBottom: '1.5rem' }}>
-          <button
-            onClick={() => setShowClearModal(true)}
-            disabled={isClearing}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              fontWeight: 600,
-              border: 'none',
-              borderRadius: '0.25rem',
-              cursor: 'pointer',
-            }}
-          >
-            {isClearing ? 'Clearing...' : '🗑️ Delete all results'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button
+              onClick={() => setShowClearModal(true)}
+              disabled={isClearing}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                fontWeight: 600,
+                border: 'none',
+                borderRadius: '0.25rem',
+                cursor: isClearing ? 'not-allowed' : 'pointer',
+                opacity: isClearing ? 0.7 : 1,
+              }}
+            >
+              🗑️ Delete all results
+            </button>
+            {isClearing && <Spinner size="sm" />}
+          </div>
           {message && (
             <div
               style={{
@@ -496,6 +501,7 @@ export default function MatchEditor({
                   borderRadius: '0.25rem',
                   cursor: 'pointer',
                   fontWeight: 500,
+                  opacity: isClearing ? 0.7 : 1,
                 }}
               >
                 Cancel
@@ -509,11 +515,16 @@ export default function MatchEditor({
                   color: 'white',
                   border: 'none',
                   borderRadius: '0.25rem',
-                  cursor: 'pointer',
+                  cursor: isClearing ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
+                  display: 'flex',
+                  gap: '0.5rem',
+                  alignItems: 'center',
+                  opacity: isClearing ? 0.7 : 1,
                 }}
               >
-                {isClearing ? 'Deleting...' : 'Delete all results'}
+                Delete all results
+                {isClearing && <Spinner size="sm" />}
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Spinner from './Spinner';
 
 interface PickemActionsProps {
   isSuperadmin: boolean;
@@ -135,73 +136,85 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
   return (
     <>
       {/* Simulation action */}
-      <div style={actionCardStyle}>
+      <div style={{ ...actionCardStyle, opacity: isLoading ? 0.7 : 1, transition: 'opacity 0.2s' }}>
         <div style={actionTitleStyle}>Populate test data</div>
         <div style={actionDescStyle}>
           Fill the leaderboard with 130 test tipsters with random predictions. All start with 0 points until you recalculate scores.
         </div>
-        <button
-          onClick={handleSimulate}
-          disabled={isLoading}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: 'var(--wc-accent)',
-            color: '#2a1a00',
-            fontWeight: 600,
-            border: 'none',
-            borderRadius: '0.25rem',
-            cursor: 'pointer',
-          }}
-        >
-          {isLoading ? 'Populating...' : 'Populate test data'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <button
+            onClick={handleSimulate}
+            disabled={isLoading}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: 'var(--wc-accent)',
+              color: '#2a1a00',
+              fontWeight: 600,
+              border: 'none',
+              borderRadius: '0.25rem',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.7 : 1,
+            }}
+          >
+            Populate test data
+          </button>
+          {isLoading && <Spinner size="sm" />}
+        </div>
       </div>
 
       {/* Recalculate action */}
-      <div style={actionCardStyle}>
+      <div style={{ ...actionCardStyle, opacity: isLoading ? 0.7 : 1, transition: 'opacity 0.2s' }}>
         <div style={actionTitleStyle}>Recalculate leaderboard</div>
         <div style={actionDescStyle}>
           Rescore all tipster predictions based on current match results. Run this after updating results to refresh the leaderboard.
         </div>
-        <button
-          onClick={() => setShowRecalcModal(true)}
-          disabled={isLoading}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: 'var(--wc-accent)',
-            color: '#2a1a00',
-            fontWeight: 600,
-            border: 'none',
-            borderRadius: '0.25rem',
-            cursor: 'pointer',
-          }}
-        >
-          Recalculate
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowRecalcModal(true)}
+            disabled={isLoading}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: 'var(--wc-accent)',
+              color: '#2a1a00',
+              fontWeight: 600,
+              border: 'none',
+              borderRadius: '0.25rem',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.7 : 1,
+            }}
+          >
+            Recalculate
+          </button>
+          {isLoading && <Spinner size="sm" />}
+        </div>
       </div>
 
       {/* Clear all results action (superadmin only) */}
       {isSuperadmin && (
-        <div style={actionCardStyle}>
+        <div style={{ ...actionCardStyle, opacity: isLoading ? 0.7 : 1, transition: 'opacity 0.2s' }}>
           <div style={actionTitleStyle}>Clear all results</div>
           <div style={actionDescStyle}>
             Completely reset the pick&apos;em game. Deletes all match results, tips, and caches. All tipsters return to 0 points. This action cannot be undone.
           </div>
-          <button
-            onClick={() => setShowClearModal(true)}
-            disabled={isLoading}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              fontWeight: 600,
-              border: 'none',
-              borderRadius: '0.25rem',
-              cursor: 'pointer',
-            }}
-          >
-            Clear all results
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button
+              onClick={() => setShowClearModal(true)}
+              disabled={isLoading}
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                fontWeight: 600,
+                border: 'none',
+                borderRadius: '0.25rem',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                opacity: isLoading ? 0.7 : 1,
+              }}
+            >
+              Clear all results
+            </button>
+            {isLoading && <Spinner size="sm" />}
+          </div>
         </div>
       )}
 
@@ -279,8 +292,10 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
                 className="btn btn-danger"
                 onClick={handleClearResults}
                 disabled={isLoading}
+                style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
               >
-                {isLoading ? 'Clearing...' : 'Clear all results'}
+                Clear all results
+                {isLoading && <Spinner size="sm" />}
               </button>
             </div>
           </div>
