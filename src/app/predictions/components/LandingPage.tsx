@@ -9,9 +9,9 @@ export default function LandingPage() {
         <div className="row justify-content-center">
           <div className="col-lg-7 text-center">
             <div className="tipovacka-hero-icon">&#9917;</div>
-            <h1 className="tipovacka-title">World Cup 2026 Predictions</h1>
+            <h1 className="tipovacka-title">World Cup 2026 Prediction Game</h1>
             <p className="tipovacka-subtitle">
-              Predict the exact scores of all 48 group-stage matches.
+              Predict the exact scores of all 48 group-stage matches.<br/>
               Earn <strong>4 points</strong> for an exact score and <strong>1 point</strong> for
               guessing the correct outcome (win, draw, or loss).
             </p>
