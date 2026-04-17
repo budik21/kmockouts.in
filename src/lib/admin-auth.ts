@@ -1,5 +1,6 @@
 import { auth } from './auth';
 import { redirect } from 'next/navigation';
+import { SUPERADMIN_EMAIL } from './superadmin';
 
 /**
  * Server-side helper for admin sub-pages.
@@ -38,6 +39,26 @@ export async function requireAdminApi(): Promise<Response | null> {
   if (!session?.isAdmin) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  return null;
+}
+
+/**
+ * For API routes requiring superadmin. Returns `null` when authorized, or a Response with 403 when not.
+ */
+export async function requireSuperadminApi(): Promise<Response | null> {
+  let session;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
+
+  if (!session?.isAdmin || session.user?.email !== SUPERADMIN_EMAIL) {
+    return new Response(JSON.stringify({ error: 'Forbidden: superadmin access required' }), {
+      status: 403,
       headers: { 'Content-Type': 'application/json' },
     });
   }

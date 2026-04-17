@@ -1,8 +1,11 @@
 import Link from 'next/link';
+import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
+import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
 import MatchEditor from '../components/MatchEditor';
+import PickemActions from '../components/PickemActions';
 
 interface AdminMatchRow {
   id: number;
@@ -64,6 +67,15 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardPage() {
   await requireAdmin();
+
+  let session;
+  try {
+    session = await auth();
+  } catch {
+    session = null;
+  }
+
+  const isSuperadmin = session?.user?.email === SUPERADMIN_EMAIL;
 
   const [matchRows, statsRows] = await Promise.all([
     query<AdminMatchRow>(`
@@ -212,6 +224,9 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Pick'em management actions */}
+      <PickemActions isSuperadmin={isSuperadmin} />
 
       <h2 style={{ color: 'var(--wc-text)', fontSize: '1.2rem' }} className="mb-2">
         Match results
