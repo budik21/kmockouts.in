@@ -22,7 +22,7 @@ export default function SimulateClient() {
   const simulate = async () => {
     if (
       !confirm(
-        'This will DELETE all existing pick\u2019em data (tipsters + tips) and insert 55 fake tipsters. Continue?',
+        'This will DELETE all existing pick\u2019em data (tipsters + tips) and insert 130 fake tipsters with random tips. Continue?',
       )
     ) {
       return;
@@ -80,7 +80,7 @@ export default function SimulateClient() {
           onClick={simulate}
           disabled={busy !== null}
         >
-          {busy === 'sim' ? 'Filling…' : 'Fill with 55 fake tipsters'}
+          {busy === 'sim' ? 'Filling…' : 'Fill with 130 fake tipsters'}
         </button>
         <button
           type="button"

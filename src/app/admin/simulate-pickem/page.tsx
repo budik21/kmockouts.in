@@ -38,8 +38,9 @@ export default async function SimulatePickemPage() {
       <p style={{ color: 'var(--wc-text-muted)' }}>
         Destructive operations for stress-testing the public pick&apos;em leaderboard.
         Filling wipes <code>tipster_user</code> and <code>tip</code> first, then inserts
-        55 fake tipsters with a distribution of points designed to surface tie-break and
-        consent edge cases.
+        130 fake tipsters with exotic names and completely random tips. All tipsters start
+        with 0 points (points = NULL). Run the &quot;Recalculate leaderboard&quot; action
+        to score them based on actual match results.
       </p>
 
       <div
