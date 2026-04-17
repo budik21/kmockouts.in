@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     [tipsPublic, session.tipsterId],
   );
 
-  revalidateTag(LEADERBOARD_TAG);
+  revalidateTag(LEADERBOARD_TAG, 'max');
 
   return NextResponse.json({ tipsPublic });
 }
