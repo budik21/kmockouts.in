@@ -8,27 +8,29 @@ export default function Spinner({ size = 'sm' }: { size?: 'sm' | 'md' | 'lg' }) 
   };
 
   return (
-    <style>
-      {`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .admin-spinner {
-          display: inline-block;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-top-color: var(--wc-accent);
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-      `}
-    </style>
-    <div
-      className="admin-spinner"
-      style={{
-        ...sizeStyles[size],
-        display: 'inline-block',
-      }}
-    />
+    <>
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          .admin-spinner {
+            display: inline-block;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: var(--wc-accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+          }
+        `}
+      </style>
+      <div
+        className="admin-spinner"
+        style={{
+          ...sizeStyles[size],
+          display: 'inline-block',
+        }}
+      />
+    </>
   );
 }
