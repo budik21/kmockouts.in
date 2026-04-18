@@ -7,7 +7,7 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     const saved = localStorage.getItem('wc2026-theme');
-    const isDark = saved === 'dark';
+    const isDark = saved !== 'light'; // dark is the default
     setDark(isDark);
     document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
   }, []);
