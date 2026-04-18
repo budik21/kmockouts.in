@@ -7,6 +7,13 @@ import LeaderboardRecalcBanner from './LeaderboardRecalcBanner';
 import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubheader';
 import { SITE_URL } from '@/lib/seo';
 
+// Opt out of build-time static prerendering. Without this, Next.js renders
+// the page during `next build` using whatever `tip.points` values exist then
+// (often NULL right after a simulate/scenario) and serves that stale HTML
+// after deploy until a `revalidateTag(LEADERBOARD_TAG)` fires.
+// The underlying queries still use tag-based `unstable_cache`, so DB load is unchanged.
+export const dynamic = 'force-dynamic';
+
 // Tag-based on-demand revalidation via `revalidateTag(LEADERBOARD_TAG)`,
 // triggered from /api/tips/recalculate and admin match/scenarios endpoints.
 
