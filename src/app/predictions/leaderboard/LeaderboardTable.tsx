@@ -148,15 +148,16 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((r) => {
+            {pageRows.map((r, idx) => {
               const isMe = currentUserToken && r.shareToken === currentUserToken;
+              const displayRank = page * PAGE_SIZE + idx + 1;
               return (
                 <tr
                   key={r.shareToken}
                   ref={isMe ? highlightRef : undefined}
                   className={isMe ? 'leaderboard-row-me' : undefined}
                 >
-                  <td className="fw-bold">{r.rank}</td>
+                  <td className="fw-bold">{displayRank}</td>
                   <td>{r.name}</td>
                   <td className="text-center">{r.totalTips}</td>
                   <td className="text-center leaderboard-exact leaderboard-col-hide-mobile">{r.exact}</td>
