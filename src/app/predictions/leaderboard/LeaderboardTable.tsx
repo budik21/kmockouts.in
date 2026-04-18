@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { LeaderboardRow } from './page';
 
@@ -11,10 +11,10 @@ const PAGE_SIZE = 20;
 
 interface Props {
   rows: LeaderboardRow[];
+  currentUserToken?: string | null;
 }
 
 function defaultCompare(a: LeaderboardRow, b: LeaderboardRow): number {
-  // Default ranking: points DESC, exact DESC, outcome DESC, totalTips ASC, name ASC
   if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
   if (b.exact !== a.exact) return b.exact - a.exact;
   if (b.outcome !== a.outcome) return b.outcome - a.outcome;
@@ -22,29 +22,38 @@ function defaultCompare(a: LeaderboardRow, b: LeaderboardRow): number {
   return a.name.localeCompare(b.name);
 }
 
-export default function LeaderboardTable({ rows }: Props) {
+function MedalIcon({ rank }: { rank: number }) {
+  if (rank === 1) return <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🥇</span>;
+  if (rank === 2) return <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🥈</span>;
+  if (rank === 3) return <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🥉</span>;
+  return null;
+}
+
+export default function LeaderboardTable({ rows, currentUserToken }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(0);
+  const highlightRef = useRef<HTMLTableRowElement>(null);
 
-  // Rank each row once using the default tie-break order
   const ranked = useMemo(() => {
     const sorted = [...rows].sort(defaultCompare);
     return sorted.map((r, i) => ({ ...r, rank: i + 1 }));
   }, [rows]);
 
+  const currentUserRanked = useMemo(
+    () => (currentUserToken ? ranked.find((r) => r.shareToken === currentUserToken) : null),
+    [ranked, currentUserToken],
+  );
+
   const sorted = useMemo(() => {
     const copy = [...ranked];
     if (sortKey === 'rank') {
       copy.sort((a, b) => sortDir === 'desc' ? a.rank - b.rank : b.rank - a.rank);
-      // 'desc' on rank shows 1,2,3... (best first). 'asc' reverses.
       return copy;
     }
     const sign = sortDir === 'desc' ? -1 : 1;
     copy.sort((a, b) => {
-      if (sortKey === 'name') {
-        return sign * a.name.localeCompare(b.name);
-      }
+      if (sortKey === 'name') return sign * a.name.localeCompare(b.name);
       return sign * ((a[sortKey] as number) - (b[sortKey] as number));
     });
     return copy;
@@ -68,20 +77,69 @@ export default function LeaderboardTable({ rows }: Props) {
     return <span className="leaderboard-sort-arrow">{sortDir === 'desc' ? '▼' : '▲'}</span>;
   };
 
+  // Jump to the page containing the current user and scroll to their row
+  const jumpToMe = () => {
+    if (!currentUserRanked) return;
+    const idx = sorted.findIndex((r) => r.shareToken === currentUserToken);
+    if (idx === -1) return;
+    const targetPage = Math.floor(idx / PAGE_SIZE);
+    setPage(targetPage);
+  };
+
+  // After page change scroll the highlighted row into view
+  useEffect(() => {
+    if (highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [page]);
+
   if (rows.length === 0) {
     return (
       <div className="leaderboard-empty">
-        <p>
-          No public predictors yet. <Link href="/predictions">Be the first!</Link>
-        </p>
+        <p>No public predictors yet. <Link href="/predictions">Be the first!</Link></p>
       </div>
     );
   }
 
   return (
     <div>
+      {/* "Your rank" widget — only shown when current user is in the leaderboard */}
+      {currentUserRanked && (
+        <div className="leaderboard-me-widget">
+          <div className="leaderboard-me-medal">
+            <MedalIcon rank={currentUserRanked.rank} />
+          </div>
+          <div className="leaderboard-me-info">
+            <span className="leaderboard-me-rank">#{currentUserRanked.rank}</span>
+            <span className="leaderboard-me-name">{currentUserRanked.name}</span>
+            <span className="leaderboard-me-pts">{currentUserRanked.totalPoints} pts</span>
+          </div>
+          <div className="leaderboard-me-actions">
+            <button className="leaderboard-me-jump-btn" onClick={jumpToMe}>
+              Jump to my row
+            </button>
+            <Link
+              href={`/predictions/share/${currentUserRanked.shareToken}`}
+              className="leaderboard-me-profile-link"
+            >
+              My predictions →
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="table-responsive">
         <table className="table table-sm leaderboard-table">
+          <colgroup>
+            <col className="leaderboard-col-rank" />
+            <col className="leaderboard-col-name" />
+            <col className="leaderboard-col-stat" />
+            <col className="leaderboard-col-stat" />
+            <col className="leaderboard-col-stat" />
+            <col className="leaderboard-col-stat" />
+            <col className="leaderboard-col-pts" />
+            <col className="leaderboard-col-link" />
+          </colgroup>
           <thead>
             <tr>
               <th className="leaderboard-sortable" onClick={() => handleSort('rank')}>
@@ -94,42 +152,49 @@ export default function LeaderboardTable({ rows }: Props) {
                 Tips Total {sortArrow('totalTips')}
               </th>
               <th className="text-center leaderboard-sortable" onClick={() => handleSort('exact')}>
-                Exact Score Match {sortArrow('exact')}
+                Exact Score {sortArrow('exact')}
               </th>
               <th className="text-center leaderboard-sortable" onClick={() => handleSort('outcome')}>
-                Winner Match {sortArrow('outcome')}
+                Winner {sortArrow('outcome')}
               </th>
               <th className="text-center leaderboard-sortable" onClick={() => handleSort('wrong')}>
                 Bad Tips {sortArrow('wrong')}
               </th>
-              <th className="text-center leaderboard-sortable leaderboard-points-col" onClick={() => handleSort('totalPoints')}>
+              <th className="text-center leaderboard-sortable leaderboard-col-pts" onClick={() => handleSort('totalPoints')}>
                 Points {sortArrow('totalPoints')}
               </th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((r) => (
-              <tr key={r.shareToken}>
-                <td className="fw-bold">{r.rank}</td>
-                <td>{r.name}</td>
-                <td className="text-center">{r.totalTips}</td>
-                <td className="text-center leaderboard-exact">{r.exact}</td>
-                <td className="text-center leaderboard-outcome">{r.outcome}</td>
-                <td className="text-center leaderboard-wrong">{r.wrong}</td>
-                <td className="text-center leaderboard-points-col fw-bold">{r.totalPoints}</td>
-                <td className="text-end">
-                  <Link
-                    href={`/predictions/share/${r.shareToken}`}
-                    className="leaderboard-profile-link"
-                    title={`View ${r.name}'s predictions`}
-                    aria-label={`View ${r.name}'s predictions`}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8.636 3.5a.5.5 0 00-.5-.5H1.5A1.5 1.5 0 000 4.5v10A1.5 1.5 0 001.5 16h10a1.5 1.5 0 001.5-1.5V7.864a.5.5 0 00-1 0V14.5a.5.5 0 01-.5.5h-10a.5.5 0 01-.5-.5v-10a.5.5 0 01.5-.5h6.636a.5.5 0 00.5-.5z"/><path d="M16 .5a.5.5 0 00-.5-.5h-5a.5.5 0 000 1h3.793L6.146 9.146a.5.5 0 10.708.708L15 1.707V5.5a.5.5 0 001 0v-5z"/></svg>
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {pageRows.map((r) => {
+              const isMe = currentUserToken && r.shareToken === currentUserToken;
+              return (
+                <tr
+                  key={r.shareToken}
+                  ref={isMe ? highlightRef : undefined}
+                  className={isMe ? 'leaderboard-row-me' : undefined}
+                >
+                  <td className="fw-bold">{r.rank}</td>
+                  <td>{r.name}</td>
+                  <td className="text-center">{r.totalTips}</td>
+                  <td className="text-center leaderboard-exact">{r.exact}</td>
+                  <td className="text-center leaderboard-outcome">{r.outcome}</td>
+                  <td className="text-center leaderboard-wrong">{r.wrong}</td>
+                  <td className="text-center leaderboard-col-pts fw-bold">{r.totalPoints}</td>
+                  <td className="text-end">
+                    <Link
+                      href={`/predictions/share/${r.shareToken}`}
+                      className="leaderboard-profile-link"
+                      title={`View ${r.name}'s predictions`}
+                      aria-label={`View ${r.name}'s predictions`}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8.636 3.5a.5.5 0 00-.5-.5H1.5A1.5 1.5 0 000 4.5v10A1.5 1.5 0 001.5 16h10a1.5 1.5 0 001.5-1.5V7.864a.5.5 0 00-1 0V14.5a.5.5 0 01-.5.5h-10a.5.5 0 01-.5-.5v-10a.5.5 0 01.5-.5h6.636a.5.5 0 00.5-.5z"/><path d="M16 .5a.5.5 0 00-.5-.5h-5a.5.5 0 000 1h3.793L6.146 9.146a.5.5 0 10.708.708L15 1.707V5.5a.5.5 0 001 0v-5z"/></svg>
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

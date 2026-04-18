@@ -6,6 +6,7 @@ import LeaderboardTable from './LeaderboardTable';
 import LeaderboardRecalcBanner from './LeaderboardRecalcBanner';
 import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubheader';
 import { SITE_URL } from '@/lib/seo';
+import { auth } from '@/lib/auth';
 
 // Opt out of build-time static prerendering. Without this, Next.js renders
 // the page during `next build` using whatever `tip.points` values exist then
@@ -64,6 +65,9 @@ interface LastScoredDbRow {
 }
 
 export default async function LeaderboardPage() {
+  const session = await auth().catch(() => null);
+  const currentUserToken = session?.shareToken ?? null;
+
   const rows = await cachedQuery<DbRow>(
     `
     SELECT
@@ -142,7 +146,7 @@ export default async function LeaderboardPage() {
 
       <LeaderboardRecalcBanner />
 
-      <LeaderboardTable rows={data} />
+      <LeaderboardTable rows={data} currentUserToken={currentUserToken} />
 
       <div className="mt-4">
         <AdBanner slot="leaderboard" />
