@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import InlineActionButton from '../components/InlineActionButton';
 
 interface Props {
   initialEmails: string[];
@@ -36,24 +37,6 @@ export default function UsersClient({ initialEmails, superadmin }: Props) {
     }
     setEmails((prev) => (prev.includes(email) ? prev : [...prev, email].sort()));
     setNewEmail('');
-    refresh();
-  };
-
-  const removeAdmin = async (email: string) => {
-    if (email === superadmin) return;
-    if (!confirm(`Remove admin access for ${email}?`)) return;
-    setError(null);
-    const res = await fetch('/api/admin/users', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: 'Request failed' }));
-      setError(body.error || 'Failed to remove admin.');
-      return;
-    }
-    setEmails((prev) => prev.filter((e) => e !== email));
     refresh();
   };
 
@@ -116,15 +99,48 @@ export default function UsersClient({ initialEmails, superadmin }: Props) {
                   </span>
                 )}
               </span>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-danger"
-                onClick={() => removeAdmin(email)}
-                disabled={isSuperadmin || pending}
-                title={isSuperadmin ? 'Superadmin cannot be removed' : 'Remove admin'}
-              >
-                Remove
-              </button>
+              {!isSuperadmin && (
+                <InlineActionButton
+                  buttonLabel="Remove"
+                  buttonClassName="btn btn-sm btn-outline-danger"
+                  inProgressLabel="Removing…"
+                  completedLabel="Admin removed"
+                  disabled={pending}
+                  confirmVariant="danger"
+                  confirm={{
+                    title: '⚠️ Remove admin access?',
+                    body: (
+                      <p style={{ margin: 0 }}>
+                        Remove admin access for <strong>{email}</strong>? They will no longer be able
+                        to access the admin area after their next session.
+                      </p>
+                    ),
+                    confirmLabel: 'Remove',
+                  }}
+                  onSuccess={() => setEmails((prev) => prev.filter((e) => e !== email))}
+                  run={async () => {
+                    const res = await fetch('/api/admin/users', {
+                      method: 'DELETE',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email }),
+                    });
+                    if (!res.ok) {
+                      const body = await res.json().catch(() => ({ error: 'Request failed' }));
+                      throw new Error(body.error || 'Failed to remove admin.');
+                    }
+                  }}
+                />
+              )}
+              {isSuperadmin && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-danger"
+                  disabled
+                  title="Superadmin cannot be removed"
+                >
+                  Remove
+                </button>
+              )}
             </li>
           );
         })}

@@ -23,8 +23,14 @@ export async function POST() {
   if (forbidden) return forbidden;
 
   try {
-    // 1. Clear all match results
-    await query('UPDATE match SET home_goals = NULL, away_goals = NULL, status = $1', ['SCHEDULED']);
+    // 1. Clear all match results and cards
+    await query(
+      `UPDATE match
+       SET home_goals = NULL, away_goals = NULL, status = $1,
+           home_yc = 0, home_yc2 = 0, home_rc_direct = 0, home_yc_rc = 0,
+           away_yc = 0, away_yc2 = 0, away_rc_direct = 0, away_yc_rc = 0`,
+      ['SCHEDULED'],
+    );
 
     // 2. Clear AI interpretation cache
     await query('DELETE FROM ai_summary_cache');

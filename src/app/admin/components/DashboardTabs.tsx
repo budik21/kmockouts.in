@@ -122,7 +122,7 @@ export default function DashboardTabs({
               Select a match data scenario to explore the tournament at different stages. Switching scenarios
               updates all results, recalculates probabilities, and regenerates AI commentary.
             </p>
-            <ScenarioPicker scenarios={scenarios} active={activeScenario} />
+            <ScenarioPicker scenarios={scenarios} active={activeScenario} requireConfirm />
           </div>
         )}
 
