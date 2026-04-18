@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import type { LeaderboardRow } from './page';
 
@@ -22,18 +22,12 @@ function defaultCompare(a: LeaderboardRow, b: LeaderboardRow): number {
   return a.name.localeCompare(b.name);
 }
 
-function MedalIcon({ rank }: { rank: number }) {
-  if (rank === 1) return <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🥇</span>;
-  if (rank === 2) return <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🥈</span>;
-  if (rank === 3) return <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>🥉</span>;
-  return null;
-}
-
 export default function LeaderboardTable({ rows, currentUserToken }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(0);
   const highlightRef = useRef<HTMLTableRowElement>(null);
+  const didAutoJump = useRef(false);
 
   const ranked = useMemo(() => {
     const sorted = [...rows].sort(defaultCompare);
@@ -77,16 +71,21 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
     return <span className="leaderboard-sort-arrow">{sortDir === 'desc' ? '▼' : '▲'}</span>;
   };
 
-  // Jump to the page containing the current user and scroll to their row
-  const jumpToMe = () => {
+  const jumpToMe = useCallback(() => {
     if (!currentUserRanked) return;
     const idx = sorted.findIndex((r) => r.shareToken === currentUserToken);
     if (idx === -1) return;
-    const targetPage = Math.floor(idx / PAGE_SIZE);
-    setPage(targetPage);
-  };
+    setPage(Math.floor(idx / PAGE_SIZE));
+  }, [currentUserRanked, sorted, currentUserToken]);
 
-  // After page change scroll the highlighted row into view
+  // Auto-jump to user's page on first render, then scroll the row into view after page settles
+  useEffect(() => {
+    if (!didAutoJump.current && currentUserRanked) {
+      didAutoJump.current = true;
+      jumpToMe();
+    }
+  }, [currentUserRanked, jumpToMe]);
+
   useEffect(() => {
     if (highlightRef.current) {
       highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -103,39 +102,14 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
 
   return (
     <div>
-      {/* "Your rank" widget — only shown when current user is in the leaderboard */}
-      {currentUserRanked && (
-        <div className="leaderboard-me-widget">
-          <div className="leaderboard-me-medal">
-            <MedalIcon rank={currentUserRanked.rank} />
-          </div>
-          <div className="leaderboard-me-info">
-            <span className="leaderboard-me-rank">#{currentUserRanked.rank}</span>
-            <span className="leaderboard-me-name">{currentUserRanked.name}</span>
-            <span className="leaderboard-me-pts">{currentUserRanked.totalPoints} pts</span>
-          </div>
-          <div className="leaderboard-me-actions">
-            <button className="leaderboard-me-jump-btn" onClick={jumpToMe}>
-              Jump to my row
-            </button>
-            <Link
-              href={`/predictions/share/${currentUserRanked.shareToken}`}
-              className="leaderboard-me-profile-link"
-            >
-              My predictions →
-            </Link>
-          </div>
-        </div>
-      )}
-
       <div className="table-responsive">
         <table className="table table-sm leaderboard-table">
           <colgroup>
             <col className="leaderboard-col-rank" />
             <col className="leaderboard-col-name" />
-            <col className="leaderboard-col-stat" />
-            <col className="leaderboard-col-stat" />
-            <col className="leaderboard-col-stat" />
+            <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
+            <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
+            <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
             <col className="leaderboard-col-stat" />
             <col className="leaderboard-col-pts" />
             <col className="leaderboard-col-link" />
@@ -151,13 +125,13 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
               <th className="text-center leaderboard-sortable" onClick={() => handleSort('totalTips')}>
                 Tips Total {sortArrow('totalTips')}
               </th>
-              <th className="text-center leaderboard-sortable" onClick={() => handleSort('exact')}>
+              <th className="text-center leaderboard-sortable leaderboard-col-hide-mobile" onClick={() => handleSort('exact')}>
                 Exact Score {sortArrow('exact')}
               </th>
-              <th className="text-center leaderboard-sortable" onClick={() => handleSort('outcome')}>
+              <th className="text-center leaderboard-sortable leaderboard-col-hide-mobile" onClick={() => handleSort('outcome')}>
                 Winner {sortArrow('outcome')}
               </th>
-              <th className="text-center leaderboard-sortable" onClick={() => handleSort('wrong')}>
+              <th className="text-center leaderboard-sortable leaderboard-col-hide-mobile" onClick={() => handleSort('wrong')}>
                 Bad Tips {sortArrow('wrong')}
               </th>
               <th className="text-center leaderboard-sortable leaderboard-col-pts" onClick={() => handleSort('totalPoints')}>
@@ -178,9 +152,9 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
                   <td className="fw-bold">{r.rank}</td>
                   <td>{r.name}</td>
                   <td className="text-center">{r.totalTips}</td>
-                  <td className="text-center leaderboard-exact">{r.exact}</td>
-                  <td className="text-center leaderboard-outcome">{r.outcome}</td>
-                  <td className="text-center leaderboard-wrong">{r.wrong}</td>
+                  <td className="text-center leaderboard-exact leaderboard-col-hide-mobile">{r.exact}</td>
+                  <td className="text-center leaderboard-outcome leaderboard-col-hide-mobile">{r.outcome}</td>
+                  <td className="text-center leaderboard-wrong leaderboard-col-hide-mobile">{r.wrong}</td>
                   <td className="text-center leaderboard-col-pts fw-bold">{r.totalPoints}</td>
                   <td className="text-end">
                     <Link

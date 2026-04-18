@@ -5116,16 +5116,27 @@ a.ranking-team-name:hover {
 .leaderboard-outcome { color: #4ade80; font-weight: 600; }
 .leaderboard-wrong { color: var(--prob-out); font-weight: 600; }
 
+/* Hide Exact Score, Winner, Bad Tips columns on mobile — keep only Tips Total + Points */
+@media (max-width: 575px) {
+  .leaderboard-col-hide-mobile { display: none; }
+}
+
 /* Column widths — rank narrow, name flexible, stat cols equal, pts slightly wider, link tiny */
 .leaderboard-col-rank  { width: 3rem; }
 .leaderboard-col-name  { /* flex */ }
 .leaderboard-col-stat  { width: 9rem; }
-.leaderboard-col-pts   {
-  width: 9rem;
-  background: rgba(var(--wc-accent-rgb, 212, 175, 55), 0.12);
-  color: var(--wc-accent);
-}
+.leaderboard-col-pts   { width: 9rem; }
 .leaderboard-col-link  { width: 2.5rem; }
+
+/* Points column gold highlight — needs .leaderboard-table specificity to beat Bootstrap */
+.leaderboard-table th.leaderboard-col-pts,
+.leaderboard-table td.leaderboard-col-pts {
+  background: rgba(var(--wc-accent-rgb, 212, 175, 55), 0.12) !important;
+  color: var(--wc-accent) !important;
+}
+.leaderboard-table tr:hover td.leaderboard-col-pts {
+  background: rgba(var(--wc-accent-rgb, 212, 175, 55), 0.2) !important;
+}
 
 /* Keep old selector working for any remaining references */
 .leaderboard-points-col {
@@ -5163,72 +5174,64 @@ a.ranking-team-name:hover {
   }
 }
 
-/* "Your rank" widget */
-.leaderboard-me-widget {
+/* Heading row: h1 left, inline rank widget right (desktop only) */
+.leaderboard-heading-row {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 1.1rem;
-  margin-bottom: 1rem;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+/* Inline rank widget — sits next to the h1 on desktop */
+.leaderboard-me-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
   background: rgba(37, 99, 235, 0.07);
-  border: 1.5px solid rgba(37, 99, 235, 0.4);
-  border-radius: 0.5rem;
-  flex-wrap: wrap;
+  border: 1.5px solid rgba(37, 99, 235, 0.35);
+  border-radius: 2rem;
+  flex-shrink: 0;
 }
-.leaderboard-me-medal {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-}
-.leaderboard-me-info {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-}
-.leaderboard-me-rank {
+.leaderboard-me-inline-medal {
   font-size: 1.25rem;
+  line-height: 1;
+}
+.leaderboard-me-inline-label {
+  font-size: 0.85rem;
+  color: var(--wc-text-muted);
+}
+.leaderboard-me-inline-rank {
+  font-size: 1.05rem;
   font-weight: 700;
   color: #60a5fa;
 }
-.leaderboard-me-name {
+.leaderboard-me-inline-pts {
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--wc-text);
-}
-.leaderboard-me-pts {
-  font-size: 0.9rem;
   color: var(--wc-accent);
-  font-weight: 600;
 }
-.leaderboard-me-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-.leaderboard-me-jump-btn {
-  padding: 0.3rem 0.8rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  background: rgba(37, 99, 235, 0.18);
-  color: #93c5fd;
-  border: 1px solid rgba(37, 99, 235, 0.45);
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.leaderboard-me-jump-btn:hover {
-  background: rgba(37, 99, 235, 0.3);
-}
-.leaderboard-me-profile-link {
-  font-size: 0.85rem;
+.leaderboard-me-inline-link {
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--wc-accent);
   text-decoration: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  padding-left: 0.5rem;
+  margin-left: 0.1rem;
 }
-.leaderboard-me-profile-link:hover {
+.leaderboard-me-inline-link:hover {
   text-decoration: underline;
+}
+
+/* On mobile collapse the widget below the heading */
+@media (max-width: 575px) {
+  .leaderboard-heading-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Subheader: description + last scored match on the left, refresh button on the right */

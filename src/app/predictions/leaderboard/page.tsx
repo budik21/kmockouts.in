@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { cachedQuery } from '@/lib/cached-db';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
 import type { Metadata } from 'next';
@@ -102,6 +103,21 @@ export default async function LeaderboardPage() {
     };
   });
 
+  // Compute current user's rank server-side so the heading widget needs no client JS
+  const currentUserEntry: { rank: number; totalPoints: number; shareToken: string } | null = (() => {
+    if (!currentUserToken) return null;
+    const sorted = [...data].sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      if (b.exact !== a.exact) return b.exact - a.exact;
+      if (b.outcome !== a.outcome) return b.outcome - a.outcome;
+      if (a.totalTips !== b.totalTips) return a.totalTips - b.totalTips;
+      return a.name.localeCompare(b.name);
+    });
+    const idx = sorted.findIndex((r) => r.shareToken === currentUserToken);
+    if (idx === -1) return null;
+    return { rank: idx + 1, totalPoints: sorted[idx].totalPoints, shareToken: currentUserToken };
+  })();
+
   const lastScoredRows = await cachedQuery<LastScoredDbRow>(
     `
     SELECT
@@ -137,7 +153,25 @@ export default async function LeaderboardPage() {
 
   return (
     <main className="container py-4">
-      <h1 className="mb-1">Predictions Leaderboard</h1>
+      <div className="leaderboard-heading-row">
+        <h1 className="mb-0">Predictions Leaderboard</h1>
+        {currentUserEntry && (
+          <div className="leaderboard-me-inline">
+            {currentUserEntry.rank === 1 && <span className="leaderboard-me-inline-medal">🥇</span>}
+            {currentUserEntry.rank === 2 && <span className="leaderboard-me-inline-medal">🥈</span>}
+            {currentUserEntry.rank === 3 && <span className="leaderboard-me-inline-medal">🥉</span>}
+            <span className="leaderboard-me-inline-label">You are on</span>
+            <span className="leaderboard-me-inline-rank">#{currentUserEntry.rank}</span>
+            <span className="leaderboard-me-inline-pts">{currentUserEntry.totalPoints} pts</span>
+            <Link
+              href={`/predictions/share/${currentUserEntry.shareToken}`}
+              className="leaderboard-me-inline-link"
+            >
+              My predictions →
+            </Link>
+          </div>
+        )}
+      </div>
 
       <LeaderboardSubheader
         description="Ranking of all public predictors for the FIFA World Cup 2026."
