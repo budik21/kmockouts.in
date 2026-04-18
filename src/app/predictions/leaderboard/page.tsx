@@ -3,6 +3,7 @@ import { LEADERBOARD_TAG } from '@/lib/cache-tags';
 import type { Metadata } from 'next';
 import AdBanner from '@/app/components/AdBanner';
 import LeaderboardTable from './LeaderboardTable';
+import LeaderboardRecalcBanner from './LeaderboardRecalcBanner';
 import { SITE_URL } from '@/lib/seo';
 
 // Tag-based on-demand revalidation via `revalidateTag(LEADERBOARD_TAG)`,
@@ -83,6 +84,8 @@ export default async function LeaderboardPage() {
       <p className="text-muted mb-4">
         Ranking of all public predictors for the FIFA World Cup 2026.
       </p>
+
+      <LeaderboardRecalcBanner />
 
       <LeaderboardTable rows={data} />
 

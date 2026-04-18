@@ -112,6 +112,48 @@ export async function calculateAllProbabilities(): Promise<{ results: Map<GroupI
 }
 
 /**
+ * Calculate scenario summaries only for a single changed group, but still run the
+ * cross-group best-third Monte Carlo using fresh data from all 12 groups. Used after
+ * a single match result edit where only one group's within-group probabilities can
+ * change; best-third `probThirdQualified` may shift across all groups.
+ */
+export async function calculateAffectedProbabilities(
+  changedGroupId: GroupId,
+): Promise<{ changedGroupSummaries: TeamScenarioSummary[]; bestThird: BestThirdResult }> {
+  const allGroupData: GroupData[] = [];
+  for (const gid of ALL_GROUPS) {
+    const teams = await getGroupTeams(gid);
+    const { played, remaining } = await getGroupMatches(gid);
+    allGroupData.push({
+      groupId: gid,
+      teams,
+      playedMatches: played,
+      remainingMatches: remaining,
+    });
+  }
+
+  const changed = allGroupData.find((g) => g.groupId === changedGroupId);
+  if (!changed) {
+    throw new Error(`Unknown group ${changedGroupId}`);
+  }
+
+  const summaries = enumerateGroupScenarios(
+    changed.teams,
+    changed.playedMatches,
+    changed.remainingMatches,
+  );
+
+  const bestThird = calculateBestThirdProbabilities(allGroupData);
+
+  for (const s of summaries) {
+    const teamProb = bestThird.teamProbabilities.get(s.teamId) ?? 0;
+    (s as TeamScenarioSummary & { probThirdQualified?: number }).probThirdQualified = teamProb;
+  }
+
+  return { changedGroupSummaries: summaries, bestThird };
+}
+
+/**
  * Save per-group best-third qualification probabilities.
  */
 export async function cacheBestThirdProbabilities(

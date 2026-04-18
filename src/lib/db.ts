@@ -134,6 +134,16 @@ export async function initializeSchema(): Promise<void> {
       started_at TEXT
     );
 
+    -- Global tip-scoring recalculation status (singleton row, id = 1)
+    CREATE TABLE IF NOT EXISTS tip_recalc_status (
+      id                 INTEGER PRIMARY KEY DEFAULT 1,
+      is_recalculating   BOOLEAN NOT NULL DEFAULT false,
+      started_at         TIMESTAMPTZ,
+      last_completed_at  TIMESTAMPTZ,
+      CHECK (id = 1)
+    );
+    INSERT INTO tip_recalc_status (id) VALUES (1) ON CONFLICT DO NOTHING;
+
     -- User feedback
     CREATE TABLE IF NOT EXISTS feedback (
       id          SERIAL PRIMARY KEY,

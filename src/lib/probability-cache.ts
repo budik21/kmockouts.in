@@ -4,10 +4,10 @@
  * don't need to run expensive scenario enumeration at render time.
  */
 
-import { query } from './db';
+import { query, getPool } from './db';
 import { GroupId } from './types';
 import { ALL_GROUPS } from './constants';
-import { calculateGroupProbabilities, calculateAllProbabilities, cacheProbabilities, cacheBestThirdProbabilities, cacheQualificationThreshold } from '../engine/probability';
+import { calculateGroupProbabilities, calculateAllProbabilities, calculateAffectedProbabilities, cacheProbabilities, cacheBestThirdProbabilities, cacheQualificationThreshold } from '../engine/probability';
 
 export interface CachedTeamProb {
   teamId: number;
@@ -131,6 +131,58 @@ export async function recalculateAllProbabilities(): Promise<void> {
 export async function recalculateGroupProbabilities(groupId: GroupId): Promise<void> {
   const summaries = await calculateGroupProbabilities(groupId);
   await cacheProbabilities(groupId, summaries);
+}
+
+/**
+ * Update only the prob_third_qual column for teams in groups other than `changedGroupId`,
+ * using freshly-computed per-team best-third probabilities. Used as a cheap follow-up
+ * after a single-group scenario recalc — the other groups' within-group probabilities
+ * don't change, but cross-group best-third qualification probability does.
+ */
+async function updateProbThirdQualForUnchangedGroups(
+  changedGroupId: GroupId,
+  teamProbabilities: Map<number, number>,
+): Promise<void> {
+  if (teamProbabilities.size === 0) return;
+
+  const pool = getPool();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const [teamId, prob] of teamProbabilities) {
+      await client.query(
+        `UPDATE probability_cache
+         SET prob_third_qual = $1, calculated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+         WHERE team_id = $2 AND group_id <> $3`,
+        [prob, teamId, changedGroupId],
+      );
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Recalculate probabilities after a single match result change:
+ *  - Re-enumerate scenarios for the affected group only (writes full cache for it).
+ *  - Run cross-group best-third Monte Carlo with fresh data from all groups.
+ *  - Patch prob_third_qual for the other 11 groups (their within-group probs are unchanged).
+ *  - Refresh best-third cache and qualification threshold.
+ * Much cheaper than recalculateAllProbabilities when only one group is affected.
+ */
+export async function recalculateAffectedProbabilities(changedGroupId: GroupId): Promise<void> {
+  const { changedGroupSummaries, bestThird } = await calculateAffectedProbabilities(changedGroupId);
+
+  await cacheProbabilities(changedGroupId, changedGroupSummaries);
+  await updateProbThirdQualForUnchangedGroups(changedGroupId, bestThird.teamProbabilities);
+  await cacheBestThirdProbabilities(bestThird.groupProbabilities);
+  if (bestThird.qualificationThreshold) {
+    await cacheQualificationThreshold(bestThird.qualificationThreshold);
+  }
 }
 
 /**

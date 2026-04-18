@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { query, queryOne } from '@/lib/db';
-import { recalculateAllProbabilities, pregenerateBestThirdSummaries } from '@/lib/probability-cache';
+import { recalculateAffectedProbabilities, pregenerateBestThirdSummaries } from '@/lib/probability-cache';
+import type { GroupId } from '@/lib/types';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
 
@@ -96,41 +97,61 @@ export async function POST(request: NextRequest) {
 
     const origin = new URL(request.url).origin;
 
-    // Fire recalculation asynchronously (all groups + best-third + AI summaries + tip points)
-    recalculateAllProbabilities()
-      .then(async () => {
-        console.log(`[admin] Recalculated all probabilities (triggered by group ${groupId})`);
-        // Recalculate tip points for all users
-        try {
-          const tipResult = await recalculateAllTipPoints();
-          console.log(`[admin] Recalculated tip points: ${tipResult} tips updated`);
-        } catch (err) {
-          console.error('[admin] Tip recalculation failed:', err);
-        }
-        // Pre-generate AI summaries so users don't wait on first page load
+    // High-priority chain: probabilities (only affected group + best-third) then AI summaries.
+    // AI must run after probabilities because it reads the best-third cache they just wrote.
+    const highPriority = (async () => {
+      try {
+        await recalculateAffectedProbabilities(groupId as GroupId);
+        console.log(`[admin] Recalculated probabilities for group ${groupId} + best-third`);
         try {
           await pregenerateBestThirdSummaries();
         } catch (err) {
           console.error('[admin] AI summary pregeneration failed:', err);
         }
-        // Purge cache again via a fresh HTTP request so the updated probability data
-        // (written to DB by recalculateAllProbabilities above) is also reflected.
-        // A direct revalidateTag() call here would be a no-op because the original
-        // request context has already closed.
-        try {
-          await fetch(`${origin}/api/internal/revalidate`, {
-            method: 'POST',
-            headers: { 'x-internal-secret': process.env.AUTH_SECRET ?? '' },
-          });
-        } catch (err) {
-          console.error('[admin] Post-recalculation cache purge failed:', err);
-        }
-        await query('UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1', [groupId]);
-      })
-      .catch(async (err) => {
-        console.error(`[admin] Recalculation failed for group ${groupId}:`, err);
-        await query('UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1', [groupId]).catch(() => {});
-      });
+      } catch (err) {
+        console.error(`[admin] Probability recalculation failed for group ${groupId}:`, err);
+      } finally {
+        await query(
+          'UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1',
+          [groupId],
+        ).catch(() => {});
+      }
+    })();
+
+    // Independent chain: tip scoring. Runs in parallel with probabilities + AI so the
+    // "New data approaching" banner can clear as soon as probs + AI finish, while the
+    // leaderboard shows its own indicator until tip scoring completes.
+    const tipScoring = (async () => {
+      await query(
+        `UPDATE tip_recalc_status SET is_recalculating = true, started_at = NOW() WHERE id = 1`,
+      ).catch(() => {});
+      try {
+        const n = await recalculateAllTipPoints();
+        console.log(`[admin] Recalculated tip points: ${n} tips updated`);
+      } catch (err) {
+        console.error('[admin] Tip recalculation failed:', err);
+      } finally {
+        await query(
+          `UPDATE tip_recalc_status
+           SET is_recalculating = false, last_completed_at = NOW()
+           WHERE id = 1`,
+        ).catch(() => {});
+      }
+    })();
+
+    // After both chains settle, purge caches via a fresh request context so the
+    // updated probability + leaderboard data is reflected. revalidateTag() called
+    // directly here would be a no-op because the original request context is closed.
+    Promise.allSettled([highPriority, tipScoring]).then(async () => {
+      try {
+        await fetch(`${origin}/api/internal/revalidate`, {
+          method: 'POST',
+          headers: { 'x-internal-secret': process.env.AUTH_SECRET ?? '' },
+        });
+      } catch (err) {
+        console.error('[admin] Post-recalculation cache purge failed:', err);
+      }
+    });
 
     return NextResponse.json({ success: true, recalculating: groupId });
   } catch (error) {
