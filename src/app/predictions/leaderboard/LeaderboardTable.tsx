@@ -78,13 +78,20 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
     setPage(Math.floor(idx / PAGE_SIZE));
   }, [currentUserRanked, sorted, currentUserToken]);
 
-  // Auto-jump to user's page on first render, then scroll the row into view after page settles
+  // Auto-jump to user's page on first render
   useEffect(() => {
     if (!didAutoJump.current && currentUserRanked) {
       didAutoJump.current = true;
       jumpToMe();
     }
   }, [currentUserRanked, jumpToMe]);
+
+  // Listen for the "Show my position" button in the heading widget
+  useEffect(() => {
+    const handler = () => jumpToMe();
+    window.addEventListener('leaderboard-show-me', handler);
+    return () => window.removeEventListener('leaderboard-show-me', handler);
+  }, [jumpToMe]);
 
   useEffect(() => {
     if (highlightRef.current) {

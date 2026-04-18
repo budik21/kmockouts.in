@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { cachedQuery } from '@/lib/cached-db';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
 import type { Metadata } from 'next';
@@ -6,6 +5,7 @@ import AdBanner from '@/app/components/AdBanner';
 import LeaderboardTable from './LeaderboardTable';
 import LeaderboardRecalcBanner from './LeaderboardRecalcBanner';
 import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubheader';
+import LeaderboardMeWidget from './LeaderboardMeWidget';
 import { SITE_URL } from '@/lib/seo';
 import { auth } from '@/lib/auth';
 
@@ -153,30 +153,22 @@ export default async function LeaderboardPage() {
 
   return (
     <main className="container py-4">
-      <div className="leaderboard-heading-row">
-        <h1 className="mb-0">Predictions Leaderboard</h1>
+      <div className="leaderboard-header">
+        <div className="leaderboard-header-left">
+          <h1 className="mb-1">Predictions Leaderboard</h1>
+          <LeaderboardSubheader
+            description="Ranking of all public predictors for the FIFA World Cup 2026."
+            lastScored={lastScored}
+          />
+        </div>
         {currentUserEntry && (
-          <div className="leaderboard-me-inline">
-            {currentUserEntry.rank === 1 && <span className="leaderboard-me-inline-medal">🥇</span>}
-            {currentUserEntry.rank === 2 && <span className="leaderboard-me-inline-medal">🥈</span>}
-            {currentUserEntry.rank === 3 && <span className="leaderboard-me-inline-medal">🥉</span>}
-            <span className="leaderboard-me-inline-label">You are on</span>
-            <span className="leaderboard-me-inline-rank">#{currentUserEntry.rank}</span>
-            <span className="leaderboard-me-inline-pts">{currentUserEntry.totalPoints} pts</span>
-            <Link
-              href={`/predictions/share/${currentUserEntry.shareToken}`}
-              className="leaderboard-me-inline-link"
-            >
-              My predictions →
-            </Link>
-          </div>
+          <LeaderboardMeWidget
+            rank={currentUserEntry.rank}
+            totalPoints={currentUserEntry.totalPoints}
+            shareToken={currentUserEntry.shareToken}
+          />
         )}
       </div>
-
-      <LeaderboardSubheader
-        description="Ranking of all public predictors for the FIFA World Cup 2026."
-        lastScored={lastScored}
-      />
 
       <LeaderboardRecalcBanner />
 
