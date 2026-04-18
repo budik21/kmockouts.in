@@ -90,22 +90,22 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
       <div className="tipovacka-score-cards tipovacka-score-cards-wide">
         <div className="tipovacka-score-card tipovacka-score-matches">
           <div className="tipovacka-score-card-value">{totalMatches}</div>
-          <div className="tipovacka-score-card-label">Matches total</div>
+          <div className="tipovacka-score-card-label">Tips Total</div>
         </div>
         <div className="tipovacka-score-card tipovacka-score-exact">
           <div className="tipovacka-score-card-value">{stats.exact}</div>
           <div className="tipovacka-score-card-pct">{pct(stats.exact)}%</div>
-          <div className="tipovacka-score-card-label">Exact Score</div>
+          <div className="tipovacka-score-card-label">Exact Score Match</div>
         </div>
         <div className="tipovacka-score-card tipovacka-score-outcome">
           <div className="tipovacka-score-card-value">{stats.outcome}</div>
           <div className="tipovacka-score-card-pct">{pct(stats.outcome)}%</div>
-          <div className="tipovacka-score-card-label">Result Match</div>
+          <div className="tipovacka-score-card-label">Winner Match</div>
         </div>
         <div className="tipovacka-score-card tipovacka-score-wrong">
           <div className="tipovacka-score-card-value">{stats.wrong}</div>
           <div className="tipovacka-score-card-pct">{pct(stats.wrong)}%</div>
-          <div className="tipovacka-score-card-label">Wrong</div>
+          <div className="tipovacka-score-card-label">Bad Tips</div>
         </div>
         <div className="tipovacka-score-card tipovacka-score-points">
           <div className="tipovacka-score-card-value">{stats.totalPoints}</div>
@@ -153,8 +153,13 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
             {copied ? (
               <span className="tipovacka-share-copied">URL Copied</span>
             ) : (
-              <button className="tipovacka-cta-btn w-100" onClick={handleCopy}>
-                Copy share link
+              <button className="tipovacka-cta-btn tipovacka-cta-btn-icon w-100" onClick={handleCopy}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 3v13" />
+                  <path d="M7 8l5-5 5 5" />
+                  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+                </svg>
+                <span>Share link</span>
               </button>
             )}
           </div>

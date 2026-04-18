@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import AdBanner from '@/app/components/AdBanner';
 import LeaderboardTable from './LeaderboardTable';
 import LeaderboardRecalcBanner from './LeaderboardRecalcBanner';
+import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubheader';
 import { SITE_URL } from '@/lib/seo';
 
 // Tag-based on-demand revalidation via `revalidateTag(LEADERBOARD_TAG)`,
@@ -43,6 +44,18 @@ interface DbRow {
   pending: string;
 }
 
+interface LastScoredDbRow {
+  home_name: string;
+  home_short: string;
+  home_code: string;
+  away_name: string;
+  away_short: string;
+  away_code: string;
+  home_goals: number;
+  away_goals: number;
+  kick_off: string;
+}
+
 export default async function LeaderboardPage() {
   const rows = await cachedQuery<DbRow>(
     `
@@ -78,12 +91,47 @@ export default async function LeaderboardPage() {
     };
   });
 
+  const lastScoredRows = await cachedQuery<LastScoredDbRow>(
+    `
+    SELECT
+      ht.name AS home_name, ht.short_name AS home_short, ht.country_code AS home_code,
+      at.name AS away_name, at.short_name AS away_short, at.country_code AS away_code,
+      m.home_goals, m.away_goals, m.kick_off
+    FROM match m
+    JOIN team ht ON ht.id = m.home_team_id
+    JOIN team at ON at.id = m.away_team_id
+    WHERE m.status = 'FINISHED'
+      AND m.home_goals IS NOT NULL
+      AND m.away_goals IS NOT NULL
+    ORDER BY m.kick_off DESC
+    LIMIT 1
+    `,
+    [],
+    [LEADERBOARD_TAG],
+  );
+
+  const lastScored: LastScoredMatch | null = lastScoredRows[0]
+    ? {
+        homeName: lastScoredRows[0].home_name,
+        homeShort: lastScoredRows[0].home_short,
+        homeCode: lastScoredRows[0].home_code,
+        awayName: lastScoredRows[0].away_name,
+        awayShort: lastScoredRows[0].away_short,
+        awayCode: lastScoredRows[0].away_code,
+        homeGoals: lastScoredRows[0].home_goals,
+        awayGoals: lastScoredRows[0].away_goals,
+        kickOff: lastScoredRows[0].kick_off,
+      }
+    : null;
+
   return (
     <main className="container py-4">
       <h1 className="mb-1">Predictions Leaderboard</h1>
-      <p className="text-muted mb-4">
-        Ranking of all public predictors for the FIFA World Cup 2026.
-      </p>
+
+      <LeaderboardSubheader
+        description="Ranking of all public predictors for the FIFA World Cup 2026."
+        lastScored={lastScored}
+      />
 
       <LeaderboardRecalcBanner />
 

@@ -126,22 +126,22 @@ export default async function PublicSharePage({ params }: Props) {
         <div className="tipovacka-score-cards tipovacka-score-cards-wide">
           <div className="tipovacka-score-card tipovacka-score-matches">
             <div className="tipovacka-score-card-value">{totalMatches}</div>
-            <div className="tipovacka-score-card-label">Matches total</div>
+            <div className="tipovacka-score-card-label">Tips Total</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-exact">
             <div className="tipovacka-score-card-value">{exact}</div>
             <div className="tipovacka-score-card-pct">{pct(exact)}%</div>
-            <div className="tipovacka-score-card-label">Exact Score</div>
+            <div className="tipovacka-score-card-label">Exact Score Match</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-outcome">
             <div className="tipovacka-score-card-value">{outcome}</div>
             <div className="tipovacka-score-card-pct">{pct(outcome)}%</div>
-            <div className="tipovacka-score-card-label">Result Match</div>
+            <div className="tipovacka-score-card-label">Winner Match</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-wrong">
             <div className="tipovacka-score-card-value">{wrong}</div>
             <div className="tipovacka-score-card-pct">{pct(wrong)}%</div>
-            <div className="tipovacka-score-card-label">Wrong</div>
+            <div className="tipovacka-score-card-label">Bad Tips</div>
           </div>
           <div className="tipovacka-score-card tipovacka-score-points">
             <div className="tipovacka-score-card-value">{totalPoints}</div>

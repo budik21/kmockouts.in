@@ -91,16 +91,16 @@ export default function LeaderboardTable({ rows }: Props) {
                 Name {sortArrow('name')}
               </th>
               <th className="text-center leaderboard-sortable" onClick={() => handleSort('totalTips')}>
-                Tips {sortArrow('totalTips')}
+                Tips Total {sortArrow('totalTips')}
               </th>
               <th className="text-center leaderboard-sortable" onClick={() => handleSort('exact')}>
-                +4 {sortArrow('exact')}
+                Exact Score Match {sortArrow('exact')}
               </th>
               <th className="text-center leaderboard-sortable" onClick={() => handleSort('outcome')}>
-                +1 {sortArrow('outcome')}
+                Winner Match {sortArrow('outcome')}
               </th>
               <th className="text-center leaderboard-sortable" onClick={() => handleSort('wrong')}>
-                Wrong {sortArrow('wrong')}
+                Bad Tips {sortArrow('wrong')}
               </th>
               <th className="text-center leaderboard-sortable leaderboard-points-col" onClick={() => handleSort('totalPoints')}>
                 Points {sortArrow('totalPoints')}

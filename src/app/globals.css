@@ -4900,6 +4900,12 @@ a.ranking-team-name:hover {
   border: 1px solid var(--wc-border);
   border-radius: 0.5rem;
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tipovacka-progress-section > .tipovacka-cta-btn {
+  margin-top: auto;
 }
 
 .tipovacka-share-section {
@@ -4907,6 +4913,12 @@ a.ranking-team-name:hover {
   border: 1px solid var(--wc-border);
   border-radius: 0.5rem;
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tipovacka-share-section > .tipovacka-share-copy {
+  margin-top: auto;
 }
 
 /* Dashboard top row — score cards + progress + share on one line (desktop) */
@@ -4941,20 +4953,32 @@ a.ranking-team-name:hover {
 
 /* CTA button (dashboard → predictions) */
 .tipovacka-cta-btn {
-  background: var(--wc-accent);
-  color: #2a1a00;
-  border: none;
+  background: transparent;
+  color: var(--wc-accent);
+  border: 1px solid var(--wc-accent);
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s;
 }
 
 .tipovacka-cta-btn:hover {
-  filter: brightness(1.1);
+  background: var(--wc-accent);
+  color: #2a1a00;
+}
+
+.tipovacka-cta-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.tipovacka-cta-btn-icon svg {
+  flex-shrink: 0;
 }
 
 /* Sharing-revoked page */
@@ -5093,14 +5117,118 @@ a.ranking-team-name:hover {
 .leaderboard-wrong { color: var(--prob-out); font-weight: 600; }
 
 .leaderboard-points-col {
-  background: rgba(var(--wc-accent-rgb, 212, 175, 55), 0.08);
+  background: rgba(var(--wc-accent-rgb, 212, 175, 55), 0.12);
   color: var(--wc-accent);
-  border-left: 2px solid var(--wc-accent);
-  border-right: 2px solid var(--wc-accent);
 }
 
 .leaderboard-table tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
+}
+
+/* Subheader: description + last scored match on the left, refresh button on the right */
+.leaderboard-subheader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.leaderboard-subheader-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.leaderboard-subheader-desc {
+  color: var(--wc-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.leaderboard-last-scored {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.leaderboard-last-scored-label {
+  color: var(--wc-text-muted);
+  font-weight: 500;
+}
+
+.leaderboard-last-scored-match {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  color: var(--wc-text);
+  font-weight: 500;
+}
+
+.leaderboard-last-scored-score {
+  font-weight: 700;
+  padding: 0.05rem 0.4rem;
+  background: rgba(var(--wc-accent-rgb, 212, 175, 55), 0.12);
+  color: var(--wc-accent);
+  border-radius: 0.25rem;
+}
+
+.leaderboard-last-scored-date {
+  color: var(--wc-text-muted);
+  font-weight: 400;
+}
+
+.leaderboard-last-scored-team-short { display: none; }
+.leaderboard-last-scored-team-full { display: inline; }
+
+.leaderboard-refresh-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  color: var(--wc-accent);
+  border: 1px solid var(--wc-accent);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.leaderboard-refresh-btn:hover:not(:disabled) {
+  background: var(--wc-accent);
+  color: #2a1a00;
+}
+
+.leaderboard-refresh-btn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.leaderboard-refresh-btn svg.spinning {
+  animation: leaderboard-refresh-spin 0.9s linear infinite;
+}
+
+@keyframes leaderboard-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Mobile: stack vertically, use short team names, full-width refresh button */
+@media (max-width: 575.98px) {
+  .leaderboard-subheader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .leaderboard-refresh-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .leaderboard-last-scored-team-full { display: none; }
+  .leaderboard-last-scored-team-short { display: inline; }
 }
 
 .leaderboard-profile-link {
