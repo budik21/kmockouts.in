@@ -40,12 +40,14 @@ function parseGroupSlug(slug: string): GroupId | null {
   return ALL_GROUPS.includes(groupId) ? groupId : null;
 }
 
-// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
+// Opt out of build-time static prerendering. Without this, Next.js renders
+// these pages during `next build` using whatever match/standings data exists
+// then (often empty) and serves that stale HTML after deploy until a
+// `revalidateTag(WC_TAG)` fires. The underlying queries still use
+// tag-based `unstable_cache`, so per-request DB load is unchanged.
+export const dynamic = 'force-dynamic';
 
-// Pre-build all 12 group pages so ISR caching kicks in immediately.
-export function generateStaticParams() {
-  return ALL_GROUPS.map((g) => ({ groupId: `group-${g.toLowerCase()}` }));
-}
+// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
 
 interface PageProps {
   params: Promise<{ groupId: string }>;

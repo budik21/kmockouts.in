@@ -1,4 +1,3 @@
-import { query } from '@/lib/db';
 import { cachedQuery } from '@/lib/cached-db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
@@ -53,16 +52,14 @@ function parseGroupSlug(slug: string): GroupId | null {
   return ALL_GROUPS.includes(groupId) ? groupId : null;
 }
 
-// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
+// Opt out of build-time static prerendering. Without this, Next.js renders
+// all 48 team pages during `next build` using whatever standings/scenario
+// data exists then and serves that stale HTML after deploy until a
+// `revalidateTag(WC_TAG)` fires. The underlying queries still use tag-based
+// `unstable_cache`, so per-request DB load is unchanged.
+export const dynamic = 'force-dynamic';
 
-// Pre-build all 48 team pages so the first request hits a cached version.
-export async function generateStaticParams() {
-  const teams = await query<TeamRow>('SELECT name, group_id FROM team ORDER BY id');
-  return teams.map((t) => ({
-    groupId: `group-${t.group_id.toLowerCase()}`,
-    teamId: slugify(t.name),
-  }));
-}
+// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
 
 interface PageProps {
   params: Promise<{ groupId: string; teamId: string }>;

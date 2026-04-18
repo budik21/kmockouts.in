@@ -5,6 +5,13 @@ import FixturesCalendar from '@/app/components/FixturesCalendar';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 
+// Opt out of build-time static prerendering. Without this, Next.js renders
+// the page during `next build` using whatever match data exists then and
+// serves that stale HTML after deploy until a `revalidateTag(WC_TAG)` fires.
+// The underlying queries still use tag-based `unstable_cache`, so per-request
+// DB load is unchanged.
+export const dynamic = 'force-dynamic';
+
 // Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
 
 export const metadata: Metadata = {

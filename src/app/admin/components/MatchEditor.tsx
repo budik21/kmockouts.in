@@ -207,6 +207,78 @@ function MatchCard({
   );
 }
 
+function RecalculateGroupButton({ groupId }: { groupId: string }) {
+  const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [message, setMessage] = useState<string>('');
+
+  const run = async () => {
+    setStatus('running');
+    setMessage('');
+    try {
+      const res = await fetch('/api/admin/group/recalculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || 'Failed to recalculate');
+      }
+      setStatus('done');
+      setMessage(data.message || `Group ${groupId} recalculated`);
+      setTimeout(() => setStatus('idle'), 5000);
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        padding: '0.75rem 1rem',
+        marginBottom: '1rem',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid var(--wc-border)',
+        borderRadius: '0.375rem',
+        flexWrap: 'wrap',
+      }}
+    >
+      <button
+        className="btn btn-sm btn-warning"
+        onClick={run}
+        disabled={status === 'running'}
+      >
+        {status === 'running' ? (
+          <>
+            <span className="spinner-border spinner-border-sm me-1" />
+            Recalculating group {groupId}…
+          </>
+        ) : (
+          <>🔄 Recalculate Group {groupId}</>
+        )}
+      </button>
+      <span style={{ fontSize: '0.85rem', color: 'var(--wc-text-muted)', flex: 1 }}>
+        Re-runs probabilities, AI interpretations and tip scoring from the saved match
+        results in group {groupId}, and purges caches.
+      </span>
+      {status === 'done' && (
+        <span style={{ color: '#4caf50', fontSize: '0.85rem', fontWeight: 500 }}>
+          ✓ {message}
+        </span>
+      )}
+      {status === 'error' && (
+        <span style={{ color: '#f44336', fontSize: '0.85rem', fontWeight: 500 }}>
+          ✗ {message}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function MatchEditor({
   initialMatches,
   isSuperadmin = false,
@@ -384,6 +456,10 @@ export default function MatchEditor({
           </button>
         ))}
       </div>
+
+      {groupFilter !== 'ALL' && (
+        <RecalculateGroupButton groupId={groupFilter} />
+      )}
       {sortedDates.map((date) => {
         const dayMatches = matchesByDate.get(date)!;
         const dateObj = new Date(date + 'T12:00:00');

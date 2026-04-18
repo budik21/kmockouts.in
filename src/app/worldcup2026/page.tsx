@@ -70,6 +70,13 @@ function rowToMatch(row: MatchRow): Match {
   };
 }
 
+// Opt out of build-time static prerendering. Without this, Next.js renders
+// the page during `next build` using whatever match/standings data exists
+// then (often empty) and serves that stale HTML after deploy until a
+// `revalidateTag(WC_TAG)` fires. The underlying queries still use
+// tag-based `unstable_cache`, so per-request DB load is unchanged.
+export const dynamic = 'force-dynamic';
+
 // Tag-based on-demand revalidation: this page is cached indefinitely
 // and invalidated via `revalidateTag(WC_TAG)` in admin mutation endpoints
 // (src/app/api/admin/match/update, src/app/api/scenarios/apply).
