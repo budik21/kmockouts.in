@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import TeamFlag from '@/app/components/TeamFlag';
+import LeaderboardMeWidget from './LeaderboardMeWidget';
 
 export interface LastScoredMatch {
   homeName: string;
@@ -19,6 +20,7 @@ export interface LastScoredMatch {
 interface Props {
   description: string;
   lastScored: LastScoredMatch | null;
+  currentUserEntry?: { rank: number; totalPoints: number; shareToken: string } | null;
 }
 
 function formatKickOff(iso: string): string {
@@ -29,7 +31,7 @@ function formatKickOff(iso: string): string {
   } catch { return ''; }
 }
 
-export default function LeaderboardSubheader({ description, lastScored }: Props) {
+export default function LeaderboardSubheader({ description, lastScored, currentUserEntry }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [justRefreshed, setJustRefreshed] = useState(false);
@@ -64,12 +66,20 @@ export default function LeaderboardSubheader({ description, lastScored }: Props)
           </div>
         )}
       </div>
-      <button
-        className="leaderboard-refresh-btn"
-        onClick={handleRefresh}
-        disabled={pending}
-        aria-label="Refresh leaderboard"
-      >
+      <div className="leaderboard-subheader-right">
+        {currentUserEntry && (
+          <LeaderboardMeWidget
+            rank={currentUserEntry.rank}
+            totalPoints={currentUserEntry.totalPoints}
+            shareToken={currentUserEntry.shareToken}
+          />
+        )}
+        <button
+          className="leaderboard-refresh-btn"
+          onClick={handleRefresh}
+          disabled={pending}
+          aria-label="Refresh leaderboard"
+        >
         <svg
           width="16"
           height="16"
@@ -86,7 +96,8 @@ export default function LeaderboardSubheader({ description, lastScored }: Props)
           <path d="M21 3v5h-5" />
         </svg>
         <span>{justRefreshed ? 'Refreshed' : pending ? 'Refreshing…' : 'Refresh leaderboard'}</span>
-      </button>
+        </button>
+      </div>
     </div>
   );
 }

@@ -153,22 +153,12 @@ export default async function LeaderboardPage() {
 
   return (
     <main className="container py-4">
-      <div className="leaderboard-header">
-        <div className="leaderboard-header-left">
-          <h1 className="mb-1">Predictions Leaderboard</h1>
-          <LeaderboardSubheader
-            description="Ranking of all public predictors for the FIFA World Cup 2026."
-            lastScored={lastScored}
-          />
-        </div>
-        {currentUserEntry && (
-          <LeaderboardMeWidget
-            rank={currentUserEntry.rank}
-            totalPoints={currentUserEntry.totalPoints}
-            shareToken={currentUserEntry.shareToken}
-          />
-        )}
-      </div>
+      <h1 className="mb-1">Predictions Leaderboard</h1>
+      <LeaderboardSubheader
+        description="Ranking of all public predictors for the FIFA World Cup 2026."
+        lastScored={lastScored}
+        currentUserEntry={currentUserEntry}
+      />
 
       <LeaderboardRecalcBanner />
 
