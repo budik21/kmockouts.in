@@ -58,7 +58,7 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 4000);
   };
 
   // Recent scored tips
@@ -115,25 +115,21 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
 
       {/* Compact progress + CTA */}
       <div className="tipovacka-progress-section tipovacka-dashboard-row-item">
-        <div className="d-flex align-items-center gap-3">
-          <div className="flex-grow-1">
-            <div className="d-flex justify-content-between align-items-center mb-1">
-              <strong style={{ fontSize: '0.85rem' }}>Predicted</strong>
-              <span style={{ fontSize: '0.8rem', color: 'var(--wc-text-muted)' }}>{totalTipped}/{totalMatches}</span>
-            </div>
-            <div className="progress" style={{ height: '6px' }}>
-              <div
-                className="progress-bar"
-                style={{ width: `${progress}%`, backgroundColor: 'var(--wc-accent)' }}
-              />
-            </div>
-          </div>
-          {!allMatchesStarted && (
-            <button className="tipovacka-cta-btn" onClick={onGoToTips}>
-              {allTipped ? 'Review your tips' : 'Add your tips'}
-            </button>
-          )}
+        <div className="d-flex justify-content-between align-items-center mb-1">
+          <strong style={{ fontSize: '0.85rem' }}>Predicted</strong>
+          <span style={{ fontSize: '0.8rem', color: 'var(--wc-text-muted)' }}>{totalTipped}/{totalMatches}</span>
         </div>
+        <div className="progress mb-2" style={{ height: '6px' }}>
+          <div
+            className="progress-bar"
+            style={{ width: `${progress}%`, backgroundColor: 'var(--wc-accent)' }}
+          />
+        </div>
+        {!allMatchesStarted && (
+          <button className="tipovacka-cta-btn w-100" onClick={onGoToTips}>
+            {allTipped ? 'Review your tips' : 'Add your tips'}
+          </button>
+        )}
       </div>
 
       {/* Share settings */}
@@ -153,11 +149,14 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
           </span>
         </div>
         {tipsPublic && (
-          <div className="tipovacka-share-url">
-            <input type="text" readOnly value={shareUrl} className="form-control form-control-sm" />
-            <button className="btn btn-sm btn-outline-secondary" onClick={handleCopy}>
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
+          <div className="tipovacka-share-copy">
+            {copied ? (
+              <span className="tipovacka-share-copied">URL Copied</span>
+            ) : (
+              <button className="tipovacka-cta-btn w-100" onClick={handleCopy}>
+                Copy share link
+              </button>
+            )}
           </div>
         )}
       </div>

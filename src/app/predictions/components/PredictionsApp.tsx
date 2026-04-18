@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { signOut } from 'next-auth/react';
 import type { TipMatch } from '../tips/page';
 import TipEditor from './TipEditor';
@@ -40,11 +40,54 @@ export default function PredictionsApp({ matches, userName, shareToken, tipsPubl
       .finally(() => setLoading(false));
   }, []);
 
+  const saveTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  const dirtyMatches = useRef<Set<number>>(new Set());
+  const [dirtyCount, setDirtyCount] = useState(0);
+
+  const flushDirtyCount = () => setDirtyCount(dirtyMatches.current.size);
+
+  const saveTip = useCallback(async (matchId: number, homeGoals: number, awayGoals: number) => {
+    try {
+      await fetch('/api/tips/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tips: [{ matchId, homeGoals, awayGoals }] }),
+      });
+    } finally {
+      saveTimers.current.delete(matchId);
+      dirtyMatches.current.delete(matchId);
+      flushDirtyCount();
+    }
+  }, []);
+
   const handleTipUpdate = useCallback((matchId: number, homeGoals: number, awayGoals: number) => {
     setTips((prev) => ({
       ...prev,
       [matchId]: { homeGoals, awayGoals, points: prev[matchId]?.points ?? null },
     }));
+    dirtyMatches.current.add(matchId);
+    flushDirtyCount();
+    const existing = saveTimers.current.get(matchId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => saveTip(matchId, homeGoals, awayGoals), 1000);
+    saveTimers.current.set(matchId, timer);
+  }, [saveTip]);
+
+  useEffect(() => {
+    if (dirtyCount === 0) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirtyCount]);
+
+  useEffect(() => {
+    const timers = saveTimers.current;
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+    };
   }, []);
 
   const handleTogglePublic = useCallback(async () => {

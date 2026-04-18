@@ -4700,16 +4700,19 @@ a.ranking-team-name:hover {
 }
 
 /* Share URL */
-.tipovacka-share-url {
+.tipovacka-share-copy {
   display: flex;
-  gap: 0.5rem;
-  max-width: 500px;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
 }
 
-.tipovacka-share-url input {
-  background: var(--wc-surface);
-  color: var(--wc-text);
-  border-color: var(--wc-border);
+.tipovacka-share-copied {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--prob-first, var(--wc-accent));
+  text-align: center;
+  width: 100%;
 }
 
 /* Recent tips */

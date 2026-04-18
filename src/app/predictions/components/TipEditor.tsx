@@ -49,8 +49,6 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
   const [untippedOnly, setUntippedOnly] = useState(false);
   // Snapshot of untipped match IDs — frozen when filter is toggled on
   const [untippedSnapshot, setUntippedSnapshot] = useState<Set<number> | null>(null);
-  const [saving, setSaving] = useState<Record<number, boolean>>({});
-  const [saved, setSaved] = useState<Record<number, boolean>>({});
 
   const handleUntippedToggle = useCallback(() => {
     setUntippedOnly((prev) => {
@@ -87,28 +85,6 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
     }
     return map;
   }, [filteredMatches]);
-
-  const handleSave = useCallback(async (matchId: number) => {
-    const tip = tips[matchId];
-    if (!tip) return;
-
-    setSaving((prev) => ({ ...prev, [matchId]: true }));
-    try {
-      const res = await fetch('/api/tips/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tips: [{ matchId, homeGoals: tip.homeGoals, awayGoals: tip.awayGoals }],
-        }),
-      });
-      if (res.ok) {
-        setSaved((prev) => ({ ...prev, [matchId]: true }));
-        setTimeout(() => setSaved((prev) => ({ ...prev, [matchId]: false })), 2000);
-      }
-    } finally {
-      setSaving((prev) => ({ ...prev, [matchId]: false }));
-    }
-  }, [tips]);
 
   const isMatchLocked = (m: TipMatch) => {
     return m.status !== 'SCHEDULED' || new Date(m.kickOff) <= new Date();
@@ -159,8 +135,6 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
               const homeGoals = tip ? tip.homeGoals : null;
               const awayGoals = tip ? tip.awayGoals : null;
               const hasTip = !!tip;
-              const isSaving = saving[match.id];
-              const isSaved = saved[match.id];
               const isFinished = match.status === 'FINISHED' && match.homeGoals !== null;
               const hasScore = hasTip && tip.points !== null;
 
@@ -202,13 +176,6 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
                           nullable
                         />
                       </div>
-                      <button
-                        className={`tipovacka-save-btn ${isSaved ? 'saved' : ''}`}
-                        onClick={() => handleSave(match.id)}
-                        disabled={isSaving}
-                      >
-                        {isSaving ? '...' : isSaved ? 'Saved' : 'Save'}
-                      </button>
                     </div>
                   )}
 
