@@ -350,7 +350,13 @@ export default async function HomePage() {
         <div className="container">
           <h1>Who Clinches a World Cup Play-Off?</h1>
           <p className="subtitle">Be the first to know who qualifies for the FIFA World Cup knockout phase. Even before it happens.</p>
-          <Countdown />
+          <Countdown
+            startedFallback={
+              <Link href="/worldcup2026/fixtures" className="hero-fixtures-btn">
+                📅 Fixtures &amp; Results
+              </Link>
+            }
+          />
           <Link href="/worldcup2026/how-to-clinch-play-off-worldcup2026" className="hero-clinch-link">
             How to Clinch a Play-Off Spot &rarr;
           </Link>

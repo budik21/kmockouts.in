@@ -2,6 +2,7 @@ import { cachedQuery } from '@/lib/cached-db';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import FixturesCalendar from '@/app/components/FixturesCalendar';
+import Countdown from '@/app/components/Countdown';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 
@@ -173,7 +174,10 @@ export default async function FixturesPage() {
         </ol>
       </nav>
 
-      <h1 className="mb-1">FIFA World Cup 2026 Fixtures &amp; Results</h1>
+      <div className="d-flex align-items-center flex-wrap gap-3 mb-1">
+        <h1 className="mb-0">FIFA World Cup 2026 Fixtures &amp; Results</h1>
+        <Countdown variant="inline" />
+      </div>
       <p className="text-muted mb-4">
         Complete schedule of all group stage matches &bull; kick-off times, venues and live scores
       </p>

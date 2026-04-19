@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 // Thursday, June 11, 2026, 20:00 UTC — first match kickoff
-const TARGET = new Date('2026-06-11T20:00:00Z').getTime();
+export const WC_KICKOFF_UTC = new Date('2026-06-11T20:00:00Z').getTime();
 
 interface TimeLeft {
   days: number;
@@ -13,7 +13,7 @@ interface TimeLeft {
 }
 
 function computeTimeLeft(): TimeLeft | null {
-  const diff = TARGET - Date.now();
+  const diff = WC_KICKOFF_UTC - Date.now();
   if (diff <= 0) return null;
   return {
     days: Math.floor(diff / 86400000),
@@ -52,7 +52,13 @@ function CountdownUnit({ value, label }: { value: number; label: string }) {
   );
 }
 
-export default function Countdown() {
+interface CountdownProps {
+  variant?: 'hero' | 'inline';
+  /** Rendered when the tournament has started. If omitted, renders nothing. */
+  startedFallback?: React.ReactNode;
+}
+
+export default function Countdown({ variant = 'hero', startedFallback }: CountdownProps = {}) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null | undefined>(undefined);
 
   useEffect(() => {
@@ -65,10 +71,16 @@ export default function Countdown() {
   if (timeLeft === undefined) return null;
 
   if (timeLeft === null) {
+    return <>{startedFallback ?? null}</>;
+  }
+
+  if (variant === 'inline') {
+    const { days, hours, mins } = timeLeft;
     return (
-      <div className="countdown">
-        <span className="countdown-live">The World Cup is underway!</span>
-      </div>
+      <span className="countdown-inline" aria-label={`World Cup starts in ${days} days ${hours} hours ${mins} minutes`}>
+        <span className="countdown-inline-label">Starts in</span>
+        <span className="countdown-inline-value">{days}d {String(hours).padStart(2, '0')}h {String(mins).padStart(2, '0')}m</span>
+      </span>
     );
   }
 
