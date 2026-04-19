@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { query } from '@/lib/db';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 
 /**
  * Wipe all pick'em data (tips + tipster_user).
@@ -17,6 +18,7 @@ export async function POST() {
     await query(`DELETE FROM tipster_user`);
 
     revalidateTag(LEADERBOARD_TAG, 'max');
+    await purgeCloudflareCache();
 
     return NextResponse.json({ success: true });
   } catch (err) {

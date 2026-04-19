@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { query } from '@/lib/db';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 
 /**
  * POST /api/admin/pickem/clear-all
@@ -20,6 +21,7 @@ export async function POST() {
     await query('DELETE FROM tip');
 
     revalidateTag(LEADERBOARD_TAG, 'max');
+    await purgeCloudflareCache();
 
     return NextResponse.json({
       success: true,

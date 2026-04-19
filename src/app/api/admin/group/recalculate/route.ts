@@ -8,6 +8,7 @@ import {
 } from '@/lib/probability-cache';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 import { ALL_GROUPS } from '@/lib/constants';
 import type { GroupId } from '@/lib/types';
 
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
     // Purge caches within this request context so callers see fresh data.
     revalidateTag(WC_TAG, 'max');
     revalidateTag(LEADERBOARD_TAG, 'max');
+    await purgeCloudflareCache();
 
     const elapsed = Date.now() - start;
     const message =

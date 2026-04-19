@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
   );
 
   revalidateTag(LEADERBOARD_TAG, 'max');
+  await purgeCloudflareCache();
 
   return NextResponse.json({ tipsPublic });
 }

@@ -6,6 +6,7 @@ import { recalculateAllProbabilities } from '@/lib/probability-cache';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { query } from '@/lib/db';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
     // Purge tagged caches for all pages that show match results / probabilities / tips
     revalidateTag(WC_TAG, 'max');
     revalidateTag(LEADERBOARD_TAG, 'max');
+    await purgeCloudflareCache();
 
     if (scenarioId === 0) {
       return NextResponse.json({ success: true, message: 'Reset to clean state', active: null });

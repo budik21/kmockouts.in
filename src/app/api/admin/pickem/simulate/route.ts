@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { query } from '@/lib/db';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 import { slugify } from '@/lib/slugify';
 
 /**
@@ -99,6 +100,7 @@ export async function POST() {
     }
 
     revalidateTag(LEADERBOARD_TAG, 'max');
+    await purgeCloudflareCache();
 
     const withConsent = Math.round(NAMES.length * 0.7);
     const withoutConsent = NAMES.length - withConsent;

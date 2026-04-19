@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { query } from '@/lib/db';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { LEADERBOARD_TAG, WC_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 
 /**
@@ -50,6 +51,7 @@ export async function POST() {
     // Invalidate all related caches
     revalidateTag(LEADERBOARD_TAG, 'max');
     revalidateTag(WC_TAG, 'max');
+    await purgeCloudflareCache();
 
     return NextResponse.json({
       success: true,

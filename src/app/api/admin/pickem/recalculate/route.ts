@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 
 /**
  * POST /api/admin/pickem/recalculate
@@ -21,6 +22,7 @@ export async function POST() {
     const updated = await recalculateAllTipPoints();
 
     revalidateTag(LEADERBOARD_TAG, 'max');
+    await purgeCloudflareCache();
 
     return NextResponse.json({
       success: true,

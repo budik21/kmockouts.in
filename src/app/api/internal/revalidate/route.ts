@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 
 /**
  * Internal endpoint for cache invalidation after background tasks complete.
@@ -20,5 +21,6 @@ export async function POST(request: NextRequest) {
 
   revalidateTag(WC_TAG, 'max');
   revalidateTag(LEADERBOARD_TAG, 'max');
+  await purgeCloudflareCache();
   return NextResponse.json({ ok: true });
 }

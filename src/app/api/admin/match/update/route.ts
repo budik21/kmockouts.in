@@ -6,6 +6,7 @@ import { recalculateAffectedProbabilities, pregenerateBestThirdSummaries } from 
 import type { GroupId } from '@/lib/types';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 
 interface UpdateBody {
   matchId: number;
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
     // (within the request scope) and again after recalculation via the internal endpoint.
     revalidateTag(WC_TAG, 'max');
     revalidateTag(LEADERBOARD_TAG, 'max');
+    await purgeCloudflareCache();
 
     const origin = new URL(request.url).origin;
 
