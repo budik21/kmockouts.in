@@ -53,12 +53,11 @@ function CountdownUnit({ value, label }: { value: number; label: string }) {
 }
 
 interface CountdownProps {
-  variant?: 'hero' | 'inline';
   /** Rendered when the tournament has started. If omitted, renders nothing. */
   startedFallback?: React.ReactNode;
 }
 
-export default function Countdown({ variant = 'hero', startedFallback }: CountdownProps = {}) {
+export default function Countdown({ startedFallback }: CountdownProps = {}) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null | undefined>(undefined);
 
   useEffect(() => {
@@ -72,16 +71,6 @@ export default function Countdown({ variant = 'hero', startedFallback }: Countdo
 
   if (timeLeft === null) {
     return <>{startedFallback ?? null}</>;
-  }
-
-  if (variant === 'inline') {
-    const { days, hours, mins } = timeLeft;
-    return (
-      <span className="countdown-inline" aria-label={`World Cup starts in ${days} days ${hours} hours ${mins} minutes`}>
-        <span className="countdown-inline-label">Starts in</span>
-        <span className="countdown-inline-value">{days}d {String(hours).padStart(2, '0')}h {String(mins).padStart(2, '0')}m</span>
-      </span>
-    );
   }
 
   return (

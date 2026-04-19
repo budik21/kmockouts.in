@@ -176,7 +176,7 @@ export default async function FixturesPage() {
 
       <div className="d-flex align-items-center flex-wrap gap-3 mb-1">
         <h1 className="mb-0">FIFA World Cup 2026 Fixtures &amp; Results</h1>
-        <Countdown variant="inline" />
+        <Countdown />
       </div>
       <p className="text-muted mb-4">
         Complete schedule of all group stage matches &bull; kick-off times, venues and live scores

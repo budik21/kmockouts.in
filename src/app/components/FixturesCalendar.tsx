@@ -35,6 +35,7 @@ interface Props {
 
 export default function FixturesCalendar({ days }: Props) {
   const [activeDate, setActiveDate] = useState<string>(days[0]?.dateKey ?? '');
+  const [todayKey, setTodayKey] = useState<string>('');
   const dateNavRef = useRef<HTMLDivElement>(null);
 
   const getSection = useCallback((dateStr: string) => {
@@ -54,10 +55,11 @@ export default function FixturesCalendar({ days }: Props) {
   // Find today or nearest future date on mount
   useEffect(() => {
     const today = new Date();
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const tk = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    setTodayKey(tk);
     let target = days[0]?.dateKey ?? '';
     for (const d of days) {
-      if (d.dateKey >= todayKey) { target = d.dateKey; break; }
+      if (d.dateKey >= tk) { target = d.dateKey; break; }
       target = d.dateKey;
     }
     setActiveDate(target);
@@ -110,7 +112,7 @@ export default function FixturesCalendar({ days }: Props) {
             <button
               key={d.dateKey}
               data-date={d.dateKey}
-              className={`fixtures-date-pill${d.dateKey === activeDate ? ' active' : ''}`}
+              className={`fixtures-date-pill${d.dateKey === activeDate ? ' active' : ''}${d.dateKey === todayKey ? ' today' : ''}`}
               onClick={() => scrollToDate(d.dateKey)}
             >
               {d.pill}
@@ -146,7 +148,10 @@ function FixtureCard({ fixture: f }: { fixture: FixtureItem }) {
     <div className={`fixture-card${isFinished ? ' fixture-finished' : ''}${isLive ? ' fixture-live' : ''}`}>
       <div className="fixture-card-top">
         <Link href={`/worldcup2026/group-${f.groupId.toLowerCase()}`} className="fixture-group-link">Group {f.groupId}</Link>
-        <span className="fixture-venue">{f.venue}</span>
+        <span className="fixture-venue-time">
+          <span className="fixture-venue">{f.venue}</span>
+          <span className="fixture-kickoff">{f.time}</span>
+        </span>
       </div>
       <div className="fixture-card-main">
         <div className="fixture-team fixture-team-home">
@@ -161,7 +166,7 @@ function FixtureCard({ fixture: f }: { fixture: FixtureItem }) {
               {f.homeGoals} – {f.awayGoals}
             </span>
           ) : (
-            <span className="fixture-time">{f.time}</span>
+            <span className="fixture-vs">—</span>
           )}
         </div>
 

@@ -112,32 +112,6 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
 }
 
-.countdown-inline {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--wc-accent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--wc-accent) 40%, transparent);
-  color: var(--wc-accent);
-  font-size: 0.8rem;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.countdown-inline-label {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.65rem;
-  opacity: 0.8;
-}
-
-.countdown-inline-value {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
 .countdown-groups {
   display: flex;
   align-items: center;
@@ -1987,9 +1961,9 @@ a { color: inherit; text-decoration: none; }
   border-color: var(--wc-primary);
 }
 
-/* Yellow arrows framing the active day pill: down-arrow above, up-arrow below */
-.fixtures-date-pill.active::before,
-.fixtures-date-pill.active::after {
+/* Yellow arrows framing today's date pill (only when tournament is running). */
+.fixtures-date-pill.today::before,
+.fixtures-date-pill.today::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -2000,12 +1974,12 @@ a { color: inherit; text-decoration: none; }
   border-right: 6px solid transparent;
 }
 
-.fixtures-date-pill.active::before {
+.fixtures-date-pill.today::before {
   top: -9px;
   border-top: 7px solid var(--wc-accent);
 }
 
-.fixtures-date-pill.active::after {
+.fixtures-date-pill.today::after {
   bottom: -9px;
   border-bottom: 7px solid var(--wc-accent);
 }
@@ -2050,12 +2024,14 @@ a { color: inherit; text-decoration: none; }
 }
 
 .fixture-card-top {
+  position: relative;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   font-size: 0.7rem;
   color: var(--wc-text-muted);
   margin-bottom: 0.3rem;
+  min-height: 1.1rem;
 }
 
 .group-link {
@@ -2070,6 +2046,9 @@ a { color: inherit; text-decoration: none; }
 }
 
 .fixture-group-link {
+  position: absolute;
+  left: 0;
+  top: 0;
   font-weight: 600;
   color: var(--wc-primary);
   opacity: 0.8;
@@ -2081,12 +2060,38 @@ a { color: inherit; text-decoration: none; }
   text-decoration: underline;
 }
 
+.fixture-venue-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: calc(100% - 5rem);
+  min-width: 0;
+}
+
 .fixture-venue {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
-  max-width: 60%;
-  text-align: right;
+}
+
+.fixture-kickoff {
+  font-weight: 600;
+  color: var(--wc-text);
+  opacity: 0.8;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.fixture-kickoff::before {
+  content: '·';
+  margin-right: 0.45rem;
+  opacity: 0.6;
+}
+
+.fixture-vs {
+  color: var(--wc-text-muted);
+  font-size: 1rem;
+  opacity: 0.5;
 }
 
 .fixture-card-main {
@@ -2163,7 +2168,8 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 576px) {
   .fixture-team-name { display: none; }
   .fixture-team-short { display: inline; }
-  .fixture-venue { display: none; }
+  .fixture-group-link { font-size: 0.62rem; }
+  .fixture-venue-time { max-width: calc(100% - 3.5rem); font-size: 0.65rem; }
   .fixture-date-pill { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
   .fixture-card { padding: 0.4rem 0.5rem; }
   .fixture-score-box { min-width: 44px; }
