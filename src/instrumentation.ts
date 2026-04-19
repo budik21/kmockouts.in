@@ -22,5 +22,18 @@ export async function register() {
     } catch (e) {
       console.error('[instrumentation] Failed to sync match schedule:', e);
     }
+
+    // Purge Cloudflare edge cache on server startup so that HTML/CSS/JS from
+    // the previous deployment is evicted as soon as the new server instance
+    // begins serving traffic. No-op if CF credentials are not configured.
+    if (process.env.NODE_ENV === 'production') {
+      const { purgeCloudflareCache } = await import('./lib/cloudflare-purge');
+      try {
+        await purgeCloudflareCache();
+        console.log('[instrumentation] Cloudflare cache purged on startup');
+      } catch (e) {
+        console.error('[instrumentation] Failed to purge Cloudflare cache:', e);
+      }
+    }
   }
 }
