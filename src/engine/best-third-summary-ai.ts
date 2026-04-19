@@ -7,6 +7,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
+import { withClaudeSlot } from '../lib/claude-concurrency';
 import type { QualificationThreshold } from './best-third';
 
 // Lazy singleton — instantiating Anthropic() at module load throws when
@@ -108,12 +109,12 @@ ${matchInfo}
 
 Write a short summary (2-4 sentences) of what this team needs to qualify as best third-placed.`;
 
-  const response = await getClient().messages.create({
+  const response = await withClaudeSlot(() => getClient().messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 256,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userPrompt }],
-  });
+  }));
 
   const textBlock = response.content.find(b => b.type === 'text');
   return textBlock?.text ?? '';
@@ -238,29 +239,26 @@ export async function generateBestThirdSummaries(
   // Nothing left to generate (either all served from cache or no API key).
   if (tasks.length === 0 || !hasApiKey) return result;
 
-  // Generate summaries with limited concurrency to avoid rate limits
-  const MAX_CONCURRENT = 3;
-  for (let i = 0; i < tasks.length; i += MAX_CONCURRENT) {
-    const batch = tasks.slice(i, i + MAX_CONCURRENT);
-    const promises = batch.map(async (targetTeam) => {
-      try {
-        const summary = await withTimeout(
-          generateBestThirdSummary({ allTeams, targetTeam, threshold: threshold ?? null }),
-          AI_CALL_TIMEOUT_MS,
-        );
-        if (summary) {
-          result.set(targetTeam.teamId, summary);
-          try {
-            await saveCache(targetTeam.teamId, summary, ctxHash);
-          } catch {
-            // Non-fatal
-          }
+  // Fire all tasks in parallel — the shared withClaudeSlot semaphore caps
+  // in-flight Claude calls process-wide, so we don't need a local batch loop.
+  const promises = tasks.map(async (targetTeam) => {
+    try {
+      const summary = await withTimeout(
+        generateBestThirdSummary({ allTeams, targetTeam, threshold: threshold ?? null }),
+        AI_CALL_TIMEOUT_MS,
+      );
+      if (summary) {
+        result.set(targetTeam.teamId, summary);
+        try {
+          await saveCache(targetTeam.teamId, summary, ctxHash);
+        } catch {
+          // Non-fatal
         }
-      } catch (err) {
-        console.error(`Best-third AI summary failed for ${targetTeam.teamName}:`, err);
       }
-    });
-    await Promise.allSettled(promises);
-  }
+    } catch (err) {
+      console.error(`Best-third AI summary failed for ${targetTeam.teamName}:`, err);
+    }
+  });
+  await Promise.allSettled(promises);
   return result;
 }

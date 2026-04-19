@@ -186,6 +186,106 @@ export async function recalculateAffectedProbabilities(changedGroupId: GroupId):
 }
 
 /**
+ * Pre-generate AI scenario summaries for every team in a group at every
+ * position their position probability is > 0 and < 100. Populates the
+ * `ai_summary_cache` table so subsequent team-detail page renders hit the
+ * cache instead of triggering a fresh Claude API call (which can take 15s
+ * and, on timeout, would leave nothing cached — causing every visitor to
+ * pay the latency). Called from the admin match-update endpoint after
+ * probability recalc completes.
+ */
+export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promise<void> {
+  if (!process.env.ANTHROPIC_API_KEY) return;
+
+  // Lazy imports to avoid circular dependencies and to keep this helper
+  // out of the hot render path when it's not used.
+  const { calculateStandings } = await import('../engine/standings');
+  const { enumerateGroupScenarios } = await import('../engine/scenarios');
+  const { generateAiScenarioSummaries } = await import('../engine/scenario-summary-ai');
+
+  const teamRows = await query<{
+    id: number; name: string; short_name: string; country_code: string; group_id: string;
+    is_placeholder: boolean; external_id: string | null; fifa_ranking: number | null;
+  }>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
+
+  const matchRows = await query<{
+    id: number; group_id: string; round: number;
+    home_team_id: number; away_team_id: number;
+    home_goals: number | null; away_goals: number | null;
+    home_yc: number; home_yc2: number; home_rc_direct: number; home_yc_rc: number;
+    away_yc: number; away_yc2: number; away_rc_direct: number; away_yc_rc: number;
+    venue: string; kick_off: string; status: string;
+  }>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
+
+  const teams = teamRows.map(r => ({
+    id: r.id, name: r.name, shortName: r.short_name, countryCode: r.country_code,
+    groupId: r.group_id as GroupId, isPlaceholder: r.is_placeholder,
+    externalId: r.external_id ?? undefined, fifaRanking: r.fifa_ranking ?? undefined,
+  }));
+  const allMatches = matchRows.map(r => ({
+    id: r.id, groupId: r.group_id as GroupId, round: r.round,
+    homeTeamId: r.home_team_id, awayTeamId: r.away_team_id,
+    homeGoals: r.home_goals, awayGoals: r.away_goals,
+    homeYc: r.home_yc, homeYc2: r.home_yc2, homeRcDirect: r.home_rc_direct, homeYcRc: r.home_yc_rc,
+    awayYc: r.away_yc, awayYc2: r.away_yc2, awayRcDirect: r.away_rc_direct, awayYcRc: r.away_yc_rc,
+    venue: r.venue, kickOff: r.kick_off, status: r.status as 'FINISHED' | 'LIVE' | 'SCHEDULED',
+  }));
+
+  const played = allMatches.filter(m => m.status === 'FINISHED');
+  const remaining = allMatches.filter(m => m.status !== 'FINISHED');
+
+  // AI summaries are only rendered once every team has played at least once.
+  const allTeamsPlayed = teams.every(t => played.some(m => m.homeTeamId === t.id || m.awayTeamId === t.id));
+  if (remaining.length === 0 || !allTeamsPlayed) {
+    return;
+  }
+
+  const standings = calculateStandings({ teams, matches: played });
+  const currentStandings = standings.map(s => ({
+    teamName: s.team.name,
+    points: s.points,
+    gd: s.goalsFor - s.goalsAgainst,
+    position: s.position,
+  }));
+
+  const summaries = enumerateGroupScenarios(teams, played, remaining);
+  const remainingMatchesInfo = remaining.map((m, i) => ({
+    matchIndex: i,
+    homeTeamId: m.homeTeamId,
+    awayTeamId: m.awayTeamId,
+    homeTeamName: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+    awayTeamName: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+  }));
+
+  console.log(`[pregenerate] Generating scenario AI summaries for group ${groupId} (${teams.length} teams)`);
+
+  // Fire all teams in parallel. Each call internally fans out across
+  // positions (also in parallel), but every actual Claude API request is
+  // gated by the process-wide semaphore in lib/claude-concurrency.ts, so
+  // the real concurrency stays bounded regardless of how many teams or
+  // groups are in flight at once.
+  await Promise.allSettled(
+    teams.map(team => {
+      const teamSummary = summaries.find(s => s.teamId === team.id);
+      if (!teamSummary) return Promise.resolve();
+      return generateAiScenarioSummaries({
+        teamId: team.id,
+        teamName: team.name,
+        groupId: groupId,
+        outcomePatternsByPosition: teamSummary.outcomePatternsByPosition,
+        probabilities: teamSummary.positionProbabilities,
+        remainingMatches: remainingMatchesInfo,
+        currentStandings,
+      }).catch(err => {
+        console.error(`[pregenerate] Team scenario AI failed for ${team.name}:`, err);
+      });
+    }),
+  );
+
+  console.log(`[pregenerate] Team scenario AI summaries done for group ${groupId}`);
+}
+
+/**
  * Pre-generate AI summaries for all best-third teams.
  * Called after probability recalculation so summaries are ready
  * when users visit the page (instead of generating on first load).

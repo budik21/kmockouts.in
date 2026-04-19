@@ -52,14 +52,14 @@ function parseGroupSlug(slug: string): GroupId | null {
   return ALL_GROUPS.includes(groupId) ? groupId : null;
 }
 
-// Opt out of build-time static prerendering. Without this, Next.js renders
-// all 48 team pages during `next build` using whatever standings/scenario
-// data exists then and serves that stale HTML after deploy until a
-// `revalidateTag(WC_TAG)` fires. The underlying queries still use tag-based
-// `unstable_cache`, so per-request DB load is unchanged.
-export const dynamic = 'force-dynamic';
-
-// Tag-based on-demand revalidation via `revalidateTag(WC_TAG)`. See cache-tags.ts.
+// Dynamic params without a `generateStaticParams` list → no build-time
+// prerendering of the 48 team pages. The first request after a cache
+// invalidation renders the page and the result is stored in the Full
+// Route Cache (including the expensive scenario enumeration + AI
+// summaries); subsequent requests are served straight from cache until
+// `revalidateTag(WC_TAG)` fires (e.g. after an admin match update). The
+// admin endpoint additionally warms every team URL in the affected group
+// so even the "first" visitor gets a cache hit. See cache-tags.ts.
 
 interface PageProps {
   params: Promise<{ groupId: string; teamId: string }>;
