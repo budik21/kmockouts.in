@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import type { AdminMatch } from '../dashboard/page';
 import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from '@/app/components/CardIcons';
@@ -295,9 +295,9 @@ export default function MatchEditor({
     [initialMatches, groupFilter],
   );
 
-  const [states, setStates] = useState<Record<number, MatchState>>(() => {
+  const buildStates = useCallback((matches: AdminMatch[]): Record<number, MatchState> => {
     const init: Record<number, MatchState> = {};
-    for (const m of initialMatches) {
+    for (const m of matches) {
       init[m.id] = {
         homeGoals: m.homeGoals,
         awayGoals: m.awayGoals,
@@ -316,7 +316,14 @@ export default function MatchEditor({
       };
     }
     return init;
-  });
+  }, []);
+
+  const [states, setStates] = useState<Record<number, MatchState>>(() => buildStates(initialMatches));
+
+  // Re-sync local state when initialMatches changes (e.g. after router.refresh following a bulk action).
+  useEffect(() => {
+    setStates(buildStates(initialMatches));
+  }, [initialMatches, buildStates]);
 
   const updateMatch = useCallback((matchId: number, patch: Partial<MatchState>) => {
     setStates((prev) => ({

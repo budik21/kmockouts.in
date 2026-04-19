@@ -110,6 +110,35 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
           return data.message;
         }}
       />
+
+      <AdminActionWidget
+        hidden={!isSuperadmin}
+        title="Delete all tipsters"
+        description="Delete every tipster account together with all their predictions. Match results stay intact. This action cannot be undone."
+        buttonLabel="Delete all tipsters"
+        buttonVariant="danger"
+        inProgressLabel="Deleting all tipsters…"
+        completedLabel="All tipsters deleted"
+        confirm={{
+          title: '⚠️ Delete all tipsters?',
+          body: (
+            <>
+              <p>
+                This action will <strong>permanently delete every tipster account</strong> along
+                with all their predictions.
+              </p>
+              <p style={{ marginBottom: 0 }}>
+                Match results remain intact. This action cannot be undone.
+              </p>
+            </>
+          ),
+          confirmLabel: 'Delete all tipsters',
+        }}
+        run={async () => {
+          const data = await postJson<{ message: string }>('/api/admin/pickem/clear');
+          return data.message;
+        }}
+      />
     </>
   );
 }
