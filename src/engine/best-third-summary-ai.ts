@@ -8,6 +8,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
 import { withClaudeSlot } from '../lib/claude-concurrency';
+import { isFeatureEnabled } from '../lib/feature-flags';
 import type { QualificationThreshold } from './best-third';
 
 // Lazy singleton — instantiating Anthropic() at module load throws when
@@ -201,7 +202,11 @@ export async function generateBestThirdSummaries(
   if (allTeams.length === 0) return result;
 
   const ctxHash = hashContext(allTeams, threshold ?? null);
-  const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
+  const aiEnabled = await isFeatureEnabled('ai_predictions', true);
+  // Generation requires both a live API key AND the feature flag to be on.
+  // Cached summaries are still served when the flag is off, matching the
+  // behaviour for the no-api-key case.
+  const hasApiKey = !!process.env.ANTHROPIC_API_KEY && aiEnabled;
 
   // Always check cache first — even when no API key is configured we want
   // to serve previously generated summaries rather than silently hide the

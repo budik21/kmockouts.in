@@ -8,7 +8,9 @@ import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 import MatchEditor from './MatchEditor';
 import PickemActions from './PickemActions';
 import UsersClient from '../users/UsersClient';
+import FeatureFlagsClient from './FeatureFlagsClient';
 import ScenarioPicker from '@/app/components/ScenarioPicker';
+import type { FeatureFlag } from '@/lib/feature-flags';
 
 interface DashboardTabsProps {
   initialMatches: AdminMatch[];
@@ -18,6 +20,7 @@ interface DashboardTabsProps {
   superadminEmail: string;
   scenarios: ScenarioMeta[];
   activeScenario: number | null;
+  featureFlags: FeatureFlag[];
 }
 
 export default function DashboardTabs({
@@ -28,8 +31,9 @@ export default function DashboardTabs({
   superadminEmail,
   scenarios,
   activeScenario,
+  featureFlags,
 }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags'>('matches');
 
   const tabButtonStyle = (isActive: boolean) => ({
     background: 'none',
@@ -98,6 +102,11 @@ export default function DashboardTabs({
         <button onClick={() => setActiveTab('users')} style={tabButtonStyle(activeTab === 'users')}>
           User Management
         </button>
+        {isSuperadmin && (
+          <button onClick={() => setActiveTab('flags')} style={tabButtonStyle(activeTab === 'flags')}>
+            Feature Flags
+          </button>
+        )}
       </div>
 
       {/* Tab content */}
@@ -186,6 +195,19 @@ export default function DashboardTabs({
               Users whose Google e-mail matches any of these addresses will be granted admin access after signing in.
             </p>
             <UsersClient initialEmails={adminEmails} superadmin={superadminEmail} />
+          </div>
+        )}
+
+        {/* Feature Flags tab — superadmin only */}
+        {activeTab === 'flags' && isSuperadmin && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
+              Feature Flags
+            </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Runtime switches for opt-in features. Changes take effect within ~30&nbsp;seconds across the app.
+            </p>
+            <FeatureFlagsClient initialFlags={featureFlags} isSuperadmin={isSuperadmin} />
           </div>
         )}
       </div>

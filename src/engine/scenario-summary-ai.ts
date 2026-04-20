@@ -9,6 +9,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
 import { withClaudeSlot } from '../lib/claude-concurrency';
+import { isFeatureEnabled } from '../lib/feature-flags';
 import { RemainingMatchInfo } from './scenario-summary';
 
 const client = new Anthropic();
@@ -443,6 +444,11 @@ export async function generateAiScenarioSummaries(
   }
 
   if (tasks.length === 0) return result;
+
+  // Feature flag: when AI predictions are disabled we still serve any cached
+  // summaries found above, but skip fresh Claude calls entirely.
+  const aiEnabled = await isFeatureEnabled('ai_predictions', true);
+  if (!aiEnabled) return result;
 
   // Run all uncached API calls in parallel with timeout
   const promises = tasks.map(async ({ pos, patterns, pHash }) => {

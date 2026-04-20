@@ -186,6 +186,18 @@ export async function initializeSchema(): Promise<void> {
       calculated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- Feature flags (runtime-togglable switches managed in admin UI).
+    -- Defaults are seeded below; updates go through /api/admin/feature-flags.
+    CREATE TABLE IF NOT EXISTS feature_flag (
+      key         TEXT PRIMARY KEY,
+      enabled     BOOLEAN NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    INSERT INTO feature_flag (key, enabled, description) VALUES
+      ('ai_predictions', true, 'Generate AI-written qualification scenario summaries for teams and best-third-placed standings. Disabling skips Claude API calls; previously cached summaries remain visible.')
+    ON CONFLICT (key) DO NOTHING;
+
     -- AI-generated scenario summaries cache
     CREATE TABLE IF NOT EXISTS ai_summary_cache (
       group_id      TEXT NOT NULL,

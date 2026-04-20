@@ -197,6 +197,12 @@ export async function recalculateAffectedProbabilities(changedGroupId: GroupId):
 export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promise<void> {
   if (!process.env.ANTHROPIC_API_KEY) return;
 
+  const { isFeatureEnabled } = await import('./feature-flags');
+  if (!(await isFeatureEnabled('ai_predictions', true))) {
+    console.log(`[pregenerate] Skipping scenario AI (ai_predictions flag off) for group ${groupId}`);
+    return;
+  }
+
   // Lazy imports to avoid circular dependencies and to keep this helper
   // out of the hot render path when it's not used.
   const { calculateStandings } = await import('../engine/standings');
@@ -291,6 +297,12 @@ export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promis
  * when users visit the page (instead of generating on first load).
  */
 export async function pregenerateBestThirdSummaries(): Promise<void> {
+  const { isFeatureEnabled } = await import('./feature-flags');
+  if (!(await isFeatureEnabled('ai_predictions', true))) {
+    console.log('[pregenerate] Skipping best-third AI (ai_predictions flag off)');
+    return;
+  }
+
   // Lazy imports to avoid circular dependencies
   const { calculateStandings } = await import('../engine/standings');
   const { compareThirdPlaced } = await import('../engine/best-third');

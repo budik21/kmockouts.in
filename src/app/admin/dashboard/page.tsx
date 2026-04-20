@@ -5,6 +5,7 @@ import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
+import { listFeatureFlags } from '@/lib/feature-flags';
 import DashboardTabs from '../components/DashboardTabs';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
@@ -112,6 +113,8 @@ export default async function AdminDashboardPage() {
   const isSuperadmin = session?.user?.email === SUPERADMIN_EMAIL;
   const { scenarios, active: activeScenario } = readScenarios();
 
+  const featureFlags = isSuperadmin ? await listFeatureFlags() : [];
+
   const [matchRows, statsRows, adminUserRows] = await Promise.all([
     query<AdminMatchRow>(`
       SELECT m.*,
@@ -194,6 +197,7 @@ export default async function AdminDashboardPage() {
         superadminEmail={SUPERADMIN_EMAIL}
         scenarios={scenarios}
         activeScenario={activeScenario}
+        featureFlags={featureFlags}
       />
     </div>
   );
