@@ -84,6 +84,9 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
   const firstScored = transitions.filter(
     (t) => t.oldPoints === null && t.newPoints !== null,
   );
+  console.log(
+    `[tip-notifications] transitions=${transitions.length} firstScored=${firstScored.length} resendKey=${process.env.RESEND_API_KEY ? 'set' : 'missing'}`,
+  );
   if (firstScored.length === 0) return;
   if (!process.env.RESEND_API_KEY) return;
 
