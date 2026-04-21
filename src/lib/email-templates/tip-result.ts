@@ -1,4 +1,5 @@
 import { SITE_URL } from '@/lib/seo';
+import { slugify } from '@/lib/slugify';
 
 export type TipResultKind = 'exact' | 'winner' | 'miss';
 
@@ -75,8 +76,9 @@ export function buildTipResultEmail(data: TipResultEmailData): TemplateOutput {
   const kind = kindFromPoints(data.points);
   const v = VARIANTS[kind];
 
-  const teamUrl = (id: number) => `${SITE_URL}/worldcup2026/${data.match.groupId}/team/${id}`;
-  const groupUrl = `${SITE_URL}/worldcup2026/${data.match.groupId}`;
+  const groupSlug = `group-${data.match.groupId.toLowerCase()}`;
+  const teamUrl = (name: string) => `${SITE_URL}/worldcup2026/${groupSlug}/team/${slugify(name)}`;
+  const groupUrl = `${SITE_URL}/worldcup2026/${groupSlug}`;
   const leaderboardUrl = `${SITE_URL}/pickem/leaderboard`;
   const unsubscribeUrl = `${SITE_URL}/me/notifications`;
 
@@ -155,10 +157,10 @@ export function buildTipResultEmail(data: TipResultEmailData): TemplateOutput {
                   <a href="${groupUrl}" style="display:inline-block;background:#6f003c;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-weight:600;font-size:14px;">Group ${esc(data.match.groupId)} table</a>
                 </td>
                 <td style="padding:6px;">
-                  <a href="${teamUrl(data.homeTeam.id)}" style="display:inline-block;background:#ffffff;color:#6f003c;border:1px solid #6f003c;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600;font-size:13px;">${esc(data.homeTeam.name)}</a>
+                  <a href="${teamUrl(data.homeTeam.name)}" style="display:inline-block;background:#ffffff;color:#6f003c;border:1px solid #6f003c;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600;font-size:13px;">${esc(data.homeTeam.name)}</a>
                 </td>
                 <td style="padding:6px;">
-                  <a href="${teamUrl(data.awayTeam.id)}" style="display:inline-block;background:#ffffff;color:#6f003c;border:1px solid #6f003c;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600;font-size:13px;">${esc(data.awayTeam.name)}</a>
+                  <a href="${teamUrl(data.awayTeam.name)}" style="display:inline-block;background:#ffffff;color:#6f003c;border:1px solid #6f003c;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600;font-size:13px;">${esc(data.awayTeam.name)}</a>
                 </td>
               </tr></table>
               <div style="margin-top:10px;">
