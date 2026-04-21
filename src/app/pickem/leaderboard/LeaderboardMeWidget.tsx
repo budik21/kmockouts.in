@@ -32,7 +32,7 @@ export default function LeaderboardMeWidget({ rank, totalPoints, shareToken }: P
         <button className="leaderboard-me-widget-btn" onClick={handleShowPosition}>
           Show my position
         </button>
-        <Link href={`/predictions/share/${shareToken}`} className="leaderboard-me-widget-link">
+        <Link href={`/pickem/share/${shareToken}`} className="leaderboard-me-widget-link">
           My predictions →
         </Link>
       </div>

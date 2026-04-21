@@ -154,7 +154,7 @@ export default function DashboardTabs({
                 <h3 style={{ color: 'var(--wc-text)', fontSize: '1.05rem', margin: 0 }}>
                   Current tipsters
                 </h3>
-                <Link href="/predictions/leaderboard" style={{ fontSize: '0.85rem' }}>
+                <Link href="/pickem/leaderboard" style={{ fontSize: '0.85rem' }}>
                   View public leaderboard →
                 </Link>
               </div>

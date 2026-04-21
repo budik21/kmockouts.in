@@ -102,7 +102,7 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
   if (rows.length === 0) {
     return (
       <div className="leaderboard-empty">
-        <p>No public predictors yet. <Link href="/predictions">Be the first!</Link></p>
+        <p>No public predictors yet. <Link href="/pickem">Be the first!</Link></p>
       </div>
     );
   }
@@ -166,7 +166,7 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
                   <td className="text-center leaderboard-col-pts fw-bold">{r.totalPoints}</td>
                   <td className="text-end">
                     <Link
-                      href={`/predictions/share/${r.shareToken}`}
+                      href={`/pickem/share/${r.shareToken}`}
                       className="leaderboard-profile-link"
                       title={`View ${r.name}'s predictions`}
                       aria-label={`View ${r.name}'s predictions`}

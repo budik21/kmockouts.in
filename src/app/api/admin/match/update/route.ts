@@ -5,6 +5,7 @@ import { query, queryOne } from '@/lib/db';
 import { recalculateAffectedProbabilities, pregenerateBestThirdSummaries, pregenerateTeamScenarioSummaries } from '@/lib/probability-cache';
 import type { GroupId } from '@/lib/types';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
+import { dispatchTipResultEmails } from '@/lib/tip-notifications';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
 import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 import { slugify } from '@/lib/slugify';
@@ -134,8 +135,11 @@ export async function POST(request: NextRequest) {
         `UPDATE tip_recalc_status SET is_recalculating = true, started_at = NOW() WHERE id = 1`,
       ).catch(() => {});
       try {
-        const n = await recalculateAllTipPoints();
-        console.log(`[admin] Recalculated tip points: ${n} tips updated`);
+        const transitions = await recalculateAllTipPoints();
+        console.log(`[admin] Recalculated tip points: ${transitions.length} tips updated`);
+        dispatchTipResultEmails(transitions).catch((err) =>
+          console.error('[admin/match/update] email dispatch failed:', err),
+        );
       } catch (err) {
         console.error('[admin] Tip recalculation failed:', err);
       } finally {

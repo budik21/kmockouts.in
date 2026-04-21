@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
 
     await recalculateAllProbabilities();
 
-    // Recalculate tip points (scenario changes match results → tips need rescoring)
+    // Recalculate tip points (scenario changes match results → tips need rescoring).
+    // No email dispatch — scenarios are speculative state.
     await recalculateAllTipPoints();
 
     // Purge tagged caches for all pages that show match results / probabilities / tips

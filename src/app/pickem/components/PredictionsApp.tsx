@@ -102,7 +102,7 @@ export default function PredictionsApp({ matches, userName, shareToken, tipsPubl
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/predictions/share/${shareToken}`;
+    return `${window.location.origin}/pickem/share/${shareToken}`;
   }, [shareToken]);
 
   const allGroups = useMemo(() => {
@@ -157,7 +157,7 @@ export default function PredictionsApp({ matches, userName, shareToken, tipsPubl
               </span>
               <button
                 className="btn btn-sm btn-outline-light"
-                onClick={() => signOut({ callbackUrl: '/predictions' })}
+                onClick={() => signOut({ callbackUrl: '/pickem' })}
               >
                 Sign out
               </button>

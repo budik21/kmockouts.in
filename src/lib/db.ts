@@ -222,6 +222,11 @@ export async function initializeSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_tipster_user_share ON tipster_user(share_token);
 
+    -- Email notification preferences (default: all opt-out)
+    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_exact_score BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_winner_only BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_wrong_tip   BOOLEAN NOT NULL DEFAULT FALSE;
+
     -- Tipovacka: individual match predictions
     CREATE TABLE IF NOT EXISTS tip (
       id            SERIAL PRIMARY KEY,

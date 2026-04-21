@@ -12,7 +12,7 @@ export default async function PredictionsPage() {
 
   // Already logged in — go to tips
   if (session?.tipsterId) {
-    redirect('/predictions/tips');
+    redirect('/pickem/tips');
   }
 
   return <LandingPage />;

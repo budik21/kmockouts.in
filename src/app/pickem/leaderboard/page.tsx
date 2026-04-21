@@ -23,12 +23,12 @@ export const metadata: Metadata = {
   title: 'Predictions Leaderboard — FIFA World Cup 2026',
   description:
     'See how all public predictors rank for the FIFA World Cup 2026. Compare points, exact scores and correct outcomes.',
-  alternates: { canonical: '/predictions/leaderboard' },
+  alternates: { canonical: '/pickem/leaderboard' },
   openGraph: {
     title: 'Predictions Leaderboard — FIFA World Cup 2026',
     description:
       'Ranking of all public predictors for the FIFA World Cup 2026.',
-    url: `${SITE_URL}/predictions/leaderboard`,
+    url: `${SITE_URL}/pickem/leaderboard`,
   },
 };
 

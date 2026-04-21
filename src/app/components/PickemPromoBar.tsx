@@ -30,7 +30,7 @@ export default function PickemPromoBar() {
   return (
     <div className="pickem-promo-bar" role="region" aria-label="Pick'em announcement">
       <div className="pickem-promo-inner">
-        <Link href="/predictions" className="pickem-promo-link">
+        <Link href="/pickem" className="pickem-promo-link">
           <span className="pickem-promo-icon" aria-hidden="true">🏆</span>
           <span className="pickem-promo-title">Pick&apos;em is live</span>
           <span className="pickem-promo-text">

@@ -7,6 +7,7 @@ import {
   pregenerateBestThirdSummaries,
 } from '@/lib/probability-cache';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
+import { dispatchTipResultEmails } from '@/lib/tip-notifications';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
 import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 import { ALL_GROUPS } from '@/lib/constants';
@@ -69,7 +70,11 @@ export async function POST(request: NextRequest) {
     // Re-score all tips against the latest DB state.
     let tipsUpdated = 0;
     try {
-      tipsUpdated = await recalculateAllTipPoints();
+      const transitions = await recalculateAllTipPoints();
+      tipsUpdated = transitions.length;
+      dispatchTipResultEmails(transitions).catch((err) =>
+        console.error('[admin/group/recalculate] email dispatch failed:', err),
+      );
     } catch (err) {
       console.error('[admin/group/recalculate] tip points:', err);
       errors.push(`tip-points: ${String(err)}`);

@@ -47,7 +47,7 @@ export default async function TipsPage() {
     session = null;
   }
   if (!session?.tipsterId) {
-    redirect('/predictions');
+    redirect('/pickem');
   }
 
   const rows = await query<MatchRow>(`

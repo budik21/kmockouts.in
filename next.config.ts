@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     // RSC that the browser still had in memory after an admin invalidation.
     staleTimes: { dynamic: 0, static: 30 },
   },
+  async redirects() {
+    return [
+      { source: '/predictions', destination: '/pickem', permanent: true },
+      { source: '/predictions/:path*', destination: '/pickem/:path*', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

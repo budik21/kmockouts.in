@@ -130,7 +130,7 @@ export default function PublicTipsView({ matches, tips, userName, shareToken }: 
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/predictions/share/${shareToken}#${selectedGroup}`;
+    return `${window.location.origin}/pickem/share/${shareToken}#${selectedGroup}`;
   }, [shareToken, selectedGroup]);
 
   const handleShare = useCallback(async () => {
