@@ -45,8 +45,16 @@ export default function Footer() {
               Feedback
             </a>
             <span className="footer-sep">&middot;</span>
+            <a href="/about">
+              About
+            </a>
+            <span className="footer-sep">&middot;</span>
             <a href="/privacy-policy">
               Privacy Policy
+            </a>
+            <span className="footer-sep">&middot;</span>
+            <a href="/terms">
+              Terms
             </a>
             <span className="footer-sep">&middot;</span>
             <form
