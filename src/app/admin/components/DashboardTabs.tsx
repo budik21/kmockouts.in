@@ -21,7 +21,7 @@ interface DashboardTabsProps {
   scenarios: ScenarioMeta[];
   activeScenario: number | null;
   featureFlags: FeatureFlag[];
-  envDocs: string;
+  envDocsHtml: string;
 }
 
 export default function DashboardTabs({
@@ -33,7 +33,7 @@ export default function DashboardTabs({
   scenarios,
   activeScenario,
   featureFlags,
-  envDocs,
+  envDocsHtml,
 }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'env'>('matches');
 
@@ -227,23 +227,74 @@ export default function DashboardTabs({
             <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
               Reference docs for every env var the app reads. Source file: <code>docs/env-variables.md</code>.
             </p>
-            <pre
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid var(--wc-border)',
-                borderRadius: '4px',
-                padding: '1.25rem',
-                color: 'var(--wc-text)',
-                fontSize: '0.85rem',
-                lineHeight: 1.55,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                margin: 0,
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-              }}
-            >
-              {envDocs}
-            </pre>
+            <style>{`
+              .env-docs {
+                background-color: rgba(255, 255, 255, 0.03);
+                border: 1px solid var(--wc-border);
+                border-radius: 4px;
+                padding: 1.5rem 1.75rem;
+                color: var(--wc-text);
+                line-height: 1.6;
+                font-size: 0.95rem;
+              }
+              .env-docs h1, .env-docs h2, .env-docs h3 {
+                color: var(--wc-text);
+                margin-top: 2rem;
+                margin-bottom: 0.75rem;
+                font-weight: 600;
+              }
+              .env-docs h1:first-child, .env-docs h2:first-child, .env-docs h3:first-child {
+                margin-top: 0;
+              }
+              .env-docs h1 { font-size: 1.6rem; border-bottom: 1px solid var(--wc-border); padding-bottom: 0.4rem; }
+              .env-docs h2 { font-size: 1.25rem; }
+              .env-docs h3 { font-size: 1.05rem; color: var(--wc-accent); }
+              .env-docs p, .env-docs ul, .env-docs ol { margin-bottom: 0.85rem; }
+              .env-docs ul, .env-docs ol { padding-left: 1.4rem; }
+              .env-docs li { margin-bottom: 0.3rem; }
+              .env-docs code {
+                background-color: rgba(255, 255, 255, 0.08);
+                padding: 0.1rem 0.35rem;
+                border-radius: 3px;
+                font-size: 0.88em;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                color: var(--wc-text);
+              }
+              .env-docs pre {
+                background-color: rgba(0, 0, 0, 0.3);
+                border: 1px solid var(--wc-border);
+                border-radius: 4px;
+                padding: 0.9rem 1rem;
+                overflow-x: auto;
+                font-size: 0.85rem;
+                line-height: 1.5;
+                margin: 0.85rem 0;
+              }
+              .env-docs pre code {
+                background: none;
+                padding: 0;
+                font-size: inherit;
+                color: var(--wc-text);
+              }
+              .env-docs hr {
+                border: none;
+                border-top: 1px solid var(--wc-border);
+                margin: 2rem 0;
+              }
+              .env-docs strong { color: var(--wc-text); font-weight: 600; }
+              .env-docs em { color: var(--wc-text-muted); }
+              .env-docs a { color: var(--wc-accent); text-decoration: underline; }
+              .env-docs blockquote {
+                border-left: 3px solid var(--wc-border);
+                margin: 0.85rem 0;
+                padding: 0.25rem 0 0.25rem 1rem;
+                color: var(--wc-text-muted);
+              }
+            `}</style>
+            <div
+              className="env-docs"
+              dangerouslySetInnerHTML={{ __html: envDocsHtml }}
+            />
           </div>
         )}
       </div>

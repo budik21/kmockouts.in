@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { marked } from 'marked';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
@@ -115,16 +116,18 @@ export default async function AdminDashboardPage() {
 
   const featureFlags = isSuperadmin ? await listFeatureFlags() : [];
 
-  let envDocs = '';
+  let envDocsHtml = '';
   if (isSuperadmin) {
+    let raw: string;
     try {
-      envDocs = fs.readFileSync(
+      raw = fs.readFileSync(
         path.join(process.cwd(), 'docs', 'env-variables.md'),
         'utf-8',
       );
     } catch {
-      envDocs = '# Environment Variables\n\nDocumentation file `docs/env-variables.md` is missing from the deployment.';
+      raw = '# Environment Variables\n\nDocumentation file `docs/env-variables.md` is missing from the deployment.';
     }
+    envDocsHtml = await marked.parse(raw, { gfm: true, breaks: false });
   }
 
   const [matchRows, statsRows, adminUserRows] = await Promise.all([
@@ -210,7 +213,7 @@ export default async function AdminDashboardPage() {
         scenarios={scenarios}
         activeScenario={activeScenario}
         featureFlags={featureFlags}
-        envDocs={envDocs}
+        envDocsHtml={envDocsHtml}
       />
     </div>
   );
