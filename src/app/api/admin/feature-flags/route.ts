@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { setFeatureFlag, listFeatureFlags } from '@/lib/feature-flags';
 
-const ALLOWED_KEYS = new Set(['ai_predictions']);
+const ALLOWED_KEYS = new Set(['ai_predictions', 'ai_predictions_display']);
 
 export async function POST(request: NextRequest) {
   const unauthorized = await requireSuperadminApi();
