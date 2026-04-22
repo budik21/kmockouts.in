@@ -21,6 +21,7 @@ interface DashboardTabsProps {
   scenarios: ScenarioMeta[];
   activeScenario: number | null;
   featureFlags: FeatureFlag[];
+  envLocks: Record<string, string>;
   envDocsHtml: string;
 }
 
@@ -33,6 +34,7 @@ export default function DashboardTabs({
   scenarios,
   activeScenario,
   featureFlags,
+  envLocks,
   envDocsHtml,
 }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'env'>('matches');
@@ -214,7 +216,7 @@ export default function DashboardTabs({
             <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
               Runtime switches for opt-in features. Changes take effect within ~30&nbsp;seconds across the app.
             </p>
-            <FeatureFlagsClient initialFlags={featureFlags} isSuperadmin={isSuperadmin} />
+            <FeatureFlagsClient initialFlags={featureFlags} isSuperadmin={isSuperadmin} envLocks={envLocks} />
           </div>
         )}
 

@@ -6,9 +6,10 @@ import type { FeatureFlag } from '@/lib/feature-flags';
 interface Props {
   initialFlags: FeatureFlag[];
   isSuperadmin: boolean;
+  envLocks?: Record<string, string>;
 }
 
-export default function FeatureFlagsClient({ initialFlags, isSuperadmin }: Props) {
+export default function FeatureFlagsClient({ initialFlags, isSuperadmin, envLocks = {} }: Props) {
   const [flags, setFlags] = useState<FeatureFlag[]>(initialFlags);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +81,11 @@ export default function FeatureFlagsClient({ initialFlags, isSuperadmin }: Props
       <ul className="list-group">
         {flags.map((flag) => {
           const isPending = pendingKey === flag.key;
-          const disabled = !isSuperadmin || isPending;
+          const envLockWarning = envLocks[flag.key];
+          const envLocked = !!envLockWarning;
+          const disabled = !isSuperadmin || isPending || envLocked;
+          // When env-locked, render as off regardless of DB value
+          const displayEnabled = envLocked ? false : flag.enabled;
           return (
             <li
               key={flag.key}
@@ -112,14 +117,20 @@ export default function FeatureFlagsClient({ initialFlags, isSuperadmin }: Props
                     height: 28,
                     flexShrink: 0,
                     cursor: disabled ? 'not-allowed' : 'pointer',
-                    opacity: disabled && !isSuperadmin ? 0.6 : 1,
+                    opacity: envLocked ? 0.45 : (disabled && !isSuperadmin ? 0.6 : 1),
                   }}
                   aria-label={`Toggle ${flag.key}`}
-                  title={isSuperadmin ? (flag.enabled ? 'Click to disable' : 'Click to enable') : 'Superadmin only'}
+                  title={
+                    envLocked
+                      ? 'Locked by environment variable'
+                      : isSuperadmin
+                      ? (flag.enabled ? 'Click to disable' : 'Click to enable')
+                      : 'Superadmin only'
+                  }
                 >
                   <input
                     type="checkbox"
-                    checked={flag.enabled}
+                    checked={displayEnabled}
                     disabled={disabled}
                     onChange={(e) => toggle(flag.key, e.target.checked)}
                     style={{ opacity: 0, width: 0, height: 0 }}
@@ -129,7 +140,7 @@ export default function FeatureFlagsClient({ initialFlags, isSuperadmin }: Props
                       position: 'absolute',
                       inset: 0,
                       borderRadius: 14,
-                      backgroundColor: flag.enabled ? 'var(--wc-accent)' : 'rgba(255,255,255,0.15)',
+                      backgroundColor: displayEnabled ? 'var(--wc-accent)' : 'rgba(255,255,255,0.15)',
                       transition: 'background-color 0.2s',
                     }}
                   />
@@ -137,7 +148,7 @@ export default function FeatureFlagsClient({ initialFlags, isSuperadmin }: Props
                     style={{
                       position: 'absolute',
                       top: 3,
-                      left: flag.enabled ? 27 : 3,
+                      left: displayEnabled ? 27 : 3,
                       width: 22,
                       height: 22,
                       borderRadius: '50%',
@@ -148,6 +159,21 @@ export default function FeatureFlagsClient({ initialFlags, isSuperadmin }: Props
                   />
                 </label>
               </div>
+
+              {envLocked && (
+                <div
+                  className="p-2 rounded mt-3"
+                  style={{
+                    backgroundColor: 'rgba(255, 193, 7, 0.08)',
+                    border: '1px solid rgba(255, 193, 7, 0.3)',
+                    color: 'var(--wc-text-muted)',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  ⚠ {envLockWarning}
+                </div>
+              )}
             </li>
           );
         })}

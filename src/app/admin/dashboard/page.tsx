@@ -6,7 +6,7 @@ import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
-import { listFeatureFlags } from '@/lib/feature-flags';
+import { listFeatureFlags, isAiGenerationEnabledByEnv } from '@/lib/feature-flags';
 import DashboardTabs from '../components/DashboardTabs';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
@@ -116,6 +116,15 @@ export default async function AdminDashboardPage() {
 
   const featureFlags = isSuperadmin ? await listFeatureFlags() : [];
 
+  // Flags that are hard-locked off by an env var take precedence over the DB
+  // value — the toggle is shown off + disabled with a warning. DB state is
+  // preserved so it reappears when the env var is re-enabled.
+  const envLocks: Record<string, string> = {};
+  if (!isAiGenerationEnabledByEnv()) {
+    envLocks.ai_predictions =
+      'AI_PREDICTIONS_ENABLED is off in the environment. Toggle is locked — no Claude generation will run regardless of this flag. Set AI_PREDICTIONS_ENABLED=true on Railway to unlock.';
+  }
+
   let envDocsHtml = '';
   if (isSuperadmin) {
     let raw: string;
@@ -213,6 +222,7 @@ export default async function AdminDashboardPage() {
         scenarios={scenarios}
         activeScenario={activeScenario}
         featureFlags={featureFlags}
+        envLocks={envLocks}
         envDocsHtml={envDocsHtml}
       />
     </div>
