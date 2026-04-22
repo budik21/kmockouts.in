@@ -402,6 +402,39 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 /** Per-position timeout for Claude API call (seconds) */
 const AI_CALL_TIMEOUT_MS = 15_000;
 
+/**
+ * Read-only variant: returns cached AI summaries only, NEVER calls the Claude API.
+ * Use this from page renders where a cache miss must not trigger generation.
+ * Fresh generation is the job of the admin match-update pregeneration path.
+ */
+export async function getCachedAiScenarioSummaries(
+  ctx: AiSummaryContext,
+): Promise<{ [pos: number]: string }> {
+  const result: { [pos: number]: string } = {};
+
+  for (let pos = 1; pos <= 4; pos++) {
+    const prob = ctx.probabilities[pos] ?? 0;
+    if (prob === 0) continue;
+    if (prob === 100) {
+      result[pos] = '<div class="scenario-path single">Guaranteed.</div>';
+      continue;
+    }
+
+    const patterns = ctx.outcomePatternsByPosition[pos] ?? [];
+    if (patterns.length === 0) continue;
+
+    const pHash = hashPatterns(patterns);
+    try {
+      const cached = await getCachedAiSummary(ctx.groupId, ctx.teamId, pos, pHash);
+      if (cached) result[pos] = cached;
+    } catch {
+      // Cache table missing or unreachable — silently skip, deterministic fallback will be used
+    }
+  }
+
+  return result;
+}
+
 export async function generateAiScenarioSummaries(
   ctx: AiSummaryContext,
 ): Promise<{ [pos: number]: string }> {

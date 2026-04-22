@@ -6,7 +6,7 @@ import { enumerateGroupScenarios } from '@/engine/scenarios';
 import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probability-cache';
 import { compareThirdPlaced } from '@/engine/best-third';
 import { generateScenarioSummaries } from '@/engine/scenario-summary';
-import { generateAiScenarioSummaries } from '@/engine/scenario-summary-ai';
+import { getCachedAiScenarioSummaries } from '@/engine/scenario-summary-ai';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { slugify } from '@/lib/slugify';
@@ -242,9 +242,10 @@ export default async function TeamDetailPage({ params }: PageProps) {
   );
 
   let scenarioSummaries = deterministicSummaries;
-  // AI summaries only when every team in the group has played at least one match
+  // Read AI summaries from cache only — never generate on page view.
+  // Fresh generation is triggered exclusively by admin match-update pregeneration.
   const allTeamsPlayed = teams.every(t => played.some(m => m.homeTeamId === t.id || m.awayTeamId === t.id));
-  if (remaining.length > 0 && allTeamsPlayed && process.env.ANTHROPIC_API_KEY) {
+  if (remaining.length > 0 && allTeamsPlayed) {
     try {
       const currentStandings = standings.map(s => ({
         teamName: s.team.name,
@@ -252,7 +253,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
         gd: s.goalsFor - s.goalsAgainst,
         position: s.position,
       }));
-      const aiSummaries = await generateAiScenarioSummaries({
+      const aiSummaries = await getCachedAiScenarioSummaries({
         teamId: team.id,
         teamName: team.name,
         groupId: groupId,
@@ -261,7 +262,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
         remainingMatches: remainingMatchesInfo,
         currentStandings,
       });
-      // Merge: use AI where available, fall back to deterministic
+      // Merge: use AI where cached, fall back to deterministic
       scenarioSummaries = { ...deterministicSummaries };
       for (const pos of [1, 2, 3, 4]) {
         if (aiSummaries[pos]) {
@@ -269,7 +270,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
         }
       }
     } catch (err) {
-      console.error('AI scenario summaries failed, using deterministic fallback:', err);
+      console.error('AI scenario cache read failed, using deterministic fallback:', err);
     }
   }
 
