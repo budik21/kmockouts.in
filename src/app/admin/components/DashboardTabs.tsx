@@ -21,6 +21,7 @@ interface DashboardTabsProps {
   scenarios: ScenarioMeta[];
   activeScenario: number | null;
   featureFlags: FeatureFlag[];
+  envDocs: string;
 }
 
 export default function DashboardTabs({
@@ -32,8 +33,9 @@ export default function DashboardTabs({
   scenarios,
   activeScenario,
   featureFlags,
+  envDocs,
 }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'env'>('matches');
 
   const tabButtonStyle = (isActive: boolean) => ({
     background: 'none',
@@ -105,6 +107,11 @@ export default function DashboardTabs({
         {isSuperadmin && (
           <button onClick={() => setActiveTab('flags')} style={tabButtonStyle(activeTab === 'flags')}>
             Feature Flags
+          </button>
+        )}
+        {isSuperadmin && (
+          <button onClick={() => setActiveTab('env')} style={tabButtonStyle(activeTab === 'env')}>
+            Env Vars
           </button>
         )}
       </div>
@@ -208,6 +215,35 @@ export default function DashboardTabs({
               Runtime switches for opt-in features. Changes take effect within ~30&nbsp;seconds across the app.
             </p>
             <FeatureFlagsClient initialFlags={featureFlags} isSuperadmin={isSuperadmin} />
+          </div>
+        )}
+
+        {/* Env Vars tab — superadmin only */}
+        {activeTab === 'env' && isSuperadmin && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
+              Environment Variables
+            </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Reference docs for every env var the app reads. Source file: <code>docs/env-variables.md</code>.
+            </p>
+            <pre
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--wc-border)',
+                borderRadius: '4px',
+                padding: '1.25rem',
+                color: 'var(--wc-text)',
+                fontSize: '0.85rem',
+                lineHeight: 1.55,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                margin: 0,
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              }}
+            >
+              {envDocs}
+            </pre>
           </div>
         )}
       </div>

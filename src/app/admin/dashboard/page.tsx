@@ -115,6 +115,18 @@ export default async function AdminDashboardPage() {
 
   const featureFlags = isSuperadmin ? await listFeatureFlags() : [];
 
+  let envDocs = '';
+  if (isSuperadmin) {
+    try {
+      envDocs = fs.readFileSync(
+        path.join(process.cwd(), 'docs', 'env-variables.md'),
+        'utf-8',
+      );
+    } catch {
+      envDocs = '# Environment Variables\n\nDocumentation file `docs/env-variables.md` is missing from the deployment.';
+    }
+  }
+
   const [matchRows, statsRows, adminUserRows] = await Promise.all([
     query<AdminMatchRow>(`
       SELECT m.*,
@@ -198,6 +210,7 @@ export default async function AdminDashboardPage() {
         scenarios={scenarios}
         activeScenario={activeScenario}
         featureFlags={featureFlags}
+        envDocs={envDocs}
       />
     </div>
   );
