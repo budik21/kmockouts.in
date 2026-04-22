@@ -197,7 +197,11 @@ export async function recalculateAffectedProbabilities(changedGroupId: GroupId):
 export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promise<void> {
   if (!process.env.ANTHROPIC_API_KEY) return;
 
-  const { isFeatureEnabled } = await import('./feature-flags');
+  const { isFeatureEnabled, isAiGenerationEnabledByEnv } = await import('./feature-flags');
+  if (!isAiGenerationEnabledByEnv()) {
+    console.log(`[pregenerate] Skipping scenario AI (AI_PREDICTIONS_ENABLED env off) for group ${groupId}`);
+    return;
+  }
   if (!(await isFeatureEnabled('ai_predictions', true))) {
     console.log(`[pregenerate] Skipping scenario AI (ai_predictions flag off) for group ${groupId}`);
     return;
@@ -297,7 +301,11 @@ export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promis
  * when users visit the page (instead of generating on first load).
  */
 export async function pregenerateBestThirdSummaries(): Promise<void> {
-  const { isFeatureEnabled } = await import('./feature-flags');
+  const { isFeatureEnabled, isAiGenerationEnabledByEnv } = await import('./feature-flags');
+  if (!isAiGenerationEnabledByEnv()) {
+    console.log('[pregenerate] Skipping best-third AI (AI_PREDICTIONS_ENABLED env off)');
+    return;
+  }
   if (!(await isFeatureEnabled('ai_predictions', true))) {
     console.log('[pregenerate] Skipping best-third AI (ai_predictions flag off)');
     return;

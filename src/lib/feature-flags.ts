@@ -75,3 +75,17 @@ export async function setFeatureFlag(key: string, enabled: boolean): Promise<voi
 export function clearFeatureFlagCache(): void {
   cache.clear();
 }
+
+/**
+ * Infra-level kill switch for Claude API generation of scenario/best-third
+ * summaries. Reads the AI_PREDICTIONS_ENABLED env var; only "1" or "true"
+ * (case-insensitive) turn it on. Missing or any other value → off.
+ *
+ * This sits BEFORE the DB-backed `ai_predictions` feature flag so that
+ * generation can be disabled globally per-environment (e.g. staging,
+ * preview deploys) without touching the DB.
+ */
+export function isAiGenerationEnabledByEnv(): boolean {
+  const raw = (process.env.AI_PREDICTIONS_ENABLED ?? '').trim().toLowerCase();
+  return raw === '1' || raw === 'true';
+}

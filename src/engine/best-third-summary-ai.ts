@@ -202,9 +202,11 @@ export async function generateBestThirdSummaries(
   if (allTeams.length === 0) return result;
 
   const ctxHash = hashContext(allTeams, threshold ?? null);
-  const aiEnabled = await isFeatureEnabled('ai_predictions', true);
-  // Generation requires both a live API key AND the feature flag to be on.
-  // Cached summaries are still served when the flag is off, matching the
+  const { isAiGenerationEnabledByEnv } = await import('../lib/feature-flags');
+  const envEnabled = isAiGenerationEnabledByEnv();
+  const aiEnabled = envEnabled && (await isFeatureEnabled('ai_predictions', true));
+  // Generation requires the env kill-switch AND the DB flag AND a live API key.
+  // Cached summaries are still served when any of them is off, matching the
   // behaviour for the no-api-key case.
   const hasApiKey = !!process.env.ANTHROPIC_API_KEY && aiEnabled;
 
