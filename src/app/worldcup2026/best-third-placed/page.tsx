@@ -8,6 +8,7 @@ import { getAllCachedProbs } from '@/lib/probability-cache';
 import BestThirdTable from '@/app/components/BestThirdTable';
 import ThirdPlacedMatchesGrid from '@/app/components/ThirdPlacedMatchesGrid';
 import { generateBestThirdSummaries, BestThirdTeamContext } from '@/engine/best-third-summary-ai';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -189,9 +190,11 @@ export default async function BestThirdPlacedPage() {
     matches: tp.teamMatches,
   }));
 
-  // Generate AI summaries for best-third teams (only when probabilities are available)
+  // Generate AI summaries for best-third teams (only when probabilities are available
+  // AND the display flag is on — the flag hides AI commentary without touching the cache).
   let summariesData: { teamId: number; teamName: string; teamShort: string; countryCode: string; groupId: string; qualProbability: number; summaryHtml: string }[] = [];
-  if (showTable && bestThirdProbs && allTeamsPlayedTwo) {
+  const displayAi = await isFeatureEnabled('ai_predictions_display', true);
+  if (displayAi && showTable && bestThirdProbs && allTeamsPlayedTwo) {
     // Look up per-team probThirdQual (more accurate than per-group)
     const getTeamQualProb = (groupId: string, teamId: number): number => {
       const groupCache = allTeamProbs?.get(groupId);

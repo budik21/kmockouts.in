@@ -7,6 +7,7 @@ import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probab
 import { compareThirdPlaced } from '@/engine/best-third';
 import { generateScenarioSummaries } from '@/engine/scenario-summary';
 import { getCachedAiScenarioSummaries } from '@/engine/scenario-summary-ai';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { slugify } from '@/lib/slugify';
@@ -244,8 +245,10 @@ export default async function TeamDetailPage({ params }: PageProps) {
   let scenarioSummaries = deterministicSummaries;
   // Read AI summaries from cache only — never generate on page view.
   // Fresh generation is triggered exclusively by admin match-update pregeneration.
+  // The ai_predictions_display flag hides AI commentary even when cached; off ⇒ use deterministic only.
+  const displayAi = await isFeatureEnabled('ai_predictions_display', true);
   const allTeamsPlayed = teams.every(t => played.some(m => m.homeTeamId === t.id || m.awayTeamId === t.id));
-  if (remaining.length > 0 && allTeamsPlayed) {
+  if (displayAi && remaining.length > 0 && allTeamsPlayed) {
     try {
       const currentStandings = standings.map(s => ({
         teamName: s.team.name,

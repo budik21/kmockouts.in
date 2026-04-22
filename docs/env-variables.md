@@ -65,11 +65,12 @@ The app reads variables via `process.env.*`. Local development uses `.env` at th
 ### `AI_PREDICTIONS_ENABLED`
 
 - **Optional. Default: off.**
-- Master kill-switch for Claude API generation. Sits *before* the DB-backed `ai_predictions` feature flag.
+- Master kill-switch for Claude API **generation**. Sits *before* the DB-backed `ai_predictions` feature flag.
 - Accepted truthy values (case-insensitive): `1`, `true`. Anything else (including missing) → off.
-- When off: pregeneration helpers short-circuit and team page / best-third page only read from cache. Fresh Claude calls never happen.
+- When off: pregeneration helpers short-circuit and team page / best-third page only read from cache. Fresh Claude calls never happen. The admin `ai_predictions` toggle is visually locked.
 - When on: the DB feature flag is then consulted; both must be enabled for generation to proceed.
 - Read by `isAiGenerationEnabledByEnv()` in `src/lib/feature-flags.ts`.
+- **Not related to display.** Whether cached AI summaries are shown on the site is controlled by the DB flag `ai_predictions_display` (default on) in the admin Feature Flags tab. Generation and display are fully separated.
 
 ---
 

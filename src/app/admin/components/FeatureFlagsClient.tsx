@@ -96,19 +96,7 @@ export default function FeatureFlagsClient({ initialFlags, isSuperadmin, envLock
                 border: '1px solid var(--wc-border)',
               }}
             >
-              <div className="d-flex align-items-start justify-content-between gap-3">
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem' }}>
-                    <code style={{ color: 'var(--wc-accent)' }}>{flag.key}</code>
-                  </div>
-                  <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.9rem', lineHeight: 1.4 }}>
-                    {flag.description}
-                  </div>
-                  <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.75rem', marginTop: '0.4rem' }}>
-                    Last updated: {new Date(flag.updatedAt).toLocaleString()}
-                  </div>
-                </div>
-
+              <div className="d-flex align-items-start gap-3">
                 <label
                   style={{
                     position: 'relative',
@@ -116,6 +104,7 @@ export default function FeatureFlagsClient({ initialFlags, isSuperadmin, envLock
                     width: 52,
                     height: 28,
                     flexShrink: 0,
+                    marginTop: 2,
                     cursor: disabled ? 'not-allowed' : 'pointer',
                     opacity: envLocked ? 0.45 : (disabled && !isSuperadmin ? 0.6 : 1),
                   }}
@@ -158,6 +147,18 @@ export default function FeatureFlagsClient({ initialFlags, isSuperadmin, envLock
                     }}
                   />
                 </label>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '0.25rem' }}>
+                    <code style={{ color: 'var(--wc-accent)' }}>{flag.key}</code>
+                  </div>
+                  <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.9rem', lineHeight: 1.4 }}>
+                    {flag.description}
+                  </div>
+                  <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+                    Last updated: {new Date(flag.updatedAt).toLocaleString()}
+                  </div>
+                </div>
               </div>
 
               {envLocked && (

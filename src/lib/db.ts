@@ -195,7 +195,8 @@ export async function initializeSchema(): Promise<void> {
       updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     INSERT INTO feature_flag (key, enabled, description) VALUES
-      ('ai_predictions', true, 'Generate AI-written qualification scenario summaries for teams and best-third-placed standings. Disabling skips Claude API calls; previously cached summaries remain visible.')
+      ('ai_predictions', true, 'GENERATION: trigger Claude API calls to produce new AI-written qualification scenario summaries. Disabling skips API calls; it does NOT hide existing summaries — use ai_predictions_display for that.'),
+      ('ai_predictions_display', true, 'DISPLAY: render cached AI-written summaries on team pages and best-third-placed standings. Disabling hides all AI commentary (deterministic fallback on team pages; best-third AI box is omitted). Generation is unaffected.')
     ON CONFLICT (key) DO NOTHING;
 
     -- AI-generated scenario summaries cache
