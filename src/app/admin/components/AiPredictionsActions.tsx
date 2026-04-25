@@ -78,9 +78,10 @@ const selectStyle: React.CSSProperties = {
   minWidth: '12rem',
 };
 
-function StatusPill({ on, label }: { on: boolean; label: string }) {
+function StatusPill({ on, label, title }: { on: boolean; label: string; title?: string }) {
   return (
     <span
+      title={title}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -92,6 +93,7 @@ function StatusPill({ on, label }: { on: boolean; label: string }) {
         backgroundColor: on ? 'rgba(76, 175, 80, 0.15)' : 'rgba(244, 67, 54, 0.15)',
         color: on ? '#4caf50' : '#f44336',
         border: `1px solid ${on ? 'rgba(76, 175, 80, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`,
+        cursor: title ? 'help' : 'default',
       }}
     >
       <span
@@ -229,8 +231,19 @@ export default function AiPredictionsActions({
             label={`AI_PREDICTIONS_ENABLED env: ${envEnabled ? 'on' : 'off'}`}
           />
           <StatusPill
-            on={generationFlagEnabled}
-            label={`ai_predictions (generation): ${generationFlagEnabled ? 'on' : 'off'}`}
+            on={envEnabled && generationFlagEnabled}
+            label={`ai_predictions (generation): ${
+              envEnabled
+                ? generationFlagEnabled
+                  ? 'on'
+                  : 'off'
+                : 'locked off (env)'
+            }${!envEnabled && generationFlagEnabled ? ' · DB: on' : ''}`}
+            title={
+              !envEnabled && generationFlagEnabled
+                ? 'DB flag is on, but the AI_PREDICTIONS_ENABLED env kill-switch overrides it. Effective state: off.'
+                : undefined
+            }
           />
           <StatusPill
             on={displayFlagEnabled}
