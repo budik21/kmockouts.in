@@ -83,10 +83,22 @@ interface AiSummaryInput {
   currentStandings: { teamName: string; points: number; gd: number; position: number }[];
 }
 
+export interface AiUsageStats {
+  inputTokens: number;
+  outputTokens: number;
+  calls: number;
+}
+
+interface AiSummaryResult {
+  text: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 /**
  * Generate an AI-powered summary for a single team+position combo.
  */
-async function generateAiSummary(input: AiSummaryInput): Promise<string> {
+async function generateAiSummary(input: AiSummaryInput): Promise<AiSummaryResult> {
   const matchList = input.remainingMatches
     .map((m, i) => `  Match ${i}: ${m.homeTeam} vs ${m.awayTeam}${m.isTeamMatch ? ' (team\'s own match)' : ''}`)
     .join('\n');
@@ -191,7 +203,11 @@ Write the scenario summary for this position. Start with a probability assessmen
   }));
 
   const textBlock = response.content.find(b => b.type === 'text');
-  return textBlock?.text ?? '';
+  return {
+    text: textBlock?.text ?? '',
+    inputTokens: response.usage?.input_tokens ?? 0,
+    outputTokens: response.usage?.output_tokens ?? 0,
+  };
 }
 
 function posLabel(pos: number): string {
@@ -435,8 +451,18 @@ export async function getCachedAiScenarioSummaries(
   return result;
 }
 
+export interface GenerateAiSummariesOptions {
+  /** When true, skip cache lookup and regenerate every position. */
+  force?: boolean;
+  /** When true, bypass the env kill-switch + DB feature flag (superadmin path). */
+  ignoreFlags?: boolean;
+  /** Usage accumulator — totals are added to this object across all calls. */
+  usage?: AiUsageStats;
+}
+
 export async function generateAiScenarioSummaries(
   ctx: AiSummaryContext,
+  options: GenerateAiSummariesOptions = {},
 ): Promise<{ [pos: number]: string }> {
   const result: { [pos: number]: string } = {};
 
@@ -462,15 +488,17 @@ export async function generateAiScenarioSummaries(
 
     const pHash = hashPatterns(patterns);
 
-    // Try cache first
-    try {
-      const cached = await getCachedAiSummary(ctx.groupId, ctx.teamId, pos, pHash);
-      if (cached) {
-        result[pos] = cached;
-        continue;
+    // Try cache first (unless force-regen)
+    if (!options.force) {
+      try {
+        const cached = await getCachedAiSummary(ctx.groupId, ctx.teamId, pos, pHash);
+        if (cached) {
+          result[pos] = cached;
+          continue;
+        }
+      } catch {
+        // Cache table might not exist yet — will generate fresh
       }
-    } catch {
-      // Cache table might not exist yet — will generate fresh
     }
 
     tasks.push({ pos, patterns, pHash });
@@ -480,9 +508,12 @@ export async function generateAiScenarioSummaries(
 
   // Feature flag: when AI predictions are disabled we still serve any cached
   // summaries found above, but skip fresh Claude calls entirely.
-  if (!isAiGenerationEnabledByEnv()) return result;
-  const aiEnabled = await isFeatureEnabled('ai_predictions', true);
-  if (!aiEnabled) return result;
+  // Superadmin force-regen path bypasses both gates via options.ignoreFlags.
+  if (!options.ignoreFlags) {
+    if (!isAiGenerationEnabledByEnv()) return result;
+    const aiEnabled = await isFeatureEnabled('ai_predictions', true);
+    if (!aiEnabled) return result;
+  }
 
   // Run all uncached API calls in parallel with timeout
   const promises = tasks.map(async ({ pos, patterns, pHash }) => {
@@ -502,11 +533,17 @@ export async function generateAiScenarioSummaries(
         AI_CALL_TIMEOUT_MS,
       );
 
-      if (summary) {
-        result[pos] = summary;
+      if (options.usage) {
+        options.usage.calls += 1;
+        options.usage.inputTokens += summary.inputTokens;
+        options.usage.outputTokens += summary.outputTokens;
+      }
+
+      if (summary.text) {
+        result[pos] = summary.text;
         // Save to cache (best-effort)
         try {
-          await saveAiSummary(ctx.groupId, ctx.teamId, pos, summary, pHash);
+          await saveAiSummary(ctx.groupId, ctx.teamId, pos, summary.text, pHash);
         } catch {
           // Cache write failure is non-fatal
         }

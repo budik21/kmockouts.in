@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
 import { listFeatureFlags, isAiGenerationEnabledByEnv } from '@/lib/feature-flags';
+import { ALL_GROUPS } from '@/lib/constants';
 import DashboardTabs from '../components/DashboardTabs';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
@@ -139,6 +140,21 @@ export default async function AdminDashboardPage() {
     envDocsHtml = await marked.parse(raw, { gfm: true, breaks: false });
   }
 
+  const aiTeamRows = isSuperadmin
+    ? await query<{ id: number; name: string; group_id: string }>(
+        'SELECT id, name, group_id FROM team WHERE is_placeholder = false ORDER BY group_id, name',
+      )
+    : [];
+  const aiTeams = aiTeamRows.map(r => ({ id: r.id, name: r.name, groupId: r.group_id }));
+  const aiGroups: string[] = [...ALL_GROUPS];
+  const aiEnvEnabled = isAiGenerationEnabledByEnv();
+  const aiGenerationFlagEnabled = isSuperadmin
+    ? (featureFlags.find(f => f.key === 'ai_predictions')?.enabled ?? false)
+    : false;
+  const aiDisplayFlagEnabled = isSuperadmin
+    ? (featureFlags.find(f => f.key === 'ai_predictions_display')?.enabled ?? false)
+    : false;
+
   const [matchRows, statsRows, adminUserRows] = await Promise.all([
     query<AdminMatchRow>(`
       SELECT m.*,
@@ -224,6 +240,11 @@ export default async function AdminDashboardPage() {
         featureFlags={featureFlags}
         envLocks={envLocks}
         envDocsHtml={envDocsHtml}
+        aiTeams={aiTeams}
+        aiGroups={aiGroups}
+        aiEnvEnabled={aiEnvEnabled}
+        aiGenerationFlagEnabled={aiGenerationFlagEnabled}
+        aiDisplayFlagEnabled={aiDisplayFlagEnabled}
       />
     </div>
   );

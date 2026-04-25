@@ -9,6 +9,7 @@ import MatchEditor from './MatchEditor';
 import PickemActions from './PickemActions';
 import UsersClient from '../users/UsersClient';
 import FeatureFlagsClient from './FeatureFlagsClient';
+import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
 import ScenarioPicker from '@/app/components/ScenarioPicker';
 import type { FeatureFlag } from '@/lib/feature-flags';
 
@@ -23,6 +24,11 @@ interface DashboardTabsProps {
   featureFlags: FeatureFlag[];
   envLocks: Record<string, string>;
   envDocsHtml: string;
+  aiTeams: AiTeamOption[];
+  aiGroups: string[];
+  aiEnvEnabled: boolean;
+  aiGenerationFlagEnabled: boolean;
+  aiDisplayFlagEnabled: boolean;
 }
 
 export default function DashboardTabs({
@@ -36,8 +42,13 @@ export default function DashboardTabs({
   featureFlags,
   envLocks,
   envDocsHtml,
+  aiTeams,
+  aiGroups,
+  aiEnvEnabled,
+  aiGenerationFlagEnabled,
+  aiDisplayFlagEnabled,
 }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'env'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'env'>('matches');
 
   const tabButtonStyle = (isActive: boolean) => ({
     background: 'none',
@@ -109,6 +120,11 @@ export default function DashboardTabs({
         {isSuperadmin && (
           <button onClick={() => setActiveTab('flags')} style={tabButtonStyle(activeTab === 'flags')}>
             Feature Flags
+          </button>
+        )}
+        {isSuperadmin && (
+          <button onClick={() => setActiveTab('ai')} style={tabButtonStyle(activeTab === 'ai')}>
+            AI Predictions
           </button>
         )}
         {isSuperadmin && (
@@ -217,6 +233,28 @@ export default function DashboardTabs({
               Runtime switches for opt-in features. Changes take effect within ~30&nbsp;seconds across the app.
             </p>
             <FeatureFlagsClient initialFlags={featureFlags} isSuperadmin={isSuperadmin} envLocks={envLocks} />
+          </div>
+        )}
+
+        {/* AI Predictions tab — superadmin only */}
+        {activeTab === 'ai' && isSuperadmin && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
+              AI Predictions
+            </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Force-regenerate Claude scenario summaries for a team or a whole group. Existing
+              cached summaries are overwritten without confirmation. Both the env kill-switch
+              and the <code>ai_predictions</code> flag are bypassed for these actions. After the
+              run, application + Cloudflare caches are purged and warmed.
+            </p>
+            <AiPredictionsActions
+              teams={aiTeams}
+              groups={aiGroups}
+              envEnabled={aiEnvEnabled}
+              generationFlagEnabled={aiGenerationFlagEnabled}
+              displayFlagEnabled={aiDisplayFlagEnabled}
+            />
           </div>
         )}
 

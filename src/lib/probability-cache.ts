@@ -194,17 +194,33 @@ export async function recalculateAffectedProbabilities(changedGroupId: GroupId):
  * pay the latency). Called from the admin match-update endpoint after
  * probability recalc completes.
  */
-export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promise<void> {
+export interface PregenerateOptions {
+  /** Restrict regeneration to a single team within the group. */
+  teamId?: number;
+  /** Skip cache lookup and regenerate every position regardless. */
+  force?: boolean;
+  /** Bypass env kill-switch + DB feature flag (superadmin path). */
+  ignoreFlags?: boolean;
+  /** Usage accumulator filled during generation. */
+  usage?: import('../engine/scenario-summary-ai').AiUsageStats;
+}
+
+export async function pregenerateTeamScenarioSummaries(
+  groupId: GroupId,
+  options: PregenerateOptions = {},
+): Promise<void> {
   if (!process.env.ANTHROPIC_API_KEY) return;
 
-  const { isFeatureEnabled, isAiGenerationEnabledByEnv } = await import('./feature-flags');
-  if (!isAiGenerationEnabledByEnv()) {
-    console.log(`[pregenerate] Skipping scenario AI (AI_PREDICTIONS_ENABLED env off) for group ${groupId}`);
-    return;
-  }
-  if (!(await isFeatureEnabled('ai_predictions', true))) {
-    console.log(`[pregenerate] Skipping scenario AI (ai_predictions flag off) for group ${groupId}`);
-    return;
+  if (!options.ignoreFlags) {
+    const { isFeatureEnabled, isAiGenerationEnabledByEnv } = await import('./feature-flags');
+    if (!isAiGenerationEnabledByEnv()) {
+      console.log(`[pregenerate] Skipping scenario AI (AI_PREDICTIONS_ENABLED env off) for group ${groupId}`);
+      return;
+    }
+    if (!(await isFeatureEnabled('ai_predictions', true))) {
+      console.log(`[pregenerate] Skipping scenario AI (ai_predictions flag off) for group ${groupId}`);
+      return;
+    }
   }
 
   // Lazy imports to avoid circular dependencies and to keep this helper
@@ -267,7 +283,11 @@ export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promis
     awayTeamName: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
   }));
 
-  console.log(`[pregenerate] Generating scenario AI summaries for group ${groupId} (${teams.length} teams)`);
+  const targetTeams = options.teamId
+    ? teams.filter(t => t.id === options.teamId)
+    : teams;
+
+  console.log(`[pregenerate] Generating scenario AI summaries for group ${groupId} (${targetTeams.length} team${targetTeams.length === 1 ? '' : 's'})${options.force ? ' [FORCE]' : ''}`);
 
   // Fire all teams in parallel. Each call internally fans out across
   // positions (also in parallel), but every actual Claude API request is
@@ -275,7 +295,7 @@ export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promis
   // the real concurrency stays bounded regardless of how many teams or
   // groups are in flight at once.
   await Promise.allSettled(
-    teams.map(team => {
+    targetTeams.map(team => {
       const teamSummary = summaries.find(s => s.teamId === team.id);
       if (!teamSummary) return Promise.resolve();
       return generateAiScenarioSummaries({
@@ -286,6 +306,10 @@ export async function pregenerateTeamScenarioSummaries(groupId: GroupId): Promis
         probabilities: teamSummary.positionProbabilities,
         remainingMatches: remainingMatchesInfo,
         currentStandings,
+      }, {
+        force: options.force,
+        ignoreFlags: options.ignoreFlags,
+        usage: options.usage,
       }).catch(err => {
         console.error(`[pregenerate] Team scenario AI failed for ${team.name}:`, err);
       });
