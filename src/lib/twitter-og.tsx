@@ -69,7 +69,7 @@ export type MilestoneKind = 'clinched' | 'eliminated' | null;
 export function detectMilestone(ctx: PreMatchContext | PostMatchContext): MilestoneKind {
   const totalAdvance = ctx.probabilities.advance + ctx.probabilities.thirdPlay;
   if (totalAdvance >= 99.5) return 'clinched';
-  if (ctx.probabilities.eliminated >= 99.5) return 'eliminated';
+  if ((ctx.positionProbs[4] ?? 0) >= 99.5) return 'eliminated';
   return null;
 }
 
