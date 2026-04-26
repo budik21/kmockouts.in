@@ -10,7 +10,7 @@ import PickemActions from './PickemActions';
 import UsersClient from '../users/UsersClient';
 import FeatureFlagsClient from './FeatureFlagsClient';
 import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
-import TwitterTab, { type TwitterTeamOption } from './TwitterTab';
+import TwitterTab from './TwitterTab';
 import ScenarioPicker from '@/app/components/ScenarioPicker';
 import type { FeatureFlag } from '@/lib/feature-flags';
 
@@ -30,8 +30,10 @@ interface DashboardTabsProps {
   aiEnvEnabled: boolean;
   aiGenerationFlagEnabled: boolean;
   aiDisplayFlagEnabled: boolean;
-  twitterTeams: TwitterTeamOption[];
+  initialTab?: TabKey;
 }
+
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
 
 export default function DashboardTabs({
   initialMatches,
@@ -49,9 +51,9 @@ export default function DashboardTabs({
   aiEnvEnabled,
   aiGenerationFlagEnabled,
   aiDisplayFlagEnabled,
-  twitterTeams,
+  initialTab,
 }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env'>('matches');
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? 'matches');
 
   const tabButtonStyle = (isActive: boolean) => ({
     background: 'none',
@@ -272,7 +274,7 @@ export default function DashboardTabs({
             <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
               Twitter (X)
             </h2>
-            <TwitterTab teams={twitterTeams} />
+            <TwitterTab />
           </div>
         )}
 

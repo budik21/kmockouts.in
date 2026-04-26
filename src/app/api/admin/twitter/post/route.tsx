@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ImageResponse } from 'next/og';
-import path from 'path';
-import fs from 'fs/promises';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { auth } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
 import { isTwitterConfigured, postTweet, recordTweet, type TwitterTemplate, type TwitterMediaKind } from '@/lib/twitter';
 import { buildPreMatchContext, buildPostMatchContext, teamPageUrl, APPENDED_URL_WEIGHT } from '@/lib/twitter-context';
+import { renderForVariant, loadFlagSvg, svgToDataUrl, type OgVariant } from '@/lib/twitter-og';
 
 export const runtime = 'nodejs';
 
@@ -18,92 +17,18 @@ function mimeToKind(mime: string): TwitterMediaKind {
   return mime === 'image/gif' ? 'gif' : 'image';
 }
 
-const flagSvgCache = new Map<string, string>();
-
-async function loadFlagSvg(countryCode: string): Promise<string | null> {
-  const code = countryCode.toLowerCase();
-  if (!code || !/^[a-z]{2}$/.test(code)) return null;
-  const cached = flagSvgCache.get(code);
-  if (cached) return cached;
-  try {
-    const svgPath = path.join(process.cwd(), 'node_modules', 'flag-icons', 'flags', '4x3', `${code}.svg`);
-    const raw = await fs.readFile(svgPath, 'utf-8');
-    flagSvgCache.set(code, raw);
-    return raw;
-  } catch {
-    return null;
-  }
-}
-
-async function renderScenarioPng(teamId: number, kind: 'pre' | 'post'): Promise<Buffer> {
+async function renderScenarioPng(teamId: number, kind: 'pre' | 'post', variant: OgVariant): Promise<Buffer> {
   const ctx = kind === 'pre'
     ? await buildPreMatchContext(teamId)
     : await buildPostMatchContext(teamId);
 
   const flagSvg = await loadFlagSvg(ctx.team.countryCode);
-  const flagDataUrl = flagSvg
-    ? `data:image/svg+xml;base64,${Buffer.from(flagSvg, 'utf-8').toString('base64')}`
-    : null;
+  const flagDataUrl = flagSvg ? svgToDataUrl(flagSvg) : null;
 
-  const headline = ctx.kind === 'pre' ? 'NEXT UP' : 'FULL TIME';
-  const accent = ctx.kind === 'pre' ? '#3b82f6' : '#ef4444';
-  const subline = ctx.kind === 'pre'
-    ? `${ctx.team.shortName} vs ${ctx.opponent.shortName} • ${new Date(ctx.nextMatch.kickOff).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`
-    : `${ctx.team.shortName} ${ctx.scoreLineFor} ${ctx.opponent.shortName} • Round ${ctx.lastMatch.round}`;
-
-  const probs = [
-    { label: 'Advance', value: ctx.probabilities.advance, color: '#22c55e' },
-    { label: '3rd-place', value: ctx.probabilities.thirdPlay, color: '#eab308' },
-    { label: 'Eliminated', value: ctx.probabilities.eliminated, color: '#ef4444' },
-  ];
-
-  const node = (
-    <div
-      style={{
-        width: '1200px',
-        height: '675px',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0b1220 100%)',
-        color: '#f8fafc',
-        fontFamily: 'sans-serif',
-        padding: '48px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', background: accent, color: '#0b1220', fontWeight: 800, padding: '8px 18px', borderRadius: '6px', fontSize: '24px', letterSpacing: '2px' }}>{headline}</div>
-        <div style={{ display: 'flex', color: '#94a3b8', fontSize: '22px' }}>
-          Group {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} matches played
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '32px', marginTop: '40px' }}>
-        {flagDataUrl ? (
-          <img src={flagDataUrl} width={220} height={165} style={{ borderRadius: '10px', boxShadow: '0 8px 22px rgba(0,0,0,0.45)' }} />
-        ) : (
-          <div style={{ display: 'flex', width: '220px', height: '165px', background: '#1e293b', borderRadius: '10px', alignItems: 'center', justifyContent: 'center', fontSize: '48px', fontWeight: 800 }}>
-            {ctx.team.shortName}
-          </div>
-        )}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '70px', fontWeight: 800, lineHeight: 1, color: '#f8fafc' }}>{ctx.team.name}</div>
-          <div style={{ fontSize: '28px', color: '#cbd5e1', marginTop: '14px' }}>{subline}</div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: '24px', marginTop: 'auto' }}>
-        {probs.map((p) => (
-          <div key={p.label} style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px 28px', background: 'rgba(255,255,255,0.05)', borderRadius: '14px', border: `1px solid ${p.color}40` }}>
-            <div style={{ display: 'flex', fontSize: '20px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>{p.label}</div>
-            <div style={{ display: 'flex', fontSize: '64px', fontWeight: 800, color: p.color, marginTop: '6px' }}>{p.value.toFixed(1)}%</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-        <div style={{ color: '#475569', fontSize: '20px', letterSpacing: '1px' }}>knockouts.in</div>
-      </div>
-    </div>
-  );
-
-  const response = new ImageResponse(node, { width: 1200, height: 675 });
+  const response = new ImageResponse(renderForVariant({ ctx, flagDataUrl }, variant), {
+    width: 1200,
+    height: 675,
+  });
   const arrayBuffer = await response.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
@@ -137,6 +62,8 @@ export async function POST(request: NextRequest) {
   const teamIdRaw = formData.get('teamId');
   const matchIdRaw = formData.get('matchId');
   const ogKindRaw = formData.get('ogKind');
+  const variantRaw = Number(formData.get('variant') ?? '1');
+  const variant: OgVariant = variantRaw === 2 ? 2 : variantRaw === 3 ? 3 : 1;
 
   if (!text) {
     return NextResponse.json({ error: 'Tweet text is required' }, { status: 400 });
@@ -148,9 +75,6 @@ export async function POST(request: NextRequest) {
   const teamId = teamIdRaw ? Number(teamIdRaw) : null;
   const matchId = matchIdRaw ? Number(matchIdRaw) : null;
 
-  // Scenario tweets get the team page URL auto-appended on the server so
-  // counter and prompt stay deterministic regardless of what the editor
-  // typed. Twitter weighs the appended URL as 23 chars (t.co) plus 1 space.
   let finalText = text;
   if (template === 'scenario_pre' || template === 'scenario_post') {
     if (!teamId) {
@@ -162,7 +86,6 @@ export async function POST(request: NextRequest) {
         : await buildPostMatchContext(teamId);
       const url = teamPageUrl(ctx.team);
       finalText = `${text} ${url}`;
-      // Weighted length check: own text + space + 23 (t.co) <= 280
       if ([...text].length + APPENDED_URL_WEIGHT > MAX_TEXT_LEN) {
         return NextResponse.json(
           { error: `Tweet text exceeds ${MAX_TEXT_LEN - APPENDED_URL_WEIGHT} characters once the team URL is appended` },
@@ -184,7 +107,6 @@ export async function POST(request: NextRequest) {
   let mediaBuffer: Buffer | null = null;
   let mediaMime: 'image/png' | 'image/jpeg' | 'image/gif' | null = null;
 
-  // Path A: explicit file upload (simple template)
   const file = formData.get('media');
   if (file instanceof File && file.size > 0) {
     if (!ALLOWED_MIME.has(file.type)) {
@@ -196,12 +118,11 @@ export async function POST(request: NextRequest) {
     mediaBuffer = Buffer.from(await file.arrayBuffer());
     mediaMime = file.type as 'image/png' | 'image/jpeg' | 'image/gif';
   } else if (template === 'scenario_pre' || template === 'scenario_post') {
-    // Path B: scenario template — server renders OG image fresh
     if (!teamId || (ogKindRaw !== 'pre' && ogKindRaw !== 'post')) {
       return NextResponse.json({ error: 'teamId and ogKind=pre|post required for scenario template' }, { status: 400 });
     }
     try {
-      mediaBuffer = await renderScenarioPng(teamId, ogKindRaw);
+      mediaBuffer = await renderScenarioPng(teamId, ogKindRaw, variant);
       mediaMime = 'image/png';
     } catch (err) {
       console.error('Scenario OG render failed:', err);

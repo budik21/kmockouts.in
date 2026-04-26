@@ -102,8 +102,19 @@ function readScenarios(): { scenarios: ScenarioMeta[]; active: number | null } {
   return { scenarios, active };
 }
 
-export default async function AdminDashboardPage() {
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
+const VALID_TABS: TabKey[] = ['matches', 'scenarios', 'pickem', 'users', 'flags', 'ai', 'twitter', 'env'];
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }>;
+}) {
   await requireAdmin();
+  const sp = (await searchParams) ?? {};
+  const initialTab: TabKey | undefined = VALID_TABS.includes(sp.tab as TabKey)
+    ? (sp.tab as TabKey)
+    : undefined;
 
   let session;
   try {
@@ -141,17 +152,11 @@ export default async function AdminDashboardPage() {
   }
 
   const aiTeamRows = isSuperadmin
-    ? await query<{ id: number; name: string; group_id: string; country_code: string }>(
-        'SELECT id, name, group_id, country_code FROM team WHERE is_placeholder = false ORDER BY group_id, name',
+    ? await query<{ id: number; name: string; group_id: string }>(
+        'SELECT id, name, group_id FROM team WHERE is_placeholder = false ORDER BY group_id, name',
       )
     : [];
   const aiTeams = aiTeamRows.map(r => ({ id: r.id, name: r.name, groupId: r.group_id }));
-  const twitterTeams = aiTeamRows.map(r => ({
-    id: r.id,
-    name: r.name,
-    groupId: r.group_id,
-    countryCode: r.country_code,
-  }));
   const aiGroups: string[] = [...ALL_GROUPS];
   const aiEnvEnabled = isAiGenerationEnabledByEnv();
   const aiGenerationFlagEnabled = isSuperadmin
@@ -251,7 +256,7 @@ export default async function AdminDashboardPage() {
         aiEnvEnabled={aiEnvEnabled}
         aiGenerationFlagEnabled={aiGenerationFlagEnabled}
         aiDisplayFlagEnabled={aiDisplayFlagEnabled}
-        twitterTeams={twitterTeams}
+        initialTab={initialTab}
       />
     </div>
   );

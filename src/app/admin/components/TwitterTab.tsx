@@ -1,19 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Spinner from './Spinner';
-import TwitterWizard from './TwitterWizard';
-
-export interface TwitterTeamOption {
-  id: number;
-  name: string;
-  groupId: string;
-  countryCode: string;
-}
-
-interface TwitterTabProps {
-  teams: TwitterTeamOption[];
-}
 
 interface TwitterPostListItem {
   id: number;
@@ -41,7 +30,7 @@ const card: React.CSSProperties = {
   borderRadius: '0.375rem',
 };
 
-const buttonStyle: React.CSSProperties = {
+const buttonLink: React.CSSProperties = {
   padding: '0.5rem 1rem',
   fontWeight: 600,
   borderRadius: '0.25rem',
@@ -49,6 +38,8 @@ const buttonStyle: React.CSSProperties = {
   backgroundColor: 'var(--wc-accent)',
   color: '#2a1a00',
   border: 'none',
+  textDecoration: 'none',
+  display: 'inline-block',
 };
 
 function templateLabel(t: TwitterPostListItem['template']): string {
@@ -65,11 +56,10 @@ function formatPostedAt(iso: string): string {
   }
 }
 
-export default function TwitterTab({ teams }: TwitterTabProps) {
+export default function TwitterTab() {
   const [data, setData] = useState<PostsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [wizardOpen, setWizardOpen] = useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -91,6 +81,8 @@ export default function TwitterTab({ teams }: TwitterTabProps) {
   useEffect(() => {
     refresh();
   }, []);
+
+  const canPost = data ? data.configured : false;
 
   return (
     <div>
@@ -125,14 +117,13 @@ export default function TwitterTab({ teams }: TwitterTabProps) {
 
       <div className="d-flex align-items-center justify-content-between mb-3">
         <h3 style={{ color: 'var(--wc-text)', fontSize: '1.05rem', margin: 0 }}>Published tweets</h3>
-        <button
-          type="button"
-          style={buttonStyle}
-          onClick={() => setWizardOpen(true)}
-          disabled={data ? !data.configured : false}
-        >
-          + New post
-        </button>
+        {canPost ? (
+          <Link href="/admin/twitter/new" style={buttonLink}>
+            + New post
+          </Link>
+        ) : (
+          <span style={{ ...buttonLink, opacity: 0.5, cursor: 'not-allowed' }}>+ New post</span>
+        )}
       </div>
 
       {loading && <Spinner />}
@@ -183,17 +174,6 @@ export default function TwitterTab({ teams }: TwitterTabProps) {
             </tbody>
           </table>
         </div>
-      )}
-
-      {wizardOpen && (
-        <TwitterWizard
-          teams={teams}
-          onClose={() => setWizardOpen(false)}
-          onPublished={() => {
-            setWizardOpen(false);
-            refresh();
-          }}
-        />
       )}
     </div>
   );
