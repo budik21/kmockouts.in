@@ -152,36 +152,87 @@ function subline(ctx: PreMatchContext | PostMatchContext): string {
     : `${ctx.team.shortName} ${ctx.scoreLineFor} ${ctx.opponent.shortName} • Round ${ctx.lastMatch.round}`;
 }
 
-// ---------- CLINCHED ----------
+function MilestonePoster({
+  ctx,
+  flagDataUrl,
+  flagSquareDataUrl,
+  kind,
+  variant,
+}: OgRenderProps & { kind: 'clinched' | 'eliminated'; variant: OgVariant }) {
+  const isClinched = kind === 'clinched';
+  const dark = variant !== 3;
+  const standing = ctx.standings.find(s => s.teamName === ctx.team.name);
+  const accent = isClinched ? '#facc15' : '#ef4444';
+  const headline = isClinched ? 'PLAY-OFF SECURED' : variant === 2 ? 'OUT!' : 'ELIMINATED!';
+  const status = isClinched ? 'Round of 32 guaranteed' : 'World Cup run ends here';
+  const background = isClinched
+    ? variant === 1
+      ? 'radial-gradient(circle at 20% 15%, rgba(250,204,21,0.34), transparent 30%), linear-gradient(135deg, #052e16 0%, #064e3b 50%, #111827 100%)'
+      : variant === 2
+        ? 'linear-gradient(120deg, #022c22 0%, #14532d 45%, #422006 100%)'
+        : 'linear-gradient(135deg, #fefce8 0%, #dcfce7 55%, #ffffff 100%)'
+    : variant === 1
+      ? 'radial-gradient(circle at 24% 10%, rgba(239,68,68,0.34), transparent 28%), linear-gradient(135deg, #111827 0%, #450a0a 58%, #0b1220 100%)'
+      : variant === 2
+        ? 'linear-gradient(120deg, #450a0a 0%, #991b1b 46%, #111827 100%)'
+        : 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 56%, #991b1b 100%)';
+  const textColor = dark || !isClinched ? '#f8fafc' : '#0f172a';
+  const mutedColor = dark || !isClinched ? '#cbd5e1' : '#475569';
+  const flagOpacity = isClinched ? 0.22 : 0.16;
+  const bigWord = isClinched ? 'THROUGH' : 'OUT';
+  const sparks = isClinched
+    ? [
+      { l: '8%', t: '12%', c: '#fde047', s: 14 },
+      { l: '18%', t: '76%', c: '#22c55e', s: 10 },
+      { l: '34%', t: '8%', c: '#facc15', s: 12 },
+      { l: '58%', t: '20%', c: '#34d399', s: 16 },
+      { l: '78%', t: '72%', c: '#fde047', s: 12 },
+      { l: '90%', t: '16%', c: '#22c55e', s: 10 },
+      { l: '44%', t: '88%', c: '#f97316', s: 8 },
+      { l: '68%', t: '90%', c: '#34d399', s: 14 },
+    ]
+    : [
+      { l: '10%', t: '18%', c: '#fecaca', s: 10 },
+      { l: '24%', t: '82%', c: '#ef4444', s: 12 },
+      { l: '52%', t: '12%', c: '#f87171', s: 8 },
+      { l: '84%', t: '74%', c: '#fee2e2', s: 14 },
+    ];
 
-function renderClinchedV1({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
-  // V1 — dark hero with confetti dots, gold pill, big team name (matches
-  // the original V1 "Modern Dark" palette).
   return (
     <div
       style={{
         width: '1200px',
         height: '675px',
         display: 'flex',
-        flexDirection: 'column',
-        background: 'linear-gradient(135deg, #052e16 0%, #064e3b 35%, #0f3a1c 65%, #422006 100%)',
-        color: '#f8fafc',
-        fontFamily: 'sans-serif',
-        padding: '56px',
         position: 'relative',
+        overflow: 'hidden',
+        background,
+        color: textColor,
+        fontFamily: 'sans-serif',
+        padding: variant === 3 ? '42px 48px' : '48px',
       }}
     >
+      <PosterBackground
+        ctx={ctx}
+        flagDataUrl={flagDataUrl}
+        flagSquareDataUrl={flagSquareDataUrl}
+        side={variant === 2 ? 'left' : 'right'}
+        opacity={flagOpacity}
+      />
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          inset: 0,
+          background: isClinched
+            ? dark
+              ? 'linear-gradient(90deg, rgba(2,44,34,0.94), rgba(20,83,45,0.70), rgba(2,6,23,0.38))'
+              : 'linear-gradient(90deg, rgba(254,252,232,0.92), rgba(255,255,255,0.68))'
+            : 'linear-gradient(90deg, rgba(69,10,10,0.96), rgba(127,29,29,0.76), rgba(15,23,42,0.48))',
+        }}
+      />
       <div style={{ display: 'flex', position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        {[
-          { l: '8%', t: '12%', c: '#fde047', s: 14 },
-          { l: '18%', t: '78%', c: '#22c55e', s: 10 },
-          { l: '40%', t: '8%', c: '#facc15', s: 12 },
-          { l: '62%', t: '22%', c: '#34d399', s: 16 },
-          { l: '78%', t: '70%', c: '#fde047', s: 12 },
-          { l: '90%', t: '15%', c: '#22c55e', s: 10 },
-          { l: '30%', t: '88%', c: '#fde047', s: 8 },
-          { l: '70%', t: '92%', c: '#34d399', s: 14 },
-        ].map((d, i) => (
+        {sparks.map((d, i) => (
           <div
             key={i}
             style={{
@@ -191,332 +242,158 @@ function renderClinchedV1({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps
               top: d.t,
               width: `${d.s}px`,
               height: `${d.s}px`,
-              borderRadius: '9999px',
+              borderRadius: '999px',
               background: d.c,
-              opacity: 0.8,
+              opacity: isClinched ? 0.82 : 0.34,
+              ...(isClinched ? { boxShadow: `0 0 28px ${d.c}` } : {}),
+            }}
+          />
+        ))}
+        {isClinched && [0, 1, 2].map((i) => (
+          <div
+            key={`firework-${i}`}
+            style={{
+              display: 'flex',
+              position: 'absolute',
+              right: `${90 + i * 145}px`,
+              top: `${58 + i * 34}px`,
+              width: `${118 - i * 16}px`,
+              height: `${118 - i * 16}px`,
+              borderRadius: '999px',
+              border: `5px solid ${i === 1 ? '#22c55e' : '#fde047'}`,
+              opacity: 0.28,
+              boxShadow: `0 0 34px ${i === 1 ? '#22c55e' : '#fde047'}`,
             }}
           />
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <div style={{ display: 'flex', background: '#fde047', color: '#422006', fontWeight: 900, padding: '10px 22px', borderRadius: '999px', fontSize: '24px', letterSpacing: '3px' }}>
-          🏆 PLAYOFF SECURED
-        </div>
-        <div style={{ display: 'flex', color: '#a7f3d0', fontSize: '20px' }}>
-          Group {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} played
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '40px', marginTop: 'auto', marginBottom: 'auto' }}>
-        <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={240} ring="#fde04766" fallback={ctx.team.shortName} />
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '92px', fontWeight: 900, lineHeight: 1, color: '#f8fafc' }}>{ctx.team.name}</div>
-          <div style={{ fontSize: '40px', fontWeight: 800, color: '#fde047', marginTop: '14px', lineHeight: 1.05 }}>claimed the playoff!</div>
-          <div style={{ fontSize: '24px', color: '#cbd5e1', marginTop: '14px' }}>{subline(ctx)}</div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div style={{ display: 'flex', color: '#bbf7d0', fontSize: '22px', fontWeight: 600 }}>
-          Round of 32 • Mathematically guaranteed
-        </div>
-        <div style={{ display: 'flex', color: '#94a3b8', fontSize: '20px', letterSpacing: '1px' }}>knockouts.in</div>
-      </div>
-    </div>
-  );
-}
-
-function renderClinchedV2({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
-  // V2 — matches "Bold Flag": giant flag on the left half, gold ribbon on
-  // the right with the headline + standings hint.
-  const standing = ctx.standings.find(s => s.teamName === ctx.team.name);
-  return (
-    <div
-      style={{
-        width: '1200px',
-        height: '675px',
-        display: 'flex',
-        flexDirection: 'row',
-        background: 'linear-gradient(90deg, #052e16 0%, #14532d 100%)',
-        color: '#f8fafc',
-        fontFamily: 'sans-serif',
-      }}
-    >
-      <div style={{ display: 'flex', width: '520px', height: '675px', alignItems: 'center', justifyContent: 'center', background: '#022c22', position: 'relative' }}>
-        <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={420} ring="#fde04766" fallback={ctx.team.shortName} />
-        {/* Diagonal gold ribbon */}
+      {!isClinched && (
         <div
           style={{
             display: 'flex',
             position: 'absolute',
-            top: '90px',
-            left: '-60px',
-            transform: 'rotate(-22deg)',
-            background: '#fde047',
-            color: '#422006',
-            padding: '8px 80px',
-            fontWeight: 900,
-            fontSize: '22px',
-            letterSpacing: '4px',
-            boxShadow: '0 6px 18px rgba(0,0,0,0.4)',
+            inset: '0 0 auto 0',
+            height: '210px',
+            background: '#dc2626',
+            transform: variant === 2 ? 'rotate(-4deg) translateY(-38px)' : 'rotate(-2deg) translateY(-44px)',
+            boxShadow: '0 22px 50px rgba(0,0,0,0.35)',
           }}
-        >
-          🏆 INTO THE R32
-        </div>
-      </div>
+        />
+      )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '60px 56px 40px 36px' }}>
-        <div style={{ display: 'flex', color: '#a7f3d0', fontSize: '22px', letterSpacing: '2px' }}>
-          GROUP {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} PLAYED
-        </div>
-        <div style={{ display: 'flex', fontSize: '78px', fontWeight: 900, marginTop: '8px', lineHeight: 1, color: '#fde047' }}>
-          {ctx.team.name}
-        </div>
-        <div style={{ display: 'flex', fontSize: '34px', fontWeight: 700, color: '#f8fafc', marginTop: '14px', lineHeight: 1.1 }}>
-          is through to the Round of 32
-        </div>
-        {standing && (
-          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 'auto', gap: '6px' }}>
-            <div style={{ display: 'flex', fontSize: '20px', color: '#bbf7d0', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Current standing</div>
-            <div style={{ display: 'flex', fontSize: '40px', fontWeight: 800, color: '#f8fafc' }}>
-              #{standing.position} · {standing.points} pts · {standing.goalDifference >= 0 ? '+' : ''}{standing.goalDifference} GD
+      <div style={{ display: 'flex', position: 'relative', zIndex: 1, flexDirection: 'column', width: '100%', height: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', maxWidth: variant === 2 ? '760px' : '820px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignSelf: 'flex-start',
+                background: isClinched ? accent : '#ffffff',
+                color: isClinched ? '#422006' : '#b91c1c',
+                fontSize: '24px',
+                fontWeight: 950,
+                letterSpacing: '3px',
+                padding: '10px 22px',
+                borderRadius: isClinched ? '999px' : '8px',
+                textTransform: 'uppercase',
+              }}
+            >
+              {headline}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                fontSize: variant === 3 ? '84px' : '98px',
+                fontWeight: 950,
+                lineHeight: 0.88,
+                letterSpacing: '-5px',
+                marginTop: '24px',
+                color: textColor,
+              }}
+            >
+              {ctx.team.name}
+            </div>
+            <div style={{ display: 'flex', fontSize: '34px', color: isClinched ? accent : '#ffffff', fontWeight: 900, marginTop: '18px' }}>
+              {status}
             </div>
           </div>
-        )}
-        <div style={{ display: 'flex', fontSize: '20px', color: '#cbd5e1', marginTop: '14px' }}>{subline(ctx)}</div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px', color: '#475569', fontSize: '18px', letterSpacing: '1px' }}>knockouts.in</div>
+          <FlagCircle
+            flagDataUrl={flagDataUrl}
+            flagSquareDataUrl={flagSquareDataUrl}
+            size={variant === 2 ? 170 : 132}
+            ring={isClinched ? `${accent}77` : '#ffffff55'}
+            fallback={ctx.team.shortName}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '28px', marginTop: 'auto' }}>
+          <div
+            style={{
+              display: 'flex',
+              fontSize: isClinched ? '130px' : '150px',
+              fontWeight: 950,
+              lineHeight: 0.82,
+              letterSpacing: '-7px',
+              color: isClinched ? accent : '#ffffff',
+              textTransform: 'uppercase',
+              ...(dark || !isClinched ? { textShadow: '0 18px 50px rgba(0,0,0,0.36)' } : {}),
+            }}
+          >
+            {bigWord}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '10px' }}>
+            <div style={{ display: 'flex', color: mutedColor, fontSize: '22px' }}>
+              Group {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} matches played
+            </div>
+            {standing && (
+              <div style={{ display: 'flex', color: textColor, fontSize: '34px', fontWeight: 900 }}>
+                #{standing.position} · {standing.points} pts · {standing.goalDifference >= 0 ? '+' : ''}{standing.goalDifference} GD
+              </div>
+            )}
+            <div style={{ display: 'flex', color: mutedColor, fontSize: '21px' }}>{subline(ctx)}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+          <div style={{ display: 'flex', color: isClinched ? (dark ? '#bbf7d0' : '#166534') : '#fee2e2', fontSize: '22px', fontWeight: 800 }}>
+            {isClinched ? 'Mathematically guaranteed' : 'Mathematically eliminated'}
+          </div>
+          <div style={{ display: 'flex', color: dark || !isClinched ? '#cbd5e1' : '#64748b', fontSize: '18px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+            knockouts.in
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function renderClinchedV3({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
-  // V3 — "Stat Focus": clean light card with a giant ✓ THROUGH and the
-  // 100% advance number front and centre.
-  return (
-    <div
-      style={{
-        width: '1200px',
-        height: '675px',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)',
-        color: '#0f172a',
-        fontFamily: 'sans-serif',
-        padding: '48px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', background: '#16a34a', color: '#fff', fontWeight: 800, padding: '8px 18px', borderRadius: '999px', fontSize: '22px', letterSpacing: '2px' }}>
-          ✓ THROUGH
-        </div>
-        <div style={{ display: 'flex', color: '#475569', fontSize: '22px' }}>
-          Group {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} played
-        </div>
-      </div>
+// ---------- CLINCHED ----------
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '28px', marginTop: '36px' }}>
-        <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={120} ring="#16a34a33" fallback={ctx.team.shortName} />
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '64px', fontWeight: 800, lineHeight: 1 }}>{ctx.team.name}</div>
-          <div style={{ fontSize: '28px', color: '#15803d', marginTop: '10px', fontWeight: 600 }}>has clinched a Round of 32 spot</div>
-        </div>
-      </div>
+function renderClinchedV1(props: OgRenderProps) {
+  return <MilestonePoster {...props} kind="clinched" variant={1} />;
+}
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '28px' }}>
-        <div style={{ display: 'flex', fontSize: '20px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px' }}>Advance probability</div>
-        <div style={{ display: 'flex', fontSize: '180px', fontWeight: 900, color: '#16a34a', lineHeight: 1, marginTop: '6px' }}>100%</div>
-      </div>
+function renderClinchedV2(props: OgRenderProps) {
+  return <MilestonePoster {...props} kind="clinched" variant={2} />;
+}
 
-      <div style={{ display: 'flex', gap: '20px', marginTop: 'auto' }}>
-        <div style={{ display: 'flex', flex: 1, padding: '14px 22px', borderRadius: '10px', background: '#dcfce7', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', fontSize: '18px', color: '#14532d', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Status</div>
-          <div style={{ display: 'flex', fontSize: '28px', fontWeight: 800, color: '#14532d' }}>Knockouts secured</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', color: '#94a3b8', fontSize: '18px', letterSpacing: '1px', paddingLeft: '6px' }}>knockouts.in</div>
-      </div>
-    </div>
-  );
+function renderClinchedV3(props: OgRenderProps) {
+  return <MilestonePoster {...props} kind="clinched" variant={3} />;
 }
 
 // ---------- ELIMINATED (no RIP / no graveyard imagery) ----------
 
-function renderEliminatedV1({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
-  // V1 — somber dark slate with a desaturated team block and a red
-  // diagonal "OUT" stamp. No funeral imagery.
-  return (
-    <div
-      style={{
-        width: '1200px',
-        height: '675px',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0b1220 100%)',
-        color: '#e2e8f0',
-        fontFamily: 'sans-serif',
-        padding: '48px',
-        position: 'relative',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <div style={{ display: 'flex', background: '#ef4444', color: '#fff', fontWeight: 900, padding: '10px 22px', borderRadius: '6px', fontSize: '24px', letterSpacing: '3px' }}>
-          ELIMINATED
-        </div>
-        <div style={{ display: 'flex', color: '#94a3b8', fontSize: '20px' }}>
-          Group {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} played
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '40px', marginTop: 'auto', marginBottom: 'auto', position: 'relative' }}>
-        <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={220} ring="#475569aa" fallback={ctx.team.shortName} />
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '88px', fontWeight: 900, lineHeight: 1, color: '#f1f5f9' }}>{ctx.team.name}</div>
-          <div style={{ fontSize: '34px', fontWeight: 700, color: '#fca5a5', marginTop: '14px', lineHeight: 1.05 }}>out of the World Cup</div>
-          <div style={{ fontSize: '22px', color: '#94a3b8', marginTop: '14px' }}>{subline(ctx)}</div>
-        </div>
-        {/* Diagonal OUT stamp */}
-        <div
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            right: '40px',
-            top: '20px',
-            transform: 'rotate(-14deg)',
-            border: '6px solid #ef4444',
-            color: '#ef4444',
-            padding: '6px 28px',
-            fontSize: '64px',
-            fontWeight: 900,
-            letterSpacing: '8px',
-            opacity: 0.85,
-          }}
-        >
-          OUT
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div style={{ display: 'flex', color: '#94a3b8', fontSize: '22px' }}>
-          Group stage exit • Thanks for the ride
-        </div>
-        <div style={{ display: 'flex', color: '#475569', fontSize: '20px', letterSpacing: '1px' }}>knockouts.in</div>
-      </div>
-    </div>
-  );
+function renderEliminatedV1(props: OgRenderProps) {
+  return <MilestonePoster {...props} kind="eliminated" variant={1} />;
 }
 
-function renderEliminatedV2({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
-  // V2 — bold flag panel desaturated to grayscale, red banner across the
-  // top, standings on the right.
-  const standing = ctx.standings.find(s => s.teamName === ctx.team.name);
-  return (
-    <div
-      style={{
-        width: '1200px',
-        height: '675px',
-        display: 'flex',
-        flexDirection: 'row',
-        background: '#0b1220',
-        color: '#f8fafc',
-        fontFamily: 'sans-serif',
-        position: 'relative',
-      }}
-    >
-      <div style={{ display: 'flex', width: '520px', height: '675px', alignItems: 'center', justifyContent: 'center', background: '#0f172a', position: 'relative' }}>
-        {/* Wrapper applies grayscale via filter (next/og supports filter) */}
-        <div style={{ display: 'flex', filter: 'grayscale(0.85) brightness(0.85)' }}>
-          <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={420} ring="#7f1d1d99" fallback={ctx.team.shortName} />
-        </div>
-      </div>
-
-      {/* Red diagonal banner across the top */}
-      <div
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: '60px',
-          left: '-40px',
-          transform: 'rotate(-12deg)',
-          background: '#dc2626',
-          color: '#fff',
-          padding: '10px 80px',
-          fontWeight: 900,
-          fontSize: '26px',
-          letterSpacing: '6px',
-          boxShadow: '0 8px 22px rgba(0,0,0,0.5)',
-        }}
-      >
-        ELIMINATED
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '120px 56px 40px 36px' }}>
-        <div style={{ display: 'flex', fontSize: '76px', fontWeight: 900, lineHeight: 1, color: '#f8fafc' }}>{ctx.team.name}</div>
-        <div style={{ display: 'flex', fontSize: '32px', color: '#fca5a5', marginTop: '14px', fontWeight: 600 }}>
-          packs the bags after the group stage
-        </div>
-        {standing && (
-          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 'auto', gap: '6px' }}>
-            <div style={{ display: 'flex', fontSize: '20px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Final group standing</div>
-            <div style={{ display: 'flex', fontSize: '40px', fontWeight: 800, color: '#f1f5f9' }}>
-              #{standing.position} · {standing.points} pts · {standing.goalDifference >= 0 ? '+' : ''}{standing.goalDifference} GD
-            </div>
-          </div>
-        )}
-        <div style={{ display: 'flex', fontSize: '20px', color: '#cbd5e1', marginTop: '14px' }}>{subline(ctx)}</div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px', color: '#475569', fontSize: '18px', letterSpacing: '1px' }}>knockouts.in</div>
-      </div>
-    </div>
-  );
+function renderEliminatedV2(props: OgRenderProps) {
+  return <MilestonePoster {...props} kind="eliminated" variant={2} />;
 }
 
-function renderEliminatedV3({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
-  // V3 — clean white card with a giant 0% number and the bad news
-  // headline. Stat-focused, mirrors the standard V3 style.
-  return (
-    <div
-      style={{
-        width: '1200px',
-        height: '675px',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'linear-gradient(180deg, #fef2f2 0%, #ffffff 100%)',
-        color: '#0f172a',
-        fontFamily: 'sans-serif',
-        padding: '48px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', background: '#dc2626', color: '#fff', fontWeight: 800, padding: '8px 18px', borderRadius: '999px', fontSize: '22px', letterSpacing: '2px' }}>
-          ELIMINATED
-        </div>
-        <div style={{ display: 'flex', color: '#475569', fontSize: '22px' }}>
-          Group {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} played
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '28px', marginTop: '36px' }}>
-        <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={120} ring="#dc262633" fallback={ctx.team.shortName} />
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '64px', fontWeight: 800, lineHeight: 1 }}>{ctx.team.name}</div>
-          <div style={{ fontSize: '28px', color: '#b91c1c', marginTop: '10px', fontWeight: 600 }}>cannot reach the Round of 32</div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '28px' }}>
-        <div style={{ display: 'flex', fontSize: '20px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px' }}>Advance probability</div>
-        <div style={{ display: 'flex', fontSize: '180px', fontWeight: 900, color: '#dc2626', lineHeight: 1, marginTop: '6px' }}>0%</div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '20px', marginTop: 'auto' }}>
-        <div style={{ display: 'flex', flex: 1, padding: '14px 22px', borderRadius: '10px', background: '#fee2e2', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', fontSize: '18px', color: '#7f1d1d', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Status</div>
-          <div style={{ display: 'flex', fontSize: '28px', fontWeight: 800, color: '#7f1d1d' }}>Out of the tournament</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', color: '#94a3b8', fontSize: '18px', letterSpacing: '1px', paddingLeft: '6px' }}>knockouts.in</div>
-      </div>
-    </div>
-  );
+function renderEliminatedV3(props: OgRenderProps) {
+  return <MilestonePoster {...props} kind="eliminated" variant={3} />;
 }
 
 // ============================================================

@@ -9,13 +9,16 @@ const HAIKU_INPUT_USD_PER_MTOK = 1;
 const HAIKU_OUTPUT_USD_PER_MTOK = 5;
 
 const SYSTEM_PROMPT = `You are a creative sports social-media writer for a World Cup 2026 fan site.
-Your tweets are PUNCHY, CREATIVE, and frame the situation as a QUESTION whenever it makes sense.
+Your tweets are PUNCHY, SPECIFIC, and frame the situation as a QUESTION whenever it makes sense.
 
 Output exactly ONE tweet, English only.
 - Hard limit: 256 characters total. Aim for 200–240. (The server appends a team-page URL; do NOT add any URL yourself.)
 - Open with a HOOK QUESTION when the team is still alive ("Can CZE clinch playoff vs MEX?", "Will the miracle happen — does CZE crash USA's party?").
 - Then give the concrete answer in the same tweet ("A draw is enough.", "They need a 3-goal win AND a SUI–CAN draw.").
-- Use the most likely scenario from the data — do not invent stats. Reference real teams, real points, real goal difference.
+- The tweet MUST accent the mostLikelyScenario from the data and include its exact probability percentage.
+- Use the supplied scenario summary to explain WHY that scenario is most likely. Prefer concrete conditions, real teams, points, scorelines, or GD if present in the data.
+- Do not hide behind generic phrases like "anything can happen", "it all comes down to", "still alive", or "must perform". Be concrete.
+- Do not invent stats. Reference real teams, real points, real goal difference only when they appear in the data.
 - Energetic, plain language. Direct. No clickbait. No hype filler ("HUGE!!", "INSANE!!").
 - Max 1 hashtag. Place at the end. Skip hashtags if they don't add value.
 - No @-mentions. No URLs. No quotation marks around the tweet. No markdown. No labels ("Tweet:", "Here is...").
@@ -26,7 +29,7 @@ PRE-MATCH tweets must:
   Pattern: "{Team} will face {Opponent} in the {1st|2nd|final} match of Group {X}, {kickoff} {UTC}…"
   (For round 1 use "opening match", round 2 "second match", round 3 "final match".)
 - THEN deliver the key message in 1 short sentence:
-  - if the team is alive: a hook question + the cleanest path ("Can they clinch? A draw is enough." / "Need a 3-goal win AND a SUI–CAN draw.")
+  - if the team is alive: name the most likely finish and its probability ("Most likely: 2nd at 42.1%") + the cleanest path ("A draw is enough." / "Need a 3-goal win AND a SUI–CAN draw.")
   - if the team is already eliminated: state plainly that the World Cup is over for them mathematically — no question framing.
 - Do NOT add a closing summary sentence that just restates the situation ("but it's too late", "the dream ends here"). Stop after the key message.
 - Do NOT invent venues. Only mention a venue if it is in the data.
@@ -34,13 +37,14 @@ PRE-MATCH tweets must:
 POST-MATCH tweets must:
 - Lead with the result + what it MEANS for the playoff outlook.
 - Pattern: "{Result} for {team} {score} {opponent} means {team} now needs {X} to {advance/avoid elimination}."
+- Include the most likely finish and its exact probability unless the result has already clinched/eliminated the team.
 - If the result clinched / eliminated → say so directly, drop the question.
 
 Examples of the desired voice:
-- PRE (alive): "Czech Republic face Mexico in the final match of Group A, kickoff Tue 18:00 UTC. Can CZE clinch playoff? A draw is enough — and they're through."
-- PRE (miracle): "Czech Republic face Mexico in the final match of Group A, Tue 18:00 UTC. Miracle time: CZE need to win by 3 AND hope SUI–CAN ends level."
+- PRE (alive): "Czech Republic face Mexico in Group A's final match, Tue 18:00 UTC. Most likely: 2nd place at 46.2% — a draw keeps the play-off path clean."
+- PRE (miracle): "Czech Republic face Mexico in Group A's final match, Tue 18:00 UTC. Most likely: out at 61.4%, unless CZE win by 3 and SUI–CAN ends level."
 - PRE (eliminated): "Canada face Switzerland in the final match of Group B, Wed 19:00 UTC. The World Cup is already over for them — the Round of 32 is mathematically out of reach."
-- POST: "CZE 2–3 RSA leaves it on a knife edge: beat MEX by 3 AND pray for help, or pack the bags. Play-off hopes hanging by a thread."
+- POST: "CZE 2–3 RSA leaves 3rd place as the most likely finish at 52.7%. Beat MEX and watch the best-third table — the play-off route is narrow."
 - POST: "Job done. CZE's 2–0 over MEX seals top spot in Group A and a Round of 32 ticket."`;
 
 interface PromptCtx {
@@ -55,13 +59,52 @@ interface PromptCtx {
     eliminated: string;
     breakdown: { [pos: number]: string };
   };
+  mostLikelyScenario: {
+    position: number;
+    label: string;
+    probability: string;
+    qualificationMeaning: string;
+    summary: string | null;
+  };
   cachedScenarioInsights: { position: number; text: string }[];
   nextMatch?: { opponent: string; kickOff: string; round: number };
   needsHeuristic?: string;
   lastMatch?: { opponent: string; result: string; scoreLine: string; round: number };
 }
 
+function formatPct(value: number): string {
+  return `${Math.round(value * 10) / 10}%`;
+}
+
+function positionLabel(position: number): string {
+  if (position === 1) return '1st place';
+  if (position === 2) return '2nd place';
+  if (position === 3) return '3rd place';
+  if (position === 4) return '4th place';
+  return `${position}th place`;
+}
+
+function qualificationMeaning(position: number, ctx: PreMatchContext | PostMatchContext): string {
+  if (position === 1 || position === 2) return 'direct Round of 32 qualification';
+  if (position === 3) {
+    return ctx.probabilities.thirdPlay > 0
+      ? 'best-third route to the Round of 32'
+      : 'third place without a guaranteed play-off route';
+  }
+  return 'elimination';
+}
+
+function mostLikelyPosition(ctx: PreMatchContext | PostMatchContext): number {
+  return [1, 2, 3, 4].reduce((best, pos) => {
+    const current = ctx.positionProbs[pos] ?? 0;
+    const bestValue = ctx.positionProbs[best] ?? 0;
+    return current > bestValue ? pos : best;
+  }, 1);
+}
+
 function buildPromptCtx(ctx: PreMatchContext | PostMatchContext): PromptCtx {
+  const likelyPosition = mostLikelyPosition(ctx);
+  const likelySummary = ctx.aiSummaries.find(s => s.position === likelyPosition)?.text ?? null;
   const base: PromptCtx = {
     team: ctx.team.name,
     countryCode: ctx.team.countryCode,
@@ -75,15 +118,22 @@ function buildPromptCtx(ctx: PreMatchContext | PostMatchContext): PromptCtx {
       gd: s.goalDifference,
     })),
     probabilities: {
-      advance_to_R32: `${ctx.probabilities.advance}%`,
-      third_place_playoff: `${ctx.probabilities.thirdPlay}%`,
-      eliminated: `${ctx.probabilities.eliminated}%`,
+      advance_to_R32: formatPct(ctx.probabilities.advance),
+      third_place_playoff: formatPct(ctx.probabilities.thirdPlay),
+      eliminated: formatPct(ctx.probabilities.eliminated),
       breakdown: {
-        1: `${ctx.positionProbs[1] ?? 0}%`,
-        2: `${ctx.positionProbs[2] ?? 0}%`,
-        3: `${ctx.positionProbs[3] ?? 0}%`,
-        4: `${ctx.positionProbs[4] ?? 0}%`,
+        1: formatPct(ctx.positionProbs[1] ?? 0),
+        2: formatPct(ctx.positionProbs[2] ?? 0),
+        3: formatPct(ctx.positionProbs[3] ?? 0),
+        4: formatPct(ctx.positionProbs[4] ?? 0),
       },
+    },
+    mostLikelyScenario: {
+      position: likelyPosition,
+      label: positionLabel(likelyPosition),
+      probability: formatPct(ctx.positionProbs[likelyPosition] ?? 0),
+      qualificationMeaning: qualificationMeaning(likelyPosition, ctx),
+      summary: likelySummary ? likelySummary.slice(0, 700) : null,
     },
     // Include up to 2 most-likely cached scenario summaries so the model
     // has the same authored colour the team page shows visitors.
@@ -137,8 +187,12 @@ export async function generateScenarioTweet(
   const promptCtx = buildPromptCtx(ctx);
   const userPrompt = `Generate a ${ctx.kind === 'pre' ? 'PRE-MATCH' : 'POST-MATCH'} tweet for the team below.
 
-Open with a hook QUESTION (unless the team has clinched or been eliminated — then state it).
-Then give the concrete answer using the data. No invented facts.
+Use mostLikelyScenario as the spine of the tweet:
+- Mention its label and exact probability: ${promptCtx.mostLikelyScenario.label} (${promptCtx.mostLikelyScenario.probability}).
+- Use its summary/conditions if supplied; if not, use standings + probabilities.
+- Keep it specific. No invented facts.
+
+Open with a hook QUESTION only when it helps and the team has not clinched or been eliminated.
 
 DATA (do not invent any other facts):
 ${JSON.stringify(promptCtx, null, 2)}
