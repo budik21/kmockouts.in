@@ -78,6 +78,7 @@ export interface TweetMatchSummary {
   awayGoals: number | null;
   kickOff: string;
   round: number;
+  venue: string | null;
 }
 
 export interface TweetStandingRow {
@@ -189,6 +190,7 @@ function matchSummary(m: Match, teamMap: Map<number, Team>): TweetMatchSummary {
     awayGoals: m.awayGoals,
     homeTeam: teamSummary(home),
     awayTeam: teamSummary(away),
+    venue: m.venue ?? null,
   };
 }
 

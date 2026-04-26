@@ -529,12 +529,19 @@ function renderEliminatedV3({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderPro
 
 function renderV1({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
   const isPre = ctx.kind === 'pre';
-  const headline = isPre ? 'NEXT UP' : 'FULL TIME';
   const accent = isPre ? '#3b82f6' : '#ef4444';
-  const subline = isPre
-    ? `${ctx.team.shortName} vs ${ctx.opponent.shortName} • ${formatKickOff(ctx.nextMatch.kickOff)}`
-    : `${ctx.team.shortName} ${ctx.scoreLineFor} ${ctx.opponent.shortName} • Round ${ctx.lastMatch.round}`;
   const probs = probTriple(ctx);
+
+  // Footer meta: very subtle line with the previous result + group round + venue + kickoff.
+  // Pre-match: shows the upcoming fixture meta. Post-match: shows the just-played match.
+  const matchForMeta = isPre ? ctx.nextMatch : ctx.lastMatch;
+  const roundLabel = `Group ${ctx.group.groupId} match ${matchForMeta.round}`;
+  const venueLabel = matchForMeta.venue ? matchForMeta.venue : null;
+  const timeLabel = formatKickOff(matchForMeta.kickOff);
+  const resultLabel = isPre
+    ? `vs ${ctx.opponent.shortName}`
+    : `${ctx.team.shortName} ${ctx.scoreLineFor} ${ctx.opponent.shortName}`;
+  const footerBits = [resultLabel, roundLabel, venueLabel, timeLabel].filter(Boolean) as string[];
 
   return (
     <div
@@ -546,38 +553,123 @@ function renderV1({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0b1220 100%)',
         color: '#f8fafc',
         fontFamily: 'sans-serif',
-        padding: '48px',
+        padding: '56px 56px 28px 56px',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', background: accent, color: '#0b1220', fontWeight: 800, padding: '8px 18px', borderRadius: '6px', fontSize: '24px', letterSpacing: '2px' }}>{headline}</div>
-        <div style={{ display: 'flex', color: '#94a3b8', fontSize: '22px' }}>
-          Group {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} matches played
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '32px', marginTop: '40px' }}>
-        <FlagCircle
-          flagDataUrl={flagDataUrl}
-          flagSquareDataUrl={flagSquareDataUrl}
-          size={180}
-          ring={`${accent}55`}
-          fallback={ctx.team.shortName}
-        />
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: '70px', fontWeight: 800, lineHeight: 1, color: '#f8fafc' }}>{ctx.team.name}</div>
-          <div style={{ fontSize: '28px', color: '#cbd5e1', marginTop: '14px' }}>{subline}</div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: '24px', marginTop: 'auto' }}>
-        {probs.map((p) => (
-          <div key={p.label} style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px 28px', background: 'rgba(255,255,255,0.05)', borderRadius: '14px', border: `1px solid ${p.color}40` }}>
-            <div style={{ display: 'flex', fontSize: '20px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>{p.label}</div>
-            <div style={{ display: 'flex', fontSize: '64px', fontWeight: 800, color: p.color, marginTop: '6px' }}>{p.value.toFixed(1)}%</div>
+      {/* Main split — flag/team on the left, stacked probability widgets on the right. */}
+      <div style={{ display: 'flex', flex: 1, alignItems: 'center', gap: '40px' }}>
+        {/* LEFT — prominent flag + team name */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
+          <FlagCircle
+            flagDataUrl={flagDataUrl}
+            flagSquareDataUrl={flagSquareDataUrl}
+            size={300}
+            ring={`${accent}66`}
+            fallback={ctx.team.shortName}
+          />
+          <div
+            style={{
+              display: 'flex',
+              fontSize: '88px',
+              fontWeight: 900,
+              lineHeight: 1,
+              color: '#f8fafc',
+              marginTop: '28px',
+              letterSpacing: '-1px',
+            }}
+          >
+            {ctx.team.name}
           </div>
-        ))}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: '22px',
+              color: '#94a3b8',
+              marginTop: '10px',
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+            }}
+          >
+            Group {ctx.group.groupId} • {ctx.group.matchesPlayed}/{ctx.group.matchesTotal} played
+          </div>
+        </div>
+
+        {/* RIGHT — three stacked probability cards, right-aligned */}
+        <div style={{ display: 'flex', flexDirection: 'column', width: '460px', gap: '16px' }}>
+          {probs.map((p) => (
+            <div
+              key={p.label}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                padding: '18px 26px',
+                background: 'rgba(255,255,255,0.05)',
+                borderRadius: '14px',
+                border: `1px solid ${p.color}55`,
+                borderRight: `6px solid ${p.color}`,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: '18px',
+                  color: '#94a3b8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '2px',
+                }}
+              >
+                {p.label}
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  fontSize: '72px',
+                  fontWeight: 900,
+                  color: p.color,
+                  lineHeight: 1,
+                  marginTop: '4px',
+                }}
+              >
+                {p.value.toFixed(1)}%
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-        <div style={{ color: '#475569', fontSize: '20px', letterSpacing: '1px' }}>knockouts.in</div>
+
+      {/* FOOTER — small, decent meta line + branding */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '20px',
+          paddingTop: '14px',
+          borderTop: '1px solid rgba(148,163,184,0.18)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            color: '#64748b',
+            fontSize: '15px',
+            letterSpacing: '0.5px',
+          }}
+        >
+          {footerBits.join('  ·  ')}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            color: '#475569',
+            fontSize: '15px',
+            letterSpacing: '1.5px',
+            textTransform: 'uppercase',
+          }}
+        >
+          knockouts.in
+        </div>
       </div>
     </div>
   );

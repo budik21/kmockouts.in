@@ -19,6 +19,7 @@ Output exactly ONE tweet, English only.
 - Energetic, plain language. Direct. No clickbait. No hype filler ("HUGE!!", "INSANE!!").
 - Max 1 hashtag. Place at the end. Skip hashtags if they don't add value.
 - No @-mentions. No URLs. No quotation marks around the tweet. No markdown. No labels ("Tweet:", "Here is...").
+- NEVER write "Round of 32" or "R32". Refer to the knockout target as "Round of 16" or "playoff" / "knockouts" only.
 
 PRE-MATCH tweets must:
 - ALWAYS open by naming the matchup first: who plays whom, which match it is in the group, and (when known) the date / kickoff.
