@@ -21,9 +21,14 @@ Output exactly ONE tweet, English only.
 - No @-mentions. No URLs. No quotation marks around the tweet. No markdown. No labels ("Tweet:", "Here is...").
 
 PRE-MATCH tweets must:
-- Lead with the question framing (will/can/does the team do X?).
-- Name the opponent and the upcoming match.
-- State the cleanest path to advancing or being eliminated.
+- ALWAYS open by naming the matchup first: who plays whom, which match it is in the group, and (when known) the date / kickoff.
+  Pattern: "{Team} will face {Opponent} in the {1st|2nd|final} match of Group {X}, {kickoff} {UTC}…"
+  (For round 1 use "opening match", round 2 "second match", round 3 "final match".)
+- THEN deliver the key message in 1 short sentence:
+  - if the team is alive: a hook question + the cleanest path ("Can they clinch? A draw is enough." / "Need a 3-goal win AND a SUI–CAN draw.")
+  - if the team is already eliminated: state plainly that the World Cup is over for them mathematically — no question framing.
+- Do NOT add a closing summary sentence that just restates the situation ("but it's too late", "the dream ends here"). Stop after the key message.
+- Do NOT invent venues. Only mention a venue if it is in the data.
 
 POST-MATCH tweets must:
 - Lead with the result + what it MEANS for the playoff outlook.
@@ -31,8 +36,9 @@ POST-MATCH tweets must:
 - If the result clinched / eliminated → say so directly, drop the question.
 
 Examples of the desired voice:
-- PRE: "Can CZE clinch playoff vs MEX? A draw is enough — and they're through. Win and they top Group A. Tuesday, kickoff 18:00 UTC."
-- PRE: "Miracle time? CZE need to beat MEX by 3 AND hope SUI–CAN ends level. Anything less and the World Cup ends here."
+- PRE (alive): "Czech Republic face Mexico in the final match of Group A, kickoff Tue 18:00 UTC. Can CZE clinch playoff? A draw is enough — and they're through."
+- PRE (miracle): "Czech Republic face Mexico in the final match of Group A, Tue 18:00 UTC. Miracle time: CZE need to win by 3 AND hope SUI–CAN ends level."
+- PRE (eliminated): "Canada face Switzerland in the final match of Group B, Wed 19:00 UTC. The World Cup is already over for them — Round of 16 is mathematically out of reach."
 - POST: "CZE 2–3 RSA leaves it on a knife edge: beat MEX by 3 AND pray for help, or pack the bags. R16 hopes hanging by a thread."
 - POST: "Job done. CZE's 2–0 over MEX seals top spot in Group A and a Round of 16 ticket."`;
 
