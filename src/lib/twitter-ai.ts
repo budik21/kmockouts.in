@@ -18,6 +18,7 @@ Output exactly ONE tweet, English only.
 - The tweet MUST accent the mostLikelyScenario from the data and include its exact probability percentage.
 - Use the supplied scenario summary to explain WHY that scenario is most likely. Prefer concrete conditions, real teams, points, scorelines, or GD if present in the data.
 - Do not hide behind generic phrases like "anything can happen", "it all comes down to", "still alive", or "must perform". Be concrete.
+- Do not use telegraphic labels like "Most likely: 1st place at 60.2%". Write a natural sentence with the team name: "Brazil most likely finish 1st (60.2%)..." or "Brazil's most likely finish is 1st place at 60.2%...".
 - Do not invent stats. Reference real teams, real points, real goal difference only when they appear in the data.
 - Energetic, plain language. Direct. No clickbait. No hype filler ("HUGE!!", "INSANE!!").
 - Max 1 hashtag. Place at the end. Skip hashtags if they don't add value.
@@ -29,7 +30,7 @@ PRE-MATCH tweets must:
   Pattern: "{Team} will face {Opponent} in the {1st|2nd|final} match of Group {X}, {kickoff} {UTC}…"
   (For round 1 use "opening match", round 2 "second match", round 3 "final match".)
 - THEN deliver the key message in 1 short sentence:
-  - if the team is alive: name the most likely finish and its probability ("Most likely: 2nd at 42.1%") + the cleanest path ("A draw is enough." / "Need a 3-goal win AND a SUI–CAN draw.")
+  - if the team is alive: name the team, the most likely finish and its probability in a natural sentence ("Brazil's most likely finish is 2nd place at 42.1%") + the cleanest path ("A draw is enough." / "Need a 3-goal win AND a SUI–CAN draw.")
   - if the team is already eliminated: state plainly that the World Cup is over for them mathematically — no question framing.
 - Do NOT add a closing summary sentence that just restates the situation ("but it's too late", "the dream ends here"). Stop after the key message.
 - Do NOT invent venues. Only mention a venue if it is in the data.
@@ -41,8 +42,8 @@ POST-MATCH tweets must:
 - If the result clinched / eliminated → say so directly, drop the question.
 
 Examples of the desired voice:
-- PRE (alive): "Czech Republic face Mexico in Group A's final match, Tue 18:00 UTC. Most likely: 2nd place at 46.2% — a draw keeps the play-off path clean."
-- PRE (miracle): "Czech Republic face Mexico in Group A's final match, Tue 18:00 UTC. Most likely: out at 61.4%, unless CZE win by 3 and SUI–CAN ends level."
+- PRE (alive): "Czech Republic face Mexico in Group A's final match, Tue 18:00 UTC. CZE's most likely finish is 2nd place (46.2%) — a draw keeps the play-off path clean."
+- PRE (miracle): "Czech Republic face Mexico in Group A's final match, Tue 18:00 UTC. CZE most likely go out (61.4%), unless they win by 3 and SUI–CAN ends level."
 - PRE (eliminated): "Canada face Switzerland in the final match of Group B, Wed 19:00 UTC. The World Cup is already over for them — the Round of 32 is mathematically out of reach."
 - POST: "CZE 2–3 RSA leaves 3rd place as the most likely finish at 52.7%. Beat MEX and watch the best-third table — the play-off route is narrow."
 - POST: "Job done. CZE's 2–0 over MEX seals top spot in Group A and a Round of 32 ticket."`;
@@ -188,7 +189,8 @@ export async function generateScenarioTweet(
   const userPrompt = `Generate a ${ctx.kind === 'pre' ? 'PRE-MATCH' : 'POST-MATCH'} tweet for the team below.
 
 Use mostLikelyScenario as the spine of the tweet:
-- Mention its label and exact probability: ${promptCtx.mostLikelyScenario.label} (${promptCtx.mostLikelyScenario.probability}).
+- Mention the team, its label and exact probability in a natural sentence: ${promptCtx.team} / ${promptCtx.mostLikelyScenario.label} / ${promptCtx.mostLikelyScenario.probability}.
+- Avoid the literal phrase "Most likely:".
 - Use its summary/conditions if supplied; if not, use standings + probabilities.
 - Keep it specific. No invented facts.
 

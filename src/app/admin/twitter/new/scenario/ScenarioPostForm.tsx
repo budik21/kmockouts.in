@@ -469,6 +469,48 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
           font-weight: 600;
           color: var(--wc-text);
         }
+        .tw-draft-panel {
+          margin-top: 1.5rem;
+          display: grid;
+          gap: 1rem;
+        }
+        .tw-draft-editor textarea {
+          min-height: 210px !important;
+          height: 215px;
+          max-height: 230px;
+          font-size: 1.05rem !important;
+          line-height: 1.5 !important;
+        }
+        .tw-draft-editor pre {
+          font-size: 1.05rem !important;
+          line-height: 1.5 !important;
+        }
+        .tw-ai-cost-panel {
+          padding: 0.8rem 0.95rem;
+          border-radius: 0.45rem;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid var(--wc-border);
+          font-size: 0.95rem;
+          color: var(--wc-text-muted);
+        }
+        .tw-ai-cost-panel strong {
+          display: block;
+          color: var(--wc-text);
+          font-size: 1.02rem;
+          margin-bottom: 0.35rem;
+        }
+        @media (min-width: 992px) {
+          .tw-draft-panel {
+            grid-template-columns: minmax(0, 48%) minmax(260px, 1fr);
+            align-items: start;
+          }
+          .tw-draft-editor {
+            max-width: 560px;
+          }
+          .tw-ai-cost-panel {
+            margin-top: 1.45rem;
+          }
+        }
       `}</style>
 
       <div className="row g-3 align-items-end">
@@ -507,44 +549,44 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
         )}
       </div>
 
-      <div style={{ marginTop: '1.5rem' }}>
-        <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--wc-text-muted)', marginBottom: '0.3rem' }}>
-          Tweet text (max {effectiveMax} chars; {URL_WEIGHT} chars reserved for the team URL)
-        </label>
-        <CounterTextarea
-          value={text}
-          onChange={setText}
-          effectiveMax={effectiveMax}
-          placeholder="Click 'Generate text' to draft this with AI."
-          disabled={generating || submitting}
-        />
-        {teamUrl && (
-          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--wc-text-muted)' }}>
-            Auto-appended:{' '}
-            <a href={teamUrl} target="_blank" rel="noopener noreferrer">
-              {teamUrl}
-            </a>
+      <div className="tw-draft-panel">
+        <div className="tw-draft-editor">
+          <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--wc-text-muted)', marginBottom: '0.3rem' }}>
+            Tweet text (max {effectiveMax} chars; {URL_WEIGHT} chars reserved for the team URL)
+          </label>
+          <CounterTextarea
+            value={text}
+            onChange={setText}
+            effectiveMax={effectiveMax}
+            placeholder="Click 'Generate text' to draft this with AI."
+            disabled={generating || submitting}
+          />
+          {teamUrl && (
+            <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--wc-text-muted)' }}>
+              Auto-appended:{' '}
+              <a href={teamUrl} target="_blank" rel="noopener noreferrer">
+                {teamUrl}
+              </a>
+            </div>
+          )}
+        </div>
+
+        <div className="tw-ai-cost-panel">
+          {usage ? (
+            <>
+              <strong>AI generation cost</strong>
+              {usage.inputTokens.toLocaleString()} input + {usage.outputTokens.toLocaleString()} output tokens
+              {' · '}~${usage.costUsd.toFixed(4)}
+              {' · '}{(usage.elapsedMs / 1000).toFixed(1)}s
+              {' · '}<code>{usage.model}</code>
+            </>
+          ) : (
+            <>
+              <strong>AI generation cost</strong>
+              Generate text to see token usage, cost estimate, model and elapsed time here.
+            </>
+          )}
           </div>
-        )}
-        {usage && (
-          <div
-            style={{
-              marginTop: '0.6rem',
-              padding: '0.5rem 0.75rem',
-              borderRadius: '0.35rem',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid var(--wc-border)',
-              fontSize: '0.82rem',
-              color: 'var(--wc-text-muted)',
-            }}
-          >
-            <strong style={{ color: 'var(--wc-text)' }}>AI cost:</strong>{' '}
-            {usage.inputTokens.toLocaleString()} in + {usage.outputTokens.toLocaleString()} out tokens
-            {' · '}~${usage.costUsd.toFixed(4)}
-            {' · '}{(usage.elapsedMs / 1000).toFixed(1)}s
-            {' · '}<code>{usage.model}</code>
-          </div>
-        )}
       </div>
 
       <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

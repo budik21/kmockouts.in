@@ -160,7 +160,7 @@ function MilestonePoster({
   variant,
 }: OgRenderProps & { kind: 'clinched' | 'eliminated'; variant: OgVariant }) {
   const isClinched = kind === 'clinched';
-  const dark = variant !== 3;
+  const dark = variant !== 3 || isClinched;
   const standing = ctx.standings.find(s => s.teamName === ctx.team.name);
   const accent = isClinched ? '#facc15' : '#ef4444';
   const headline = isClinched ? 'PLAY-OFF SECURED' : variant === 2 ? 'OUT!' : 'ELIMINATED!';
@@ -170,7 +170,7 @@ function MilestonePoster({
       ? 'radial-gradient(circle at 20% 15%, rgba(250,204,21,0.34), transparent 30%), linear-gradient(135deg, #052e16 0%, #064e3b 50%, #111827 100%)'
       : variant === 2
         ? 'linear-gradient(120deg, #022c22 0%, #14532d 45%, #422006 100%)'
-        : 'linear-gradient(135deg, #fefce8 0%, #dcfce7 55%, #ffffff 100%)'
+        : 'radial-gradient(circle at 18% 12%, rgba(250,204,21,0.38), transparent 30%), radial-gradient(circle at 78% 18%, rgba(34,197,94,0.28), transparent 28%), linear-gradient(135deg, #022c22 0%, #14532d 52%, #111827 100%)'
     : variant === 1
       ? 'radial-gradient(circle at 24% 10%, rgba(239,68,68,0.34), transparent 28%), linear-gradient(135deg, #111827 0%, #450a0a 58%, #0b1220 100%)'
       : variant === 2
@@ -178,7 +178,7 @@ function MilestonePoster({
         : 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 56%, #991b1b 100%)';
   const textColor = dark || !isClinched ? '#f8fafc' : '#0f172a';
   const mutedColor = dark || !isClinched ? '#cbd5e1' : '#475569';
-  const flagOpacity = isClinched ? 0.22 : 0.16;
+  const flagOpacity = variant === 3 && isClinched ? 0.32 : isClinched ? 0.22 : 0.16;
   const bigWord = isClinched ? 'THROUGH' : 'OUT';
   const sparks = isClinched
     ? [
@@ -226,7 +226,7 @@ function MilestonePoster({
           inset: 0,
           background: isClinched
             ? dark
-              ? 'linear-gradient(90deg, rgba(2,44,34,0.94), rgba(20,83,45,0.70), rgba(2,6,23,0.38))'
+              ? 'linear-gradient(90deg, rgba(2,44,34,0.94), rgba(20,83,45,0.66), rgba(2,6,23,0.32))'
               : 'linear-gradient(90deg, rgba(254,252,232,0.92), rgba(255,255,255,0.68))'
             : 'linear-gradient(90deg, rgba(69,10,10,0.96), rgba(127,29,29,0.76), rgba(15,23,42,0.48))',
         }}
