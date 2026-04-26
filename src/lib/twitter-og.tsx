@@ -605,15 +605,12 @@ function PosterBackground({
         style={{
           display: 'flex',
           position: 'absolute',
-          right: side === 'right' ? '-36px' : undefined,
-          left: side === 'left' ? '-36px' : undefined,
-          top: '42px',
-          writingMode: 'vertical-rl',
-          textOrientation: 'mixed',
-          fontSize: '112px',
+          ...(side === 'right' ? { right: '-80px' } : { left: '-80px' }),
+          bottom: '32px',
+          fontSize: '132px',
           fontWeight: 950,
-          lineHeight: 0.9,
-          letterSpacing: '-4px',
+          lineHeight: 0.85,
+          letterSpacing: '-7px',
           color: 'rgba(255,255,255,0.13)',
           textTransform: 'uppercase',
         }}
@@ -707,8 +704,9 @@ function MatchWidget({
         display: 'flex',
         alignItems: 'center',
         gap: '18px',
-        padding: '16px 20px',
-        borderRadius: '22px',
+        width: '100%',
+        padding: '12px 18px',
+        borderRadius: '18px',
         background: surface,
         border: `1px solid ${tone === 'light' ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.14)'}`,
       }}
@@ -716,18 +714,18 @@ function MatchWidget({
       <FlagCircle
         flagDataUrl={opponentFlagDataUrl ?? null}
         flagSquareDataUrl={opponentFlagSquareDataUrl}
-        size={72}
+        size={58}
         ring={tone === 'light' ? '#0f172a22' : '#ffffff22'}
         fallback={ctx.opponent.shortName}
       />
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <div style={{ display: 'flex', fontSize: '16px', color: muted, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 800 }}>
+        <div style={{ display: 'flex', fontSize: '14px', color: muted, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 800 }}>
           {label}
         </div>
-        <div style={{ display: 'flex', fontSize: '30px', color: text, fontWeight: 900, lineHeight: 1.05, marginTop: '4px' }}>
+        <div style={{ display: 'flex', fontSize: '26px', color: text, fontWeight: 900, lineHeight: 1.05, marginTop: '2px' }}>
           {ctx.opponent.name}
         </div>
-        <div style={{ display: 'flex', fontSize: '18px', color: muted, marginTop: '4px' }}>
+        <div style={{ display: 'flex', fontSize: '16px', color: muted, marginTop: '2px' }}>
           {detail}
         </div>
       </div>
@@ -736,12 +734,12 @@ function MatchWidget({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '104px',
-          height: '78px',
-          borderRadius: '18px',
+          width: '94px',
+          height: '62px',
+          borderRadius: '14px',
           background: tone === 'light' ? '#0f172a' : '#f8fafc',
           color: tone === 'light' ? '#f8fafc' : '#0f172a',
-          fontSize: isPre ? '28px' : '34px',
+          fontSize: isPre ? '25px' : '30px',
           fontWeight: 950,
           letterSpacing: isPre ? '3px' : '-1px',
         }}
@@ -794,9 +792,9 @@ function renderV1({ ctx, flagDataUrl, flagSquareDataUrl, opponentFlagDataUrl, op
           {stats.map((s) => <BigStatCard key={s.label} {...s} />)}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '24px', marginTop: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: 'auto' }}>
           <MatchWidget ctx={ctx} opponentFlagDataUrl={opponentFlagDataUrl} opponentFlagSquareDataUrl={opponentFlagSquareDataUrl} />
-          <div style={{ display: 'flex', color: '#64748b', fontSize: '18px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', color: '#64748b', fontSize: '16px', letterSpacing: '2px', textTransform: 'uppercase' }}>
             knockouts.in
           </div>
         </div>
@@ -871,7 +869,7 @@ function renderV2({ ctx, flagDataUrl, flagSquareDataUrl, opponentFlagDataUrl, op
             ))}
           </div>
 
-          <div style={{ display: 'flex', marginTop: '28px' }}>
+          <div style={{ display: 'flex', marginTop: '22px' }}>
             <MatchWidget ctx={ctx} opponentFlagDataUrl={opponentFlagDataUrl} opponentFlagSquareDataUrl={opponentFlagSquareDataUrl} />
           </div>
         </div>
@@ -900,7 +898,7 @@ function renderV3({ ctx, flagDataUrl, flagSquareDataUrl, opponentFlagDataUrl, op
         background: 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #f1f5f9 100%)',
         color: '#0f172a',
         fontFamily: 'sans-serif',
-        padding: '48px',
+        padding: '40px 44px',
       }}
     >
       {flagDataUrl && (
@@ -922,7 +920,7 @@ function renderV3({ ctx, flagDataUrl, flagSquareDataUrl, opponentFlagDataUrl, op
           }}
         />
       )}
-      <div style={{ display: 'flex', position: 'absolute', right: '-20px', top: '46px', writingMode: 'vertical-rl', fontSize: '104px', fontWeight: 950, lineHeight: 0.9, letterSpacing: '-5px', textTransform: 'uppercase', color: 'rgba(15,23,42,0.10)' }}>
+      <div style={{ display: 'flex', position: 'absolute', right: '-20px', top: '46px', writingMode: 'vertical-rl', fontSize: '96px', fontWeight: 950, lineHeight: 0.9, letterSpacing: '-5px', textTransform: 'uppercase', color: 'rgba(15,23,42,0.10)' }}>
         {ctx.team.name}
       </div>
 
@@ -931,8 +929,8 @@ function renderV3({ ctx, flagDataUrl, flagSquareDataUrl, opponentFlagDataUrl, op
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={104} ring={`${accent}33`} fallback={ctx.team.shortName} />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', fontSize: '20px', color: accent, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '3px' }}>{headline}</div>
-              <div style={{ display: 'flex', fontSize: '66px', fontWeight: 950, lineHeight: 0.95, letterSpacing: '-4px' }}>{ctx.team.name}</div>
+              <div style={{ display: 'flex', fontSize: '18px', color: accent, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '3px' }}>{headline}</div>
+              <div style={{ display: 'flex', fontSize: '58px', fontWeight: 950, lineHeight: 0.95, letterSpacing: '-4px' }}>{ctx.team.name}</div>
             </div>
           </div>
           <div style={{ display: 'flex', color: '#475569', fontSize: '22px' }}>
@@ -940,7 +938,7 @@ function renderV3({ ctx, flagDataUrl, flagSquareDataUrl, opponentFlagDataUrl, op
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '18px', marginTop: '46px' }}>
+        <div style={{ display: 'flex', gap: '18px', marginTop: '34px' }}>
           {stats.map((s) => (
             <div
               key={s.label}
@@ -948,7 +946,7 @@ function renderV3({ ctx, flagDataUrl, flagSquareDataUrl, opponentFlagDataUrl, op
                 display: 'flex',
                 flexDirection: 'column',
                 flex: 1,
-                padding: '24px',
+                padding: '28px',
                 borderRadius: '30px',
                 background: '#ffffff',
                 border: '1px solid rgba(15,23,42,0.10)',
@@ -956,15 +954,15 @@ function renderV3({ ctx, flagDataUrl, flagSquareDataUrl, opponentFlagDataUrl, op
               }}
             >
               <div style={{ display: 'flex', width: '54px', height: '8px', background: s.color, borderRadius: '999px' }} />
-              <div style={{ display: 'flex', color: '#475569', fontSize: '18px', fontWeight: 850, textTransform: 'uppercase', letterSpacing: '2px', marginTop: '22px' }}>{s.label}</div>
-              <div style={{ display: 'flex', color: s.color, fontSize: '88px', fontWeight: 950, lineHeight: 0.92, letterSpacing: '-5px', marginTop: '14px' }}>{pct(s.value)}</div>
+              <div style={{ display: 'flex', color: '#475569', fontSize: '18px', fontWeight: 850, textTransform: 'uppercase', letterSpacing: '2px', marginTop: '24px' }}>{s.label}</div>
+              <div style={{ display: 'flex', color: s.color, fontSize: '100px', fontWeight: 950, lineHeight: 0.92, letterSpacing: '-6px', marginTop: '16px' }}>{pct(s.value)}</div>
             </div>
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '24px', marginTop: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto' }}>
           <MatchWidget ctx={ctx} opponentFlagDataUrl={opponentFlagDataUrl} opponentFlagSquareDataUrl={opponentFlagSquareDataUrl} tone="light" />
-          <div style={{ display: 'flex', color: '#64748b', fontSize: '18px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', color: '#64748b', fontSize: '15px', letterSpacing: '2px', textTransform: 'uppercase' }}>
             knockouts.in
           </div>
         </div>
