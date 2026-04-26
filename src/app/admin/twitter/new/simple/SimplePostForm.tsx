@@ -81,7 +81,7 @@ export function CounterTextarea({ value, onChange, effectiveMax, placeholder, di
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          rows={6}
+          rows={12}
           style={{
             ...inputStyle,
             position: 'relative',
@@ -91,7 +91,7 @@ export function CounterTextarea({ value, onChange, effectiveMax, placeholder, di
             lineHeight: 1.45,
             padding: '0.6rem 0.7rem',
             resize: 'vertical',
-            minHeight: '160px',
+            minHeight: '320px',
           }}
         />
       </div>
@@ -109,6 +109,82 @@ export function CounterTextarea({ value, onChange, effectiveMax, placeholder, di
   );
 }
 
+export interface PublishedTweet {
+  tweetId: string;
+  url: string;
+  text: string;
+}
+
+interface SuccessPanelProps {
+  published: PublishedTweet;
+  onPostAnother: () => void;
+  onBackToDashboard: () => void;
+}
+
+export function SuccessPanel({ published, onPostAnother, onBackToDashboard }: SuccessPanelProps) {
+  return (
+    <div
+      style={{
+        padding: '1.5rem',
+        borderRadius: '0.5rem',
+        border: '1px solid rgba(34,197,94,0.45)',
+        background: 'rgba(34,197,94,0.08)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
+        <span
+          aria-hidden
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: '#22c55e',
+            color: '#052e16',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+          }}
+        >
+          ✓
+        </span>
+        <h2 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--wc-text)' }}>
+          Tweet published successfully
+        </h2>
+      </div>
+      <div
+        style={{
+          marginTop: '0.6rem',
+          padding: '0.75rem 0.9rem',
+          borderRadius: '0.35rem',
+          background: 'rgba(0,0,0,0.25)',
+          color: 'var(--wc-text)',
+          fontSize: '0.92rem',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}
+      >
+        {published.text}
+      </div>
+      <div style={{ marginTop: '0.85rem', fontSize: '0.9rem', color: 'var(--wc-text-muted)' }}>
+        Tweet ID: <code style={{ color: 'var(--wc-text)' }}>{published.tweetId}</code>
+        {' · '}
+        <a href={published.url} target="_blank" rel="noopener noreferrer">
+          Open on X →
+        </a>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem', flexWrap: 'wrap' }}>
+        <button type="button" style={buttonPrimary} onClick={onPostAnother}>
+          Post another
+        </button>
+        <button type="button" style={buttonGhost} onClick={onBackToDashboard}>
+          Back to dashboard
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function SimplePostForm() {
   const router = useRouter();
   const [text, setText] = useState('');
@@ -116,6 +192,7 @@ export default function SimplePostForm() {
   const [preview, setPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [published, setPublished] = useState<PublishedTweet | null>(null);
 
   const len = [...text].length;
   const tooLong = len > TWEET_MAX;
@@ -125,6 +202,15 @@ export default function SimplePostForm() {
     setFile(f);
     if (preview) URL.revokeObjectURL(preview);
     setPreview(f ? URL.createObjectURL(f) : null);
+  }
+
+  function reset() {
+    setText('');
+    setFile(null);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(null);
+    setError(null);
+    setPublished(null);
   }
 
   async function submit() {
@@ -138,11 +224,22 @@ export default function SimplePostForm() {
       const res = await fetch('/api/admin/twitter/post', { method: 'POST', body: fd });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-      router.push('/admin/dashboard?tab=twitter');
+      setPublished({ tweetId: String(body.tweetId), url: String(body.url), text });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
       setSubmitting(false);
     }
+  }
+
+  if (published) {
+    return (
+      <SuccessPanel
+        published={published}
+        onPostAnother={reset}
+        onBackToDashboard={() => router.push('/admin/dashboard?tab=twitter')}
+      />
+    );
   }
 
   return (

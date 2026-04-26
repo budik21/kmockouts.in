@@ -27,13 +27,14 @@ export async function POST(request: NextRequest) {
       ? await buildPreMatchContext(teamId)
       : await buildPostMatchContext(teamId);
 
-    const { text } = await generateScenarioTweet(ctx);
+    const { text, usage } = await generateScenarioTweet(ctx);
     const teamUrl = teamPageUrl(ctx.team);
     return NextResponse.json({
       text,
       teamUrl,
       appendedUrlWeight: APPENDED_URL_WEIGHT,
       context: ctx,
+      usage,
     });
   } catch (err) {
     console.error('POST /api/admin/twitter/scenario/draft error:', err);

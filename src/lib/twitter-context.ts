@@ -96,6 +96,12 @@ export interface TweetGroupContext {
   matchesTotal: number;
 }
 
+export interface CachedAiSummaryRow {
+  position: number;
+  /** Plain-text version of the cached scenario summary. */
+  text: string;
+}
+
 export interface PreMatchContext {
   kind: 'pre';
   team: TweetTeamSummary;
@@ -106,6 +112,10 @@ export interface PreMatchContext {
   opponent: TweetTeamSummary;
   /** Heuristic verdict of what the team needs (computed deterministically). */
   needHint: 'must_win' | 'win_or_draw' | 'any_result_safe' | 'must_win_big' | 'unclear';
+  /** Cached AI scenario summaries (one per finishing position with prob>0). */
+  aiSummaries: CachedAiSummaryRow[];
+  /** Per-position probability map (1..4, in 0–100). */
+  positionProbs: { [pos: number]: number };
 }
 
 export interface PostMatchContext {
@@ -118,6 +128,10 @@ export interface PostMatchContext {
   opponent: TweetTeamSummary;
   result: 'win' | 'draw' | 'loss';
   scoreLineFor: string;     // e.g. "2-1" from team's perspective
+  /** Cached AI scenario summaries. */
+  aiSummaries: CachedAiSummaryRow[];
+  /** Per-position probability map (1..4, in 0–100). */
+  positionProbs: { [pos: number]: number };
 }
 
 interface ProbabilityRow {
@@ -180,8 +194,9 @@ function matchSummary(m: Match, teamMap: Map<number, Team>): TweetMatchSummary {
 
 function probabilitiesFromRow(row: ProbabilityRow | undefined): TweetProbabilities {
   if (!row) return { advance: 0, thirdPlay: 0, eliminated: 100 };
-  const advance = (row.prob_first + row.prob_second) * 100;
-  const thirdPlay = row.prob_third_qual * 100;
+  // probability_cache stores values already in 0–100 (see engine/scenarios.ts).
+  const advance = row.prob_first + row.prob_second;
+  const thirdPlay = row.prob_third_qual;
   const eliminated = Math.max(0, 100 - advance - thirdPlay);
   return {
     advance: Math.round(advance * 10) / 10,
@@ -206,6 +221,47 @@ async function loadTeam(teamId: number): Promise<Team> {
   const row = await queryOne<TeamRow>('SELECT * FROM team WHERE id = $1', [teamId]);
   if (!row) throw new Error(`Team ${teamId} not found`);
   return rowToTeam(row);
+}
+
+function htmlToPlain(html: string): string {
+  return html
+    .replace(/<\/(p|div|li|br|h[1-6])>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function loadCachedAiSummaries(
+  groupId: string,
+  teamId: number,
+): Promise<CachedAiSummaryRow[]> {
+  try {
+    const rows = await query<{ position: number; summary_html: string }>(
+      'SELECT position, summary_html FROM ai_summary_cache WHERE group_id = $1 AND team_id = $2 ORDER BY position',
+      [groupId, teamId],
+    );
+    return rows.map(r => ({ position: r.position, text: htmlToPlain(r.summary_html) }));
+  } catch {
+    return [];
+  }
+}
+
+function positionProbsFromRow(row: ProbabilityRow | undefined): { [pos: number]: number } {
+  if (!row) return { 1: 0, 2: 0, 3: 0, 4: 0 };
+  const third = row.prob_third;
+  const fourth = Math.max(0, 100 - row.prob_first - row.prob_second - third);
+  return {
+    1: Math.round(row.prob_first * 10) / 10,
+    2: Math.round(row.prob_second * 10) / 10,
+    3: Math.round(third * 10) / 10,
+    4: Math.round(fourth * 10) / 10,
+  };
 }
 
 export async function buildPostMatchContext(teamId: number): Promise<PostMatchContext> {
@@ -244,6 +300,8 @@ export async function buildPostMatchContext(teamId: number): Promise<PostMatchCo
     opponent: teamSummary(opponent),
     result,
     scoreLineFor: `${teamGoals}-${oppGoals}`,
+    aiSummaries: await loadCachedAiSummaries(team.groupId, teamId),
+    positionProbs: positionProbsFromRow(snap.probsByTeam.get(teamId)),
   };
 }
 
@@ -298,6 +356,8 @@ export async function buildPreMatchContext(teamId: number): Promise<PreMatchCont
     nextMatch: matchSummary(next, teamMap),
     opponent: teamSummary(opponent),
     needHint,
+    aiSummaries: await loadCachedAiSummaries(team.groupId, teamId),
+    positionProbs: positionProbsFromRow(snap.probsByTeam.get(teamId)),
   };
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Spinner from '../../../components/Spinner';
 import TeamFlag from '../../../../components/TeamFlag';
-import { CounterTextarea } from '../simple/SimplePostForm';
+import { CounterTextarea, SuccessPanel, type PublishedTweet } from '../simple/SimplePostForm';
 
 interface TeamOption {
   id: number;
@@ -309,10 +309,19 @@ function KindToggle({ value, onChange, disabled }: KindToggleProps) {
   );
 }
 
+interface AiUsage {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  elapsedMs: number;
+  model: string;
+}
+
 interface DraftResponse {
   text: string;
   teamUrl: string;
   appendedUrlWeight: number;
+  usage?: AiUsage;
 }
 
 export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
@@ -326,6 +335,8 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ogTimestamp, setOgTimestamp] = useState<number>(Date.now());
+  const [usage, setUsage] = useState<AiUsage | null>(null);
+  const [published, setPublished] = useState<PublishedTweet | null>(null);
 
   const effectiveMax = TWEET_MAX - URL_WEIGHT;
   const len = [...text].length;
@@ -352,6 +363,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
       setText(draft.text);
       setTeamUrl(draft.teamUrl);
       setOgTimestamp(Date.now());
+      if (draft.usage) setUsage(draft.usage);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -373,15 +385,36 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
       const res = await fetch('/api/admin/twitter/post', { method: 'POST', body: fd });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-      router.push('/admin/dashboard?tab=twitter');
+      const url = teamUrl ? `${text} ${teamUrl}` : text;
+      setPublished({ tweetId: String(body.tweetId), url: String(body.url), text: url });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
       setSubmitting(false);
     }
   }
 
+  function reset() {
+    setText('');
+    setTeamUrl(null);
+    setUsage(null);
+    setPublished(null);
+    setError(null);
+    setOgTimestamp(Date.now());
+  }
+
   const canGenerate = !!teamId && !generating && !submitting;
   const canPublish = !!teamId && text.trim().length > 0 && !tooLong && !submitting && !generating;
+
+  if (published) {
+    return (
+      <SuccessPanel
+        published={published}
+        onPostAnother={reset}
+        onBackToDashboard={() => router.push('/admin/dashboard?tab=twitter')}
+      />
+    );
+  }
 
   return (
     <div>
@@ -525,6 +558,25 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
             <a href={teamUrl} target="_blank" rel="noopener noreferrer">
               {teamUrl}
             </a>
+          </div>
+        )}
+        {usage && (
+          <div
+            style={{
+              marginTop: '0.6rem',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '0.35rem',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid var(--wc-border)',
+              fontSize: '0.82rem',
+              color: 'var(--wc-text-muted)',
+            }}
+          >
+            <strong style={{ color: 'var(--wc-text)' }}>AI cost:</strong>{' '}
+            {usage.inputTokens.toLocaleString()} in + {usage.outputTokens.toLocaleString()} out tokens
+            {' · '}~${usage.costUsd.toFixed(4)}
+            {' · '}{(usage.elapsedMs / 1000).toFixed(1)}s
+            {' · '}<code>{usage.model}</code>
           </div>
         )}
       </div>

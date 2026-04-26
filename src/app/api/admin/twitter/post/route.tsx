@@ -22,10 +22,14 @@ async function renderScenarioPng(teamId: number, kind: 'pre' | 'post', variant: 
     ? await buildPreMatchContext(teamId)
     : await buildPostMatchContext(teamId);
 
-  const flagSvg = await loadFlagSvg(ctx.team.countryCode);
+  const [flagSvg, flagSquareSvg] = await Promise.all([
+    loadFlagSvg(ctx.team.countryCode, '4x3'),
+    loadFlagSvg(ctx.team.countryCode, '1x1'),
+  ]);
   const flagDataUrl = flagSvg ? svgToDataUrl(flagSvg) : null;
+  const flagSquareDataUrl = flagSquareSvg ? svgToDataUrl(flagSquareSvg) : null;
 
-  const response = new ImageResponse(renderForVariant({ ctx, flagDataUrl }, variant), {
+  const response = new ImageResponse(renderForVariant({ ctx, flagDataUrl, flagSquareDataUrl }, variant), {
     width: 1200,
     height: 675,
   });
