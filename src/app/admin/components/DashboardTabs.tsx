@@ -10,6 +10,7 @@ import PickemActions from './PickemActions';
 import UsersClient from '../users/UsersClient';
 import FeatureFlagsClient from './FeatureFlagsClient';
 import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
+import TwitterTab, { type TwitterTeamOption } from './TwitterTab';
 import ScenarioPicker from '@/app/components/ScenarioPicker';
 import type { FeatureFlag } from '@/lib/feature-flags';
 
@@ -29,6 +30,7 @@ interface DashboardTabsProps {
   aiEnvEnabled: boolean;
   aiGenerationFlagEnabled: boolean;
   aiDisplayFlagEnabled: boolean;
+  twitterTeams: TwitterTeamOption[];
 }
 
 export default function DashboardTabs({
@@ -47,8 +49,9 @@ export default function DashboardTabs({
   aiEnvEnabled,
   aiGenerationFlagEnabled,
   aiDisplayFlagEnabled,
+  twitterTeams,
 }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'env'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env'>('matches');
 
   const tabButtonStyle = (isActive: boolean) => ({
     background: 'none',
@@ -125,6 +128,11 @@ export default function DashboardTabs({
         {isSuperadmin && (
           <button onClick={() => setActiveTab('ai')} style={tabButtonStyle(activeTab === 'ai')}>
             AI Predictions
+          </button>
+        )}
+        {isSuperadmin && (
+          <button onClick={() => setActiveTab('twitter')} style={tabButtonStyle(activeTab === 'twitter')}>
+            Twitter
           </button>
         )}
         {isSuperadmin && (
@@ -255,6 +263,16 @@ export default function DashboardTabs({
               generationFlagEnabled={aiGenerationFlagEnabled}
               displayFlagEnabled={aiDisplayFlagEnabled}
             />
+          </div>
+        )}
+
+        {/* Twitter tab — superadmin only */}
+        {activeTab === 'twitter' && isSuperadmin && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
+              Twitter (X)
+            </h2>
+            <TwitterTab teams={twitterTeams} />
           </div>
         )}
 

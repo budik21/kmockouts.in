@@ -243,6 +243,22 @@ export async function initializeSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_tip_user ON tip(user_id);
     CREATE INDEX IF NOT EXISTS idx_tip_match ON tip(match_id);
+
+    -- Twitter (X) posts published via this app. The Free tier of X API does
+    -- NOT expose GET endpoints to read the account timeline, so we keep our
+    -- own log to render history in the admin Twitter tab.
+    CREATE TABLE IF NOT EXISTS twitter_post (
+      id              SERIAL PRIMARY KEY,
+      tweet_id        TEXT NOT NULL UNIQUE,
+      text            TEXT NOT NULL,
+      media_kind      TEXT,
+      template        TEXT NOT NULL,
+      team_id         INTEGER REFERENCES team(id),
+      match_id        INTEGER REFERENCES match(id),
+      posted_by_email TEXT NOT NULL,
+      posted_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_twitter_post_posted_at ON twitter_post(posted_at DESC);
   `);
 
   // ---- Seed knockout third-place combinations (FIFA Annex C) ----

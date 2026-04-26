@@ -141,11 +141,17 @@ export default async function AdminDashboardPage() {
   }
 
   const aiTeamRows = isSuperadmin
-    ? await query<{ id: number; name: string; group_id: string }>(
-        'SELECT id, name, group_id FROM team WHERE is_placeholder = false ORDER BY group_id, name',
+    ? await query<{ id: number; name: string; group_id: string; country_code: string }>(
+        'SELECT id, name, group_id, country_code FROM team WHERE is_placeholder = false ORDER BY group_id, name',
       )
     : [];
   const aiTeams = aiTeamRows.map(r => ({ id: r.id, name: r.name, groupId: r.group_id }));
+  const twitterTeams = aiTeamRows.map(r => ({
+    id: r.id,
+    name: r.name,
+    groupId: r.group_id,
+    countryCode: r.country_code,
+  }));
   const aiGroups: string[] = [...ALL_GROUPS];
   const aiEnvEnabled = isAiGenerationEnabledByEnv();
   const aiGenerationFlagEnabled = isSuperadmin
@@ -245,6 +251,7 @@ export default async function AdminDashboardPage() {
         aiEnvEnabled={aiEnvEnabled}
         aiGenerationFlagEnabled={aiGenerationFlagEnabled}
         aiDisplayFlagEnabled={aiDisplayFlagEnabled}
+        twitterTeams={twitterTeams}
       />
     </div>
   );
