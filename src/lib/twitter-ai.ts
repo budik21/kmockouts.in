@@ -4,9 +4,33 @@ import type { PreMatchContext, PostMatchContext } from './twitter-context';
 
 const client = new Anthropic();
 
-const MODEL = 'claude-haiku-4-5-20251001';
-const HAIKU_INPUT_USD_PER_MTOK = 1;
-const HAIKU_OUTPUT_USD_PER_MTOK = 5;
+export type TwitterAiModelKey = 'haiku' | 'sonnet' | 'opus';
+
+const TWITTER_AI_MODELS: Record<TwitterAiModelKey, {
+  id: string;
+  inputUsdPerMtok: number;
+  outputUsdPerMtok: number;
+}> = {
+  haiku: {
+    id: 'claude-haiku-4-5-20251001',
+    inputUsdPerMtok: 1,
+    outputUsdPerMtok: 5,
+  },
+  sonnet: {
+    id: 'claude-sonnet-4-6',
+    inputUsdPerMtok: 3,
+    outputUsdPerMtok: 15,
+  },
+  opus: {
+    id: 'claude-opus-4-7',
+    inputUsdPerMtok: 15,
+    outputUsdPerMtok: 75,
+  },
+};
+
+export function normalizeTwitterAiModel(value: unknown): TwitterAiModelKey {
+  return value === 'sonnet' || value === 'opus' ? value : 'haiku';
+}
 
 const SYSTEM_PROMPT = `You are a creative sports social-media writer for a World Cup 2026 fan site.
 Your tweets are PUNCHY, SPECIFIC, and frame the situation as a QUESTION whenever it makes sense.
@@ -56,7 +80,8 @@ interface PromptCtx {
   standings: { pos: number; team: string; played: number; pts: number; gd: number }[];
   probabilities: {
     advance_to_R32: string;
-    third_place_playoff: string;
+    third_place_finish: string;
+    best_third_qualification: string;
     eliminated: string;
     breakdown: { [pos: number]: string };
   };
@@ -120,7 +145,8 @@ function buildPromptCtx(ctx: PreMatchContext | PostMatchContext): PromptCtx {
     })),
     probabilities: {
       advance_to_R32: formatPct(ctx.probabilities.advance),
-      third_place_playoff: formatPct(ctx.probabilities.thirdPlay),
+      third_place_finish: formatPct(ctx.probabilities.third),
+      best_third_qualification: formatPct(ctx.probabilities.thirdPlay),
       eliminated: formatPct(ctx.probabilities.eliminated),
       breakdown: {
         1: formatPct(ctx.positionProbs[1] ?? 0),
@@ -184,8 +210,10 @@ export interface ScenarioTweetUsage {
 
 export async function generateScenarioTweet(
   ctx: PreMatchContext | PostMatchContext,
+  modelKey: TwitterAiModelKey = 'haiku',
 ): Promise<{ text: string; usage: ScenarioTweetUsage }> {
   const promptCtx = buildPromptCtx(ctx);
+  const model = TWITTER_AI_MODELS[modelKey];
   const userPrompt = `Generate a ${ctx.kind === 'pre' ? 'PRE-MATCH' : 'POST-MATCH'} tweet for the team below.
 
 Use mostLikelyScenario as the spine of the tweet:
@@ -201,10 +229,10 @@ ${JSON.stringify(promptCtx, null, 2)}
 
 Write the tweet now. Output the tweet text only — no surrounding quotes, no labels.`;
 
-  console.log(`[twitter-ai] generateScenarioTweet team=${ctx.team.name} kind=${ctx.kind} model=${MODEL}`);
+  console.log(`[twitter-ai] generateScenarioTweet team=${ctx.team.name} kind=${ctx.kind} model=${model.id}`);
   const start = Date.now();
   const response = await withClaudeSlot(() => client.messages.create({
-    model: MODEL,
+    model: model.id,
     max_tokens: 360,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userPrompt }],
@@ -217,13 +245,13 @@ Write the tweet now. Output the tweet text only — no surrounding quotes, no la
   const inputTokens = response.usage?.input_tokens ?? 0;
   const outputTokens = response.usage?.output_tokens ?? 0;
   const costUsd =
-    (inputTokens / 1_000_000) * HAIKU_INPUT_USD_PER_MTOK +
-    (outputTokens / 1_000_000) * HAIKU_OUTPUT_USD_PER_MTOK;
+    (inputTokens / 1_000_000) * model.inputUsdPerMtok +
+    (outputTokens / 1_000_000) * model.outputUsdPerMtok;
 
   console.log(`[twitter-ai] done ${elapsedMs}ms · ${inputTokens} in + ${outputTokens} out · ~$${costUsd.toFixed(5)}`);
 
   return {
     text: trimToTweetLength(raw),
-    usage: { inputTokens, outputTokens, costUsd, elapsedMs, model: MODEL },
+    usage: { inputTokens, outputTokens, costUsd, elapsedMs, model: model.id },
   };
 }

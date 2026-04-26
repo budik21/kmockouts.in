@@ -19,9 +19,15 @@ interface ScenarioPostFormProps {
 
 type Kind = 'pre' | 'post';
 type Variant = 1 | 2 | 3;
+type TwitterAiModel = 'haiku' | 'sonnet' | 'opus';
 
 const TWEET_MAX = 280;
 const URL_WEIGHT = 24;
+const MODEL_LABELS: Record<TwitterAiModel, string> = {
+  haiku: 'Haiku',
+  sonnet: 'Sonnet',
+  opus: 'Opus',
+};
 
 const buttonPrimary: React.CSSProperties = {
   padding: '0.5rem 1.1rem',
@@ -331,6 +337,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
   const [text, setText] = useState('');
   const [teamUrl, setTeamUrl] = useState<string | null>(null);
   const [variant, setVariant] = useState<Variant>(1);
+  const [aiModel, setAiModel] = useState<TwitterAiModel>('haiku');
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -358,7 +365,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
       const res = await fetch('/api/admin/twitter/scenario/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId, kind }),
+        body: JSON.stringify({ teamId, kind, model: aiModel }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -499,6 +506,29 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
           font-size: 1.02rem;
           margin-bottom: 0.35rem;
         }
+        .tw-model-select {
+          width: 100%;
+          padding: 0.55rem 0.7rem;
+          border-radius: 0.3rem;
+          border: 1px solid var(--wc-border);
+          background: rgba(0,0,0,0.25);
+          color: var(--wc-text);
+          font-size: 1rem;
+        }
+        .tw-generation-controls {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+        .tw-generation-success {
+          padding: 0.75rem 0.9rem;
+          border-radius: 0.45rem;
+          background: rgba(34,197,94,0.10);
+          border: 1px solid rgba(34,197,94,0.42);
+          color: #bbf7d0;
+          font-size: 0.96rem;
+          line-height: 1.45;
+        }
         @media (min-width: 992px) {
           .tw-draft-panel {
             grid-template-columns: minmax(0, 48%) minmax(260px, 1fr);
@@ -507,7 +537,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
           .tw-draft-editor {
             max-width: 560px;
           }
-          .tw-ai-cost-panel {
+          .tw-generation-controls {
             margin-top: 1.45rem;
           }
         }
@@ -533,22 +563,6 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
         </div>
       </div>
 
-      <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          style={{ ...buttonPrimary, opacity: canGenerate ? 1 : 0.55, cursor: canGenerate ? 'pointer' : 'not-allowed' }}
-          disabled={!canGenerate}
-          onClick={generate}
-        >
-          {generating ? <Spinner /> : text ? 'Regenerate text' : 'Generate text'}
-        </button>
-        {!teamId && (
-          <span style={{ alignSelf: 'center', fontSize: '0.85rem', color: 'var(--wc-text-muted)' }}>
-            Select a team to enable text generation.
-          </span>
-        )}
-      </div>
-
       <div className="tw-draft-panel">
         <div className="tw-draft-editor">
           <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--wc-text-muted)', marginBottom: '0.3rem' }}>
@@ -571,20 +585,52 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
           )}
         </div>
 
-        <div className="tw-ai-cost-panel">
+        <div className="tw-generation-controls">
+          <div>
+            <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--wc-text-muted)', marginBottom: '0.35rem' }}>
+              Anthropic model
+            </label>
+            <select
+              className="tw-model-select"
+              value={aiModel}
+              disabled={generating || submitting}
+              onChange={(e) => {
+                setAiModel(e.target.value as TwitterAiModel);
+                setUsage(null);
+              }}
+            >
+              {(['haiku', 'sonnet', 'opus'] as TwitterAiModel[]).map((model) => (
+                <option key={model} value={model}>
+                  {MODEL_LABELS[model]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            style={{ ...buttonPrimary, opacity: canGenerate ? 1 : 0.55, cursor: canGenerate ? 'pointer' : 'not-allowed', alignSelf: 'flex-start' }}
+            disabled={!canGenerate}
+            onClick={generate}
+          >
+            {generating ? <Spinner /> : text ? 'Regenerate text' : 'Generate text'}
+          </button>
+
           {usage ? (
-            <>
-              <strong>AI generation cost</strong>
-              {usage.inputTokens.toLocaleString()} input + {usage.outputTokens.toLocaleString()} output tokens
-              {' · '}~${usage.costUsd.toFixed(4)}
+            <div className="tw-generation-success">
+              <strong style={{ display: 'block', color: '#dcfce7', marginBottom: '0.25rem' }}>
+                Tweet generated with {MODEL_LABELS[aiModel]}
+              </strong>
+              Cost: ~${usage.costUsd.toFixed(4)}
+              {' · '}{usage.inputTokens.toLocaleString()} input + {usage.outputTokens.toLocaleString()} output tokens
               {' · '}{(usage.elapsedMs / 1000).toFixed(1)}s
               {' · '}<code>{usage.model}</code>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="tw-ai-cost-panel">
               <strong>AI generation cost</strong>
-              Generate text to see token usage, cost estimate, model and elapsed time here.
-            </>
+              Select a model, then generate text to see token usage, cost estimate and elapsed time here.
+            </div>
           )}
           </div>
       </div>

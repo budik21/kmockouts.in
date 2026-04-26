@@ -407,14 +407,14 @@ function pct(value: number): string {
 function posterStats(ctx: PreMatchContext | PostMatchContext) {
   return [
     {
-      label: 'Qualify',
-      value: ctx.probabilities.advance + ctx.probabilities.thirdPlay,
+      label: 'Top 2',
+      value: ctx.probabilities.advance,
       color: '#22c55e',
       bg: 'rgba(34,197,94,0.18)',
     },
     {
-      label: '2nd place',
-      value: ctx.positionProbs[2] ?? 0,
+      label: '3rd place',
+      value: ctx.probabilities.third,
       color: '#38bdf8',
       bg: 'rgba(56,189,248,0.18)',
     },

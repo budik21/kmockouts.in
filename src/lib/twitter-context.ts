@@ -65,9 +65,10 @@ export interface TweetTeamSummary {
 }
 
 export interface TweetProbabilities {
-  advance: number;       // prob_first + prob_second
-  thirdPlay: number;     // prob_third_qual (advances as best third)
-  eliminated: number;    // 100 - advance - thirdPlay
+  advance: number;       // prob_first + prob_second (direct top-2 play-off)
+  third: number;         // prob_third (finishes 3rd in group)
+  thirdPlay: number;     // prob_third_qual (finishes 3rd and advances as best third)
+  eliminated: number;    // prob_out (finishes 4th)
 }
 
 export interface TweetMatchSummary {
@@ -195,13 +196,15 @@ function matchSummary(m: Match, teamMap: Map<number, Team>): TweetMatchSummary {
 }
 
 function probabilitiesFromRow(row: ProbabilityRow | undefined): TweetProbabilities {
-  if (!row) return { advance: 0, thirdPlay: 0, eliminated: 100 };
+  if (!row) return { advance: 0, third: 0, thirdPlay: 0, eliminated: 0 };
   // probability_cache stores values already in 0–100 (see engine/scenarios.ts).
   const advance = row.prob_first + row.prob_second;
+  const third = row.prob_third;
   const thirdPlay = row.prob_third_qual;
-  const eliminated = Math.max(0, 100 - advance - thirdPlay);
+  const eliminated = row.prob_out;
   return {
     advance: Math.round(advance * 10) / 10,
+    third: Math.round(third * 10) / 10,
     thirdPlay: Math.round(thirdPlay * 10) / 10,
     eliminated: Math.round(eliminated * 10) / 10,
   };
@@ -256,13 +259,11 @@ async function loadCachedAiSummaries(
 
 function positionProbsFromRow(row: ProbabilityRow | undefined): { [pos: number]: number } {
   if (!row) return { 1: 0, 2: 0, 3: 0, 4: 0 };
-  const third = row.prob_third;
-  const fourth = Math.max(0, 100 - row.prob_first - row.prob_second - third);
   return {
     1: Math.round(row.prob_first * 10) / 10,
     2: Math.round(row.prob_second * 10) / 10,
-    3: Math.round(third * 10) / 10,
-    4: Math.round(fourth * 10) / 10,
+    3: Math.round(row.prob_third * 10) / 10,
+    4: Math.round(row.prob_out * 10) / 10,
   };
 }
 

@@ -3,7 +3,7 @@ import { requireSuperadminApi } from '@/lib/admin-auth';
 import { auth } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
 import { buildPreMatchContext, buildPostMatchContext, teamPageUrl, APPENDED_URL_WEIGHT } from '@/lib/twitter-context';
-import { generateScenarioTweet } from '@/lib/twitter-ai';
+import { generateScenarioTweet, normalizeTwitterAiModel } from '@/lib/twitter-ai';
 
 export async function POST(request: NextRequest) {
   const unauthorized = await requireSuperadminApi();
@@ -16,9 +16,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as { teamId?: unknown; kind?: unknown };
+    const body = (await request.json()) as { teamId?: unknown; kind?: unknown; model?: unknown };
     const teamId = typeof body.teamId === 'number' ? body.teamId : Number(body.teamId);
     const kind = body.kind === 'pre' ? 'pre' : body.kind === 'post' ? 'post' : null;
+    const model = normalizeTwitterAiModel(body.model);
     if (!Number.isFinite(teamId) || !kind) {
       return NextResponse.json({ error: 'teamId (number) and kind ("pre"|"post") are required' }, { status: 400 });
     }
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       ? await buildPreMatchContext(teamId)
       : await buildPostMatchContext(teamId);
 
-    const { text, usage } = await generateScenarioTweet(ctx);
+    const { text, usage } = await generateScenarioTweet(ctx, model);
     const teamUrl = teamPageUrl(ctx.team);
     return NextResponse.json({
       text,
