@@ -39,6 +39,16 @@ const buttonPrimary: React.CSSProperties = {
   border: 'none',
 };
 
+const selectStyle: React.CSSProperties = {
+  padding: '0.4rem 0.6rem',
+  borderRadius: '0.25rem',
+  border: '1px solid var(--wc-border)',
+  backgroundColor: 'var(--wc-surface)',
+  color: 'var(--wc-text)',
+  fontSize: '0.95rem',
+  minWidth: '12rem',
+};
+
 const buttonGhost: React.CSSProperties = {
   padding: '0.5rem 1rem',
   fontWeight: 500,
@@ -508,12 +518,11 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
         }
         .tw-model-select {
           width: 100%;
-          padding: 0.55rem 0.7rem;
-          border-radius: 0.3rem;
-          border: 1px solid var(--wc-border);
-          background: rgba(0,0,0,0.25);
-          color: var(--wc-text);
-          font-size: 1rem;
+          max-width: 20rem;
+        }
+        .tw-model-select:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
         .tw-generation-controls {
           display: flex;
@@ -592,6 +601,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
             </label>
             <select
               className="tw-model-select"
+              style={selectStyle}
               value={aiModel}
               disabled={generating || submitting}
               onChange={(e) => {

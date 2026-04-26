@@ -1,7 +1,9 @@
 import { query, queryOne } from './db';
 import { calculateStandings } from '../engine/standings';
+import { enumerateGroupScenarios, type TeamScenarioSummary } from '../engine/scenarios';
 import { slugify } from './slugify';
 import { SITE_URL } from './seo';
+import { getCachedGroupProbs, recalculateGroupProbabilities, type CachedTeamProb } from './probability-cache';
 import type { GroupId, TeamRow, MatchRow, Team, Match } from './types';
 
 /**
@@ -136,16 +138,7 @@ export interface PostMatchContext {
   positionProbs: { [pos: number]: number };
 }
 
-interface ProbabilityRow {
-  team_id: number;
-  prob_first: number;
-  prob_second: number;
-  prob_third: number;
-  prob_third_qual: number;
-  prob_out: number;
-}
-
-async function loadGroupSnapshot(groupId: string) {
+async function loadGroupSnapshot(groupId: GroupId) {
   const teamRows = await query<TeamRow>(
     'SELECT * FROM team WHERE group_id = $1 ORDER BY id',
     [groupId],
@@ -154,20 +147,30 @@ async function loadGroupSnapshot(groupId: string) {
     'SELECT * FROM match WHERE group_id = $1 ORDER BY kick_off, id',
     [groupId],
   );
-  const probRows = await query<ProbabilityRow>(
-    'SELECT team_id, prob_first, prob_second, prob_third, prob_third_qual, prob_out FROM probability_cache WHERE group_id = $1',
-    [groupId],
-  );
 
   const teams = teamRows.map(rowToTeam);
   const matches = matchRows.map(rowToMatch);
   const finished = matches.filter(m => m.status === 'FINISHED');
+  const remaining = matches.filter(m => m.status !== 'FINISHED');
   const standings = calculateStandings({ teams, matches: finished });
+  const scenarioSummaries = enumerateGroupScenarios(teams, finished, remaining);
+  const scenariosByTeam = new Map(scenarioSummaries.map(summary => [summary.teamId, summary]));
 
-  const probsByTeam = new Map<number, ProbabilityRow>();
-  for (const p of probRows) probsByTeam.set(p.team_id, p);
+  let probsByTeam = await getCachedGroupProbs(groupId);
+  const hasAllTeamRows = !!probsByTeam && teams.every(team => probsByTeam?.has(team.id));
+  if (!hasAllTeamRows) {
+    await recalculateGroupProbabilities(groupId);
+    probsByTeam = await getCachedGroupProbs(groupId);
+  }
 
-  return { teams, matches, finished, standings, probsByTeam };
+  return {
+    teams,
+    matches,
+    finished,
+    standings,
+    scenariosByTeam,
+    probsByTeam: probsByTeam ?? new Map<number, CachedTeamProb>(),
+  };
 }
 
 function teamSummary(t: Team): TweetTeamSummary {
@@ -195,13 +198,17 @@ function matchSummary(m: Match, teamMap: Map<number, Team>): TweetMatchSummary {
   };
 }
 
-function probabilitiesFromRow(row: ProbabilityRow | undefined): TweetProbabilities {
-  if (!row) return { advance: 0, third: 0, thirdPlay: 0, eliminated: 0 };
-  // probability_cache stores values already in 0–100 (see engine/scenarios.ts).
-  const advance = row.prob_first + row.prob_second;
-  const third = row.prob_third;
-  const thirdPlay = row.prob_third_qual;
-  const eliminated = row.prob_out;
+function probabilitiesFromSources(
+  scenario: TeamScenarioSummary | undefined,
+  cached: CachedTeamProb | undefined,
+): TweetProbabilities {
+  const positionProbs = scenario?.positionProbabilities;
+  const advance = positionProbs
+    ? (positionProbs[1] ?? 0) + (positionProbs[2] ?? 0)
+    : (cached?.probFirst ?? 0) + (cached?.probSecond ?? 0);
+  const third = positionProbs?.[3] ?? cached?.probThird ?? 0;
+  const thirdPlay = cached?.probThirdQual ?? 0;
+  const eliminated = positionProbs?.[4] ?? cached?.probOut ?? 0;
   return {
     advance: Math.round(advance * 10) / 10,
     third: Math.round(third * 10) / 10,
@@ -257,13 +264,16 @@ async function loadCachedAiSummaries(
   }
 }
 
-function positionProbsFromRow(row: ProbabilityRow | undefined): { [pos: number]: number } {
-  if (!row) return { 1: 0, 2: 0, 3: 0, 4: 0 };
+function positionProbsFromSources(
+  scenario: TeamScenarioSummary | undefined,
+  cached: CachedTeamProb | undefined,
+): { [pos: number]: number } {
+  const positionProbs = scenario?.positionProbabilities;
   return {
-    1: Math.round(row.prob_first * 10) / 10,
-    2: Math.round(row.prob_second * 10) / 10,
-    3: Math.round(row.prob_third * 10) / 10,
-    4: Math.round(row.prob_out * 10) / 10,
+    1: Math.round((positionProbs?.[1] ?? cached?.probFirst ?? 0) * 10) / 10,
+    2: Math.round((positionProbs?.[2] ?? cached?.probSecond ?? 0) * 10) / 10,
+    3: Math.round((positionProbs?.[3] ?? cached?.probThird ?? 0) * 10) / 10,
+    4: Math.round((positionProbs?.[4] ?? cached?.probOut ?? 0) * 10) / 10,
   };
 }
 
@@ -288,6 +298,8 @@ export async function buildPostMatchContext(teamId: number): Promise<PostMatchCo
   const result: 'win' | 'draw' | 'loss' =
     teamGoals > oppGoals ? 'win' : teamGoals === oppGoals ? 'draw' : 'loss';
   const opponent = isHome ? teamMap.get(last.awayTeamId)! : teamMap.get(last.homeTeamId)!;
+  const scenario = snap.scenariosByTeam.get(teamId);
+  const cached = snap.probsByTeam.get(teamId);
 
   return {
     kind: 'post',
@@ -298,13 +310,13 @@ export async function buildPostMatchContext(teamId: number): Promise<PostMatchCo
       matchesTotal: snap.matches.length,
     },
     standings: buildStandingRows(snap),
-    probabilities: probabilitiesFromRow(snap.probsByTeam.get(teamId)),
+    probabilities: probabilitiesFromSources(scenario, cached),
     lastMatch: matchSummary(last, teamMap),
     opponent: teamSummary(opponent),
     result,
     scoreLineFor: `${teamGoals}-${oppGoals}`,
     aiSummaries: await loadCachedAiSummaries(team.groupId, teamId),
-    positionProbs: positionProbsFromRow(snap.probsByTeam.get(teamId)),
+    positionProbs: positionProbsFromSources(scenario, cached),
   };
 }
 
@@ -326,7 +338,9 @@ export async function buildPreMatchContext(teamId: number): Promise<PreMatchCont
     ? teamMap.get(next.awayTeamId)!
     : teamMap.get(next.homeTeamId)!;
 
-  const probs = probabilitiesFromRow(snap.probsByTeam.get(teamId));
+  const scenario = snap.scenariosByTeam.get(teamId);
+  const cached = snap.probsByTeam.get(teamId);
+  const probs = probabilitiesFromSources(scenario, cached);
   const standing = snap.standings.find(s => s.team.id === teamId);
 
   // Deterministic verdict for the AI prompt and OG header
@@ -360,7 +374,7 @@ export async function buildPreMatchContext(teamId: number): Promise<PreMatchCont
     opponent: teamSummary(opponent),
     needHint,
     aiSummaries: await loadCachedAiSummaries(team.groupId, teamId),
-    positionProbs: positionProbsFromRow(snap.probsByTeam.get(teamId)),
+    positionProbs: positionProbsFromSources(scenario, cached),
   };
 }
 
