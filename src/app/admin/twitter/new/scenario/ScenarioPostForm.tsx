@@ -335,6 +335,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ogTimestamp, setOgTimestamp] = useState<number>(Date.now());
+  const [graphicGenerated, setGraphicGenerated] = useState(false);
   const [usage, setUsage] = useState<AiUsage | null>(null);
   const [published, setPublished] = useState<PublishedTweet | null>(null);
 
@@ -342,9 +343,11 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
   const len = [...text].length;
   const tooLong = len > effectiveMax;
 
-  // When team or kind changes, the OG previews must regenerate.
+  // Team/kind changes invalidate the prepared graphic and URL hint.
   useEffect(() => {
-    setOgTimestamp(Date.now());
+    setGraphicGenerated(false);
+    setTeamUrl(null);
+    setUsage(null);
   }, [teamId, kind]);
 
   async function generate() {
@@ -362,13 +365,18 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
       const draft = body as DraftResponse;
       setText(draft.text);
       setTeamUrl(draft.teamUrl);
-      setOgTimestamp(Date.now());
       if (draft.usage) setUsage(draft.usage);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setGenerating(false);
     }
+  }
+
+  function generateGraphic() {
+    if (!teamId) return;
+    setGraphicGenerated(true);
+    setOgTimestamp(Date.now());
   }
 
   async function publish() {
@@ -382,6 +390,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
       fd.append('teamId', String(teamId));
       fd.append('ogKind', kind);
       fd.append('variant', String(variant));
+      if (graphicGenerated) fd.append('includeGraphic', 'true');
       const res = await fetch('/api/admin/twitter/post', { method: 'POST', body: fd });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -401,9 +410,11 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
     setPublished(null);
     setError(null);
     setOgTimestamp(Date.now());
+    setGraphicGenerated(false);
   }
 
   const canGenerate = !!teamId && !generating && !submitting;
+  const canGenerateGraphic = !!teamId && !generating && !submitting;
   const canPublish = !!teamId && text.trim().length > 0 && !tooLong && !submitting && !generating;
 
   if (published) {
@@ -496,7 +507,63 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
         )}
       </div>
 
-      {teamId && (
+      <div style={{ marginTop: '1.5rem' }}>
+        <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--wc-text-muted)', marginBottom: '0.3rem' }}>
+          Tweet text (max {effectiveMax} chars; {URL_WEIGHT} chars reserved for the team URL)
+        </label>
+        <CounterTextarea
+          value={text}
+          onChange={setText}
+          effectiveMax={effectiveMax}
+          placeholder="Click 'Generate text' to draft this with AI."
+          disabled={generating || submitting}
+        />
+        {teamUrl && (
+          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--wc-text-muted)' }}>
+            Auto-appended:{' '}
+            <a href={teamUrl} target="_blank" rel="noopener noreferrer">
+              {teamUrl}
+            </a>
+          </div>
+        )}
+        {usage && (
+          <div
+            style={{
+              marginTop: '0.6rem',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '0.35rem',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid var(--wc-border)',
+              fontSize: '0.82rem',
+              color: 'var(--wc-text-muted)',
+            }}
+          >
+            <strong style={{ color: 'var(--wc-text)' }}>AI cost:</strong>{' '}
+            {usage.inputTokens.toLocaleString()} in + {usage.outputTokens.toLocaleString()} out tokens
+            {' · '}~${usage.costUsd.toFixed(4)}
+            {' · '}{(usage.elapsedMs / 1000).toFixed(1)}s
+            {' · '}<code>{usage.model}</code>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          style={{ ...buttonPrimary, opacity: canGenerateGraphic ? 1 : 0.55, cursor: canGenerateGraphic ? 'pointer' : 'not-allowed' }}
+          disabled={!canGenerateGraphic}
+          onClick={generateGraphic}
+        >
+          {graphicGenerated ? 'Regenerate graphic' : 'Generate graphic'}
+        </button>
+        <span style={{ alignSelf: 'center', fontSize: '0.85rem', color: 'var(--wc-text-muted)' }}>
+          {graphicGenerated
+            ? 'Selected graphic will be attached to the tweet.'
+            : 'Skip this to publish text with the team URL only.'}
+        </span>
+      </div>
+
+      {graphicGenerated && teamId && (
         <div style={{ marginTop: '1.5rem' }}>
           <h3 style={{ color: 'var(--wc-text)', fontSize: '1rem', marginBottom: '0.5rem' }}>
             Pick a graphic
@@ -540,46 +607,6 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
           </div>
         </div>
       )}
-
-      <div style={{ marginTop: '1.5rem' }}>
-        <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--wc-text-muted)', marginBottom: '0.3rem' }}>
-          Tweet text (max {effectiveMax} chars; {URL_WEIGHT} chars reserved for the team URL)
-        </label>
-        <CounterTextarea
-          value={text}
-          onChange={setText}
-          effectiveMax={effectiveMax}
-          placeholder="Click 'Generate text' to draft this with AI."
-          disabled={generating || submitting}
-        />
-        {teamUrl && (
-          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--wc-text-muted)' }}>
-            Auto-appended:{' '}
-            <a href={teamUrl} target="_blank" rel="noopener noreferrer">
-              {teamUrl}
-            </a>
-          </div>
-        )}
-        {usage && (
-          <div
-            style={{
-              marginTop: '0.6rem',
-              padding: '0.5rem 0.75rem',
-              borderRadius: '0.35rem',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid var(--wc-border)',
-              fontSize: '0.82rem',
-              color: 'var(--wc-text-muted)',
-            }}
-          >
-            <strong style={{ color: 'var(--wc-text)' }}>AI cost:</strong>{' '}
-            {usage.inputTokens.toLocaleString()} in + {usage.outputTokens.toLocaleString()} out tokens
-            {' · '}~${usage.costUsd.toFixed(4)}
-            {' · '}{(usage.elapsedMs / 1000).toFixed(1)}s
-            {' · '}<code>{usage.model}</code>
-          </div>
-        )}
-      </div>
 
       {error && <div style={{ color: '#fca5a5', marginTop: '0.75rem' }}>{error}</div>}
 

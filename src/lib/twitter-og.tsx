@@ -14,8 +14,8 @@ export async function loadFlagSvg(
   countryCode: string,
   aspect: '1x1' | '4x3' = '4x3',
 ): Promise<string | null> {
-  const code = countryCode.toLowerCase();
-  if (!code || !/^[a-z]{2}$/.test(code)) return null;
+  const code = countryCode.trim().toLowerCase();
+  if (!code || !/^[a-z]{2}(?:-[a-z0-9]{1,3})?$/.test(code)) return null;
   const cacheKey = `${aspect}:${code}`;
   const cached = flagSvgCache.get(cacheKey);
   if (cached) return cached;
@@ -65,15 +65,16 @@ export type MilestoneKind = 'clinched' | 'eliminated' | null;
  * variant body for a celebration/RIP layout.
  */
 export function detectMilestone(ctx: PreMatchContext | PostMatchContext): MilestoneKind {
-  if (ctx.probabilities.advance >= 99.5) return 'clinched';
+  const totalAdvance = ctx.probabilities.advance + ctx.probabilities.thirdPlay;
+  if (totalAdvance >= 99.5) return 'clinched';
   if (ctx.probabilities.eliminated >= 99.5) return 'eliminated';
   return null;
 }
 
 function probTriple(ctx: PreMatchContext | PostMatchContext) {
   return [
-    { label: 'Advance', value: ctx.probabilities.advance, color: '#22c55e' },
-    { label: '3rd-place', value: ctx.probabilities.thirdPlay, color: '#eab308' },
+    { label: 'Top 2', value: ctx.probabilities.advance, color: '#22c55e' },
+    { label: 'Best 3rd', value: ctx.probabilities.thirdPlay, color: '#eab308' },
     { label: 'Eliminated', value: ctx.probabilities.eliminated, color: '#ef4444' },
   ];
 }

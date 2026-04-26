@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
   const ogKindRaw = formData.get('ogKind');
   const variantRaw = Number(formData.get('variant') ?? '1');
   const variant: OgVariant = variantRaw === 2 ? 2 : variantRaw === 3 ? 3 : 1;
+  const includeGraphic = formData.get('includeGraphic') === 'true';
 
   if (!text) {
     return NextResponse.json({ error: 'Tweet text is required' }, { status: 400 });
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
     mediaBuffer = Buffer.from(await file.arrayBuffer());
     mediaMime = file.type as 'image/png' | 'image/jpeg' | 'image/gif';
-  } else if (template === 'scenario_pre' || template === 'scenario_post') {
+  } else if (includeGraphic && (template === 'scenario_pre' || template === 'scenario_post')) {
     if (!teamId || (ogKindRaw !== 'pre' && ogKindRaw !== 'post')) {
       return NextResponse.json({ error: 'teamId and ogKind=pre|post required for scenario template' }, { status: 400 });
     }
