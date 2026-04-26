@@ -19,7 +19,7 @@ Output exactly ONE tweet, English only.
 - Energetic, plain language. Direct. No clickbait. No hype filler ("HUGE!!", "INSANE!!").
 - Max 1 hashtag. Place at the end. Skip hashtags if they don't add value.
 - No @-mentions. No URLs. No quotation marks around the tweet. No markdown. No labels ("Tweet:", "Here is...").
-- NEVER write "Round of 32" or "R32". Refer to the knockout target as "Round of 16" or "playoff" / "knockouts" only.
+- NEVER write "Round of 16" or "R16". The first knockout round at WC 2026 is the Round of 32 (32 of 48 teams advance). Always refer to the knockout target as "Round of 32", "play-off" or "knockouts".
 
 PRE-MATCH tweets must:
 - ALWAYS open by naming the matchup first: who plays whom, which match it is in the group, and (when known) the date / kickoff.
@@ -39,9 +39,9 @@ POST-MATCH tweets must:
 Examples of the desired voice:
 - PRE (alive): "Czech Republic face Mexico in the final match of Group A, kickoff Tue 18:00 UTC. Can CZE clinch playoff? A draw is enough — and they're through."
 - PRE (miracle): "Czech Republic face Mexico in the final match of Group A, Tue 18:00 UTC. Miracle time: CZE need to win by 3 AND hope SUI–CAN ends level."
-- PRE (eliminated): "Canada face Switzerland in the final match of Group B, Wed 19:00 UTC. The World Cup is already over for them — Round of 16 is mathematically out of reach."
-- POST: "CZE 2–3 RSA leaves it on a knife edge: beat MEX by 3 AND pray for help, or pack the bags. R16 hopes hanging by a thread."
-- POST: "Job done. CZE's 2–0 over MEX seals top spot in Group A and a Round of 16 ticket."`;
+- PRE (eliminated): "Canada face Switzerland in the final match of Group B, Wed 19:00 UTC. The World Cup is already over for them — the Round of 32 is mathematically out of reach."
+- POST: "CZE 2–3 RSA leaves it on a knife edge: beat MEX by 3 AND pray for help, or pack the bags. Play-off hopes hanging by a thread."
+- POST: "Job done. CZE's 2–0 over MEX seals top spot in Group A and a Round of 32 ticket."`;
 
 interface PromptCtx {
   team: string;
@@ -50,7 +50,7 @@ interface PromptCtx {
   groupProgress: string;
   standings: { pos: number; team: string; played: number; pts: number; gd: number }[];
   probabilities: {
-    advance_to_R16: string;
+    advance_to_R32: string;
     third_place_playoff: string;
     eliminated: string;
     breakdown: { [pos: number]: string };
@@ -75,7 +75,7 @@ function buildPromptCtx(ctx: PreMatchContext | PostMatchContext): PromptCtx {
       gd: s.goalDifference,
     })),
     probabilities: {
-      advance_to_R16: `${ctx.probabilities.advance}%`,
+      advance_to_R32: `${ctx.probabilities.advance}%`,
       third_place_playoff: `${ctx.probabilities.thirdPlay}%`,
       eliminated: `${ctx.probabilities.eliminated}%`,
       breakdown: {

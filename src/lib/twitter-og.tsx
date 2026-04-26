@@ -223,7 +223,7 @@ function renderClinchedV1({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div style={{ display: 'flex', color: '#bbf7d0', fontSize: '22px', fontWeight: 600 }}>
-          Round of 16 • Mathematically guaranteed
+          Round of 32 • Mathematically guaranteed
         </div>
         <div style={{ display: 'flex', color: '#94a3b8', fontSize: '20px', letterSpacing: '1px' }}>knockouts.in</div>
       </div>
@@ -266,7 +266,7 @@ function renderClinchedV2({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps
             boxShadow: '0 6px 18px rgba(0,0,0,0.4)',
           }}
         >
-          🏆 INTO THE R16
+          🏆 INTO THE R32
         </div>
       </div>
 
@@ -278,7 +278,7 @@ function renderClinchedV2({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps
           {ctx.team.name}
         </div>
         <div style={{ display: 'flex', fontSize: '34px', fontWeight: 700, color: '#f8fafc', marginTop: '14px', lineHeight: 1.1 }}>
-          is through to the Round of 16
+          is through to the Round of 32
         </div>
         {standing && (
           <div style={{ display: 'flex', flexDirection: 'column', marginTop: 'auto', gap: '6px' }}>
@@ -324,7 +324,7 @@ function renderClinchedV3({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps
         <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={120} ring="#16a34a33" fallback={ctx.team.shortName} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: '64px', fontWeight: 800, lineHeight: 1 }}>{ctx.team.name}</div>
-          <div style={{ fontSize: '28px', color: '#15803d', marginTop: '10px', fontWeight: 600 }}>has clinched a Round of 16 spot</div>
+          <div style={{ fontSize: '28px', color: '#15803d', marginTop: '10px', fontWeight: 600 }}>has clinched a Round of 32 spot</div>
         </div>
       </div>
 
@@ -503,7 +503,7 @@ function renderEliminatedV3({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderPro
         <FlagCircle flagDataUrl={flagDataUrl} flagSquareDataUrl={flagSquareDataUrl} size={120} ring="#dc262633" fallback={ctx.team.shortName} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: '64px', fontWeight: 800, lineHeight: 1 }}>{ctx.team.name}</div>
-          <div style={{ fontSize: '28px', color: '#b91c1c', marginTop: '10px', fontWeight: 600 }}>cannot reach the Round of 16</div>
+          <div style={{ fontSize: '28px', color: '#b91c1c', marginTop: '10px', fontWeight: 600 }}>cannot reach the Round of 32</div>
         </div>
       </div>
 
@@ -787,7 +787,7 @@ function renderV3({ ctx, flagDataUrl, flagSquareDataUrl }: OgRenderProps) {
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '28px' }}>
-        <div style={{ display: 'flex', fontSize: '20px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px' }}>Advance to Round of 16</div>
+        <div style={{ display: 'flex', fontSize: '20px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '2px' }}>Advance to Round of 32</div>
         <div style={{ display: 'flex', fontSize: '170px', fontWeight: 900, color: accent, lineHeight: 1, marginTop: '6px' }}>{advance.toFixed(1)}%</div>
       </div>
       <div style={{ display: 'flex', gap: '20px', marginTop: 'auto' }}>
