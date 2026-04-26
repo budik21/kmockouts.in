@@ -25,14 +25,24 @@ export async function GET(request: NextRequest) {
       ? await buildPreMatchContext(teamId)
       : await buildPostMatchContext(teamId);
 
-    const [flagSvg, flagSquareSvg] = await Promise.all([
+    const [flagSvg, flagSquareSvg, opponentFlagSvg, opponentFlagSquareSvg] = await Promise.all([
       loadFlagSvg(ctx.team.countryCode, '4x3'),
       loadFlagSvg(ctx.team.countryCode, '1x1'),
+      loadFlagSvg(ctx.opponent.countryCode, '4x3'),
+      loadFlagSvg(ctx.opponent.countryCode, '1x1'),
     ]);
     const flagDataUrl = flagSvg ? svgToDataUrl(flagSvg) : null;
     const flagSquareDataUrl = flagSquareSvg ? svgToDataUrl(flagSquareSvg) : null;
+    const opponentFlagDataUrl = opponentFlagSvg ? svgToDataUrl(opponentFlagSvg) : null;
+    const opponentFlagSquareDataUrl = opponentFlagSquareSvg ? svgToDataUrl(opponentFlagSquareSvg) : null;
 
-    return new ImageResponse(renderForVariant({ ctx, flagDataUrl, flagSquareDataUrl }, variant), {
+    return new ImageResponse(renderForVariant({
+      ctx,
+      flagDataUrl,
+      flagSquareDataUrl,
+      opponentFlagDataUrl,
+      opponentFlagSquareDataUrl,
+    }, variant), {
       width: 1200,
       height: 675,
     });

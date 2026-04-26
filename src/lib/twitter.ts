@@ -143,6 +143,14 @@ export async function listTweets(limit = 100): Promise<TwitterPostListItem[]> {
   }));
 }
 
+export async function deleteTweetRecord(id: number): Promise<boolean> {
+  const rows = await query<{ id: number }>(
+    'DELETE FROM twitter_post WHERE id = $1 RETURNING id',
+    [id],
+  );
+  return rows.length > 0;
+}
+
 export async function tweetExists(tweetId: string): Promise<boolean> {
   const row = await queryOne<{ id: number }>(
     'SELECT id FROM twitter_post WHERE tweet_id = $1',

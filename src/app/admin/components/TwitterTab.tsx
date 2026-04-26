@@ -42,6 +42,16 @@ const buttonLink: React.CSSProperties = {
   display: 'inline-block',
 };
 
+const dangerButton: React.CSSProperties = {
+  padding: '0.35rem 0.65rem',
+  fontWeight: 600,
+  borderRadius: '0.25rem',
+  cursor: 'pointer',
+  backgroundColor: 'rgba(239,68,68,0.12)',
+  color: '#fca5a5',
+  border: '1px solid rgba(239,68,68,0.45)',
+};
+
 function templateLabel(t: TwitterPostListItem['template']): string {
   if (t === 'simple') return 'Simple';
   if (t === 'scenario_pre') return 'Pre-match';
@@ -59,6 +69,7 @@ function formatPostedAt(iso: string): string {
 export default function TwitterTab() {
   const [data, setData] = useState<PostsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
@@ -75,6 +86,34 @@ export default function TwitterTab() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function deleteRecord(post: TwitterPostListItem) {
+    const ok = window.confirm(
+      `Remove this tweet from the local DB history only?\n\n${post.text}`,
+    );
+    if (!ok) return;
+
+    setDeletingId(post.id);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/twitter/posts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: post.id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      setData((current) => current
+        ? { ...current, posts: current.posts.filter((p) => p.id !== post.id) }
+        : current);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -148,6 +187,7 @@ export default function TwitterTab() {
                 <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem' }}>Text</th>
                 <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem' }}>Media</th>
                 <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem' }}>Link</th>
+                <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -168,6 +208,21 @@ export default function TwitterTab() {
                     <a href={p.url} target="_blank" rel="noopener noreferrer">
                       Open ↗
                     </a>
+                  </td>
+                  <td style={{ padding: '0.5rem 0.75rem', whiteSpace: 'nowrap' }}>
+                    <button
+                      type="button"
+                      style={{
+                        ...dangerButton,
+                        opacity: deletingId === p.id ? 0.6 : 1,
+                        cursor: deletingId === p.id ? 'not-allowed' : 'pointer',
+                      }}
+                      disabled={deletingId === p.id}
+                      onClick={() => deleteRecord(p)}
+                      title="Remove only from the local DB history. This does not delete the tweet on X."
+                    >
+                      {deletingId === p.id ? 'Removing…' : 'Remove from DB'}
+                    </button>
                   </td>
                 </tr>
               ))}
