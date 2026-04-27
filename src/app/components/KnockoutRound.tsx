@@ -2,17 +2,22 @@
 
 import KnockoutMatchCard from './KnockoutMatchCard';
 
+interface ResolvedTeamData {
+  team: { id: number; name: string; shortName: string; countryCode: string };
+  label: string;
+}
+
+interface SlotData {
+  resolved: ResolvedTeamData | null;
+  pair?: [ResolvedTeamData, ResolvedTeamData];
+  placeholder: string;
+}
+
 interface MatchData {
   matchNumber: number;
   round: string;
-  home: {
-    resolved: { team: { id: number; name: string; shortName: string; countryCode: string }; label: string } | null;
-    placeholder: string;
-  };
-  away: {
-    resolved: { team: { id: number; name: string; shortName: string; countryCode: string }; label: string } | null;
-    placeholder: string;
-  };
+  home: SlotData;
+  away: SlotData;
   kickOff: string | null;
   venue: string | null;
 }

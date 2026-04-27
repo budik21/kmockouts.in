@@ -2,16 +2,19 @@
 
 import TeamFlag from './TeamFlag';
 
+interface ResolvedTeamData {
+  team: {
+    id: number;
+    name: string;
+    shortName: string;
+    countryCode: string;
+  };
+  label: string;
+}
+
 interface SlotData {
-  resolved: {
-    team: {
-      id: number;
-      name: string;
-      shortName: string;
-      countryCode: string;
-    };
-    label: string;
-  } | null;
+  resolved: ResolvedTeamData | null;
+  pair?: [ResolvedTeamData, ResolvedTeamData];
   placeholder: string;
 }
 
@@ -41,6 +44,19 @@ function SlotRow({ slot }: { slot: SlotData }) {
       <div className="ko-slot ko-slot-resolved">
         <TeamFlag countryCode={team.countryCode} size="sm" />
         <span className="ko-slot-code" title={team.name}>{team.shortName}</span>
+      </div>
+    );
+  }
+
+  if (slot.pair) {
+    const [a, b] = slot.pair;
+    return (
+      <div className="ko-slot ko-slot-pair">
+        <TeamFlag countryCode={a.team.countryCode} size="sm" />
+        <span className="ko-slot-code" title={a.team.name}>{a.team.shortName}</span>
+        <span className="ko-slot-pair-sep">/</span>
+        <TeamFlag countryCode={b.team.countryCode} size="sm" />
+        <span className="ko-slot-code" title={b.team.name}>{b.team.shortName}</span>
       </div>
     );
   }

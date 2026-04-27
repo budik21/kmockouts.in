@@ -30,8 +30,14 @@ const ROUND_ORDER = [
 
 // ── Types ────────────────────────────────────────────────────
 
+interface ResolvedTeamData {
+  team: { id: number; name: string; shortName: string; countryCode: string };
+  label: string;
+}
+
 interface SlotData {
-  resolved: { team: { id: number; name: string; shortName: string; countryCode: string }; label: string } | null;
+  resolved: ResolvedTeamData | null;
+  pair?: [ResolvedTeamData, ResolvedTeamData];
   placeholder: string;
 }
 

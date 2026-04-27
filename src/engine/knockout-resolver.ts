@@ -30,6 +30,8 @@ export interface ResolvedTeam {
 export interface ResolvedSlot {
   /** Resolved team, or null if still a placeholder */
   resolved: ResolvedTeam | null;
+  /** For R16 slots: the two potential teams from the source R32 match, when both are known */
+  pair?: [ResolvedTeam, ResolvedTeam];
   /** Placeholder label shown when team is not yet resolved (e.g. "A1", "3rd CEF") */
   placeholder: string;
 }
@@ -145,6 +147,30 @@ export async function resolveKnockoutBracket(
       venue: schedule?.venue ?? null,
     };
   });
+
+  // For R16 slots: when the source R32 match has both teams resolved,
+  // expose the two potential opponents as a pair so the UI can render them.
+  const matchByNumber = new Map<number, ResolvedMatch>();
+  for (const m of resolvedMatches) matchByNumber.set(m.matchNumber, m);
+
+  for (const def of ALL_KNOCKOUT_MATCHES) {
+    if (def.round !== 'r16') continue;
+    const match = matchByNumber.get(def.matchNumber);
+    if (!match) continue;
+
+    if (!match.home.resolved && def.home.type === 'winner') {
+      const src = matchByNumber.get(def.home.matchNumber);
+      if (src && src.home.resolved && src.away.resolved) {
+        match.home.pair = [src.home.resolved, src.away.resolved];
+      }
+    }
+    if (!match.away.resolved && def.away.type === 'winner') {
+      const src = matchByNumber.get(def.away.matchNumber);
+      if (src && src.home.resolved && src.away.resolved) {
+        match.away.pair = [src.home.resolved, src.away.resolved];
+      }
+    }
+  }
 
   // Organize by round
   const rounds: Record<KnockoutRoundName, ResolvedMatch[]> = {
