@@ -348,6 +348,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
   const [teamUrl, setTeamUrl] = useState<string | null>(null);
   const [variant, setVariant] = useState<Variant>(1);
   const [aiModel, setAiModel] = useState<TwitterAiModel>('haiku');
+  const [includeUrl, setIncludeUrl] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -356,7 +357,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
   const [usage, setUsage] = useState<AiUsage | null>(null);
   const [published, setPublished] = useState<PublishedTweet | null>(null);
 
-  const effectiveMax = TWEET_MAX - URL_WEIGHT;
+  const effectiveMax = includeUrl ? TWEET_MAX - URL_WEIGHT : TWEET_MAX;
   const len = [...text].length;
   const tooLong = len > effectiveMax;
 
@@ -408,11 +409,12 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
       fd.append('ogKind', kind);
       fd.append('variant', String(variant));
       if (graphicGenerated) fd.append('includeGraphic', 'true');
+      if (!includeUrl) fd.append('includeUrl', 'false');
       const res = await fetch('/api/admin/twitter/post', { method: 'POST', body: fd });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-      const url = teamUrl ? `${text} ${teamUrl}` : text;
-      setPublished({ tweetId: String(body.tweetId), url: String(body.url), text: url });
+      const finalText = includeUrl && teamUrl ? `${text} ${teamUrl}` : text;
+      setPublished({ tweetId: String(body.tweetId), url: String(body.url), text: finalText });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -575,7 +577,7 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
       <div className="tw-draft-panel">
         <div className="tw-draft-editor">
           <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--wc-text-muted)', marginBottom: '0.3rem' }}>
-            Tweet text (max {effectiveMax} chars; {URL_WEIGHT} chars reserved for the team URL)
+            Tweet text (max {effectiveMax} chars{includeUrl ? `; ${URL_WEIGHT} chars reserved for the team URL` : ''})
           </label>
           <CounterTextarea
             value={text}
@@ -584,12 +586,79 @@ export default function ScenarioPostForm({ teams }: ScenarioPostFormProps) {
             placeholder="Click 'Generate text' to draft this with AI."
             disabled={generating || submitting}
           />
-          {teamUrl && (
+          {includeUrl && teamUrl && (
             <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--wc-text-muted)' }}>
               Auto-appended:{' '}
               <a href={teamUrl} target="_blank" rel="noopener noreferrer">
                 {teamUrl}
               </a>
+            </div>
+          )}
+
+          <div style={{ marginTop: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={includeUrl}
+              disabled={generating || submitting}
+              onClick={() => setIncludeUrl((v) => !v)}
+              style={{
+                position: 'relative',
+                width: '38px',
+                height: '22px',
+                borderRadius: '999px',
+                border: '1px solid var(--wc-border)',
+                background: includeUrl ? 'var(--wc-accent)' : 'rgba(255,255,255,0.08)',
+                cursor: (generating || submitting) ? 'not-allowed' : 'pointer',
+                padding: 0,
+                transition: 'background-color 0.15s ease',
+                opacity: (generating || submitting) ? 0.6 : 1,
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: includeUrl ? '18px' : '2px',
+                  width: '16px',
+                  height: '16px',
+                  borderRadius: '50%',
+                  background: includeUrl ? '#2a1a00' : '#e5e7eb',
+                  transition: 'left 0.15s ease',
+                }}
+              />
+            </button>
+            <label
+              onClick={() => {
+                if (generating || submitting) return;
+                setIncludeUrl((v) => !v);
+              }}
+              style={{
+                fontSize: '0.92rem',
+                color: 'var(--wc-text)',
+                cursor: (generating || submitting) ? 'not-allowed' : 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              Include team URL in tweet
+            </label>
+          </div>
+
+          {includeUrl && (
+            <div
+              style={{
+                marginTop: '0.55rem',
+                padding: '0.6rem 0.75rem',
+                borderRadius: '0.35rem',
+                background: 'rgba(251,191,36,0.10)',
+                border: '1px solid rgba(251,191,36,0.45)',
+                color: '#fde68a',
+                fontSize: '0.85rem',
+                lineHeight: 1.4,
+              }}
+            >
+              ⚠ Tweets containing a URL are billed by X at <strong>$0.20</strong> per post (vs.
+              $0.015 without a URL). Disable the toggle to publish without the link.
             </div>
           )}
         </div>

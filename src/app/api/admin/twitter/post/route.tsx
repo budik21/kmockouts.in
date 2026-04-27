@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
   const variantRaw = Number(formData.get('variant') ?? '1');
   const variant: OgVariant = variantRaw === 2 ? 2 : variantRaw === 3 ? 3 : 1;
   const includeGraphic = formData.get('includeGraphic') === 'true';
+  const includeUrl = formData.get('includeUrl') !== 'false';
 
   if (!text) {
     return NextResponse.json({ error: 'Tweet text is required' }, { status: 400 });
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
   const matchId = matchIdRaw ? Number(matchIdRaw) : null;
 
   let finalText = text;
-  if (template === 'scenario_pre' || template === 'scenario_post') {
+  if ((template === 'scenario_pre' || template === 'scenario_post') && includeUrl) {
     if (!teamId) {
       return NextResponse.json({ error: 'teamId required for scenario template' }, { status: 400 });
     }
