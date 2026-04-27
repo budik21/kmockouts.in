@@ -4043,6 +4043,12 @@ a.ranking-team-name:hover {
   opacity: 0.7;
 }
 
+/* Center slot contents in the mobile/stacked view for R32 and R16 */
+.ko-round-grid-r32 .ko-slot,
+.ko-round-grid-r16 .ko-slot {
+  justify-content: center;
+}
+
 /* ── Final & third-place styling ── */
 
 .ko-round-grid-final .ko-match-card,
