@@ -5877,8 +5877,14 @@ a.ranking-team-name:hover {
   font-size: 1.35rem;
   line-height: 1.25;
   font-weight: 700;
-  margin: 0;
+  /* Slight top breathing room so the headline doesn't crash into the
+     header bar above; only kicks in on desktop where the widget sits in
+     its own column. */
+  margin: 0.25rem 0 0;
   color: var(--wc-text);
+}
+@media (min-width: 992px) {
+  .group-overview-headline { margin-top: 0.5rem; }
 }
 .group-overview-lede {
   font-size: 1rem;
@@ -5887,16 +5893,31 @@ a.ranking-team-name:hover {
   color: var(--wc-text);
   opacity: 0.92;
 }
-.group-overview-next { margin-top: 0.25rem; }
-.group-overview-readmore {
-  align-self: flex-start;
-  margin-top: 0.25rem;
+.group-overview-body-excerpt {
   font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--wc-text);
+  opacity: 0.85;
+}
+.group-overview-readmore-inline {
   font-weight: 600;
   color: var(--wc-accent, #b91d47);
   text-decoration: none;
+  white-space: nowrap;
 }
-.group-overview-readmore:hover { text-decoration: underline; }
+.group-overview-readmore-inline:hover { text-decoration: underline; }
+
+.group-overview-next-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.4rem;
+  opacity: 0.85;
+  color: var(--wc-text);
+}
+
 .group-overview-empty {
   font-size: 0.95rem;
   opacity: 0.75;

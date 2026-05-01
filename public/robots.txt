@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /me
+Disallow: /me/
+Disallow: /pickem/share
+
+Sitemap: https://knockouts.in/sitemap.xml

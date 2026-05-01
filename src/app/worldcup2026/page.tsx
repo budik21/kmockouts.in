@@ -176,6 +176,8 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
 
     groups[gid] = {
       groupId: gid,
+      finishedMatches: matchRows.length,
+      totalMatches: allMatchRows.length,
       standings: standings.map((s) => ({
         position: s.position,
         team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder, fifaRanking: s.team.fifaRanking },
@@ -251,12 +253,12 @@ interface NewsRow {
 
 async function getGroupArticles(): Promise<Record<string, GroupArticleSummary>> {
   try {
-    const rows = await cachedQuery<{ group_id: string; headline: string; lede: string }>(
-      'SELECT group_id, headline, lede FROM ai_group_article_cache',
+    const rows = await cachedQuery<{ group_id: string; headline: string; lede: string; body_html: string }>(
+      'SELECT group_id, headline, lede, body_html FROM ai_group_article_cache',
     );
     const out: Record<string, GroupArticleSummary> = {};
     for (const r of rows) {
-      out[r.group_id] = { headline: r.headline, lede: r.lede };
+      out[r.group_id] = { headline: r.headline, lede: r.lede, body_html: r.body_html };
     }
     return out;
   } catch {
