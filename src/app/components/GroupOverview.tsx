@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import GroupStandings, { TeamProbData } from './GroupStandings';
-import AdBanner from './AdBanner';
 import NextMatchesRow, { NextMatchDisplay } from './NextMatchesRow';
 
 interface GroupData {
@@ -23,60 +22,86 @@ interface GroupData {
   nextMatches?: NextMatchDisplay[];
 }
 
-interface GroupOverviewProps {
-  groups: Record<string, GroupData>;
-  /** AdSense slot ID for the mid-groups banner (between row 2 and 3) */
-  adSlot?: string;
+export interface GroupArticleSummary {
+  headline: string;
+  lede: string;
 }
 
-export default function GroupOverview({ groups, adSlot }: GroupOverviewProps) {
+interface GroupOverviewProps {
+  groups: Record<string, GroupData>;
+  /** Map of groupId -> { headline, lede } pulled from ai_group_article_cache.
+   *  When the entry for a group is missing, that card falls back to a
+   *  next-matches-only widget (with bigger fonts). */
+  articles?: Record<string, GroupArticleSummary>;
+}
+
+export default function GroupOverview({ groups, articles }: GroupOverviewProps) {
   const groupIds = Object.keys(groups).sort();
 
-  // Split into first 6 groups (rows 1-2) and remaining (rows 3-4)
-  const firstHalf = groupIds.slice(0, 6);
-  const secondHalf = groupIds.slice(6);
+  return (
+    <div className="d-flex flex-column gap-3">
+      {groupIds.map((gid) => {
+        const group = groups[gid];
+        const article = articles?.[gid];
+        const groupHref = `/worldcup2026/group-${gid.toLowerCase()}`;
 
-  const renderGroupCard = (gid: string) => {
-    const group = groups[gid];
-    return (
-      <div key={gid} className="col-12 col-md-6 col-lg-4">
-        <Link href={`/worldcup2026/group-${gid.toLowerCase()}`} style={{ textDecoration: 'none' }}>
-          <div className="group-card">
+        return (
+          <div key={gid} className="group-card group-overview-card">
             <div className="group-card-header">
-              <span>Group {gid}</span>
+              <Link href={groupHref} className="group-overview-header-link">
+                Group {gid}
+              </Link>
               <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
                 {group.standings[0]?.matchesPlayed ?? 0}/3 played
               </span>
             </div>
+
             <div className="group-card-body">
-              <GroupStandings
-                standings={group.standings}
-                compact
-                probabilities={group.probabilities}
-              />
-              {group.nextMatches && group.nextMatches.length > 0 && (
-                <NextMatchesRow matches={group.nextMatches} />
-              )}
+              <div className="group-overview-grid">
+                {/* Standings — left on desktop, top on mobile */}
+                <div className="group-overview-table">
+                  <GroupStandings
+                    standings={group.standings}
+                    compact
+                    groupId={gid}
+                    probabilities={group.probabilities}
+                  />
+                </div>
+
+                {/* Article widget — right on desktop, below on mobile */}
+                <div className="group-overview-widget">
+                  {article ? (
+                    <>
+                      <Link href={groupHref} className="group-overview-headline-link">
+                        <h2 className="group-overview-headline">{article.headline}</h2>
+                      </Link>
+                      <p className="group-overview-lede">{article.lede}</p>
+                      {group.nextMatches && group.nextMatches.length > 0 && (
+                        <div className="group-overview-next">
+                          <NextMatchesRow matches={group.nextMatches.slice(0, 2)} />
+                        </div>
+                      )}
+                      <Link href={groupHref} className="group-overview-readmore">
+                        Read more &rarr;
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      {group.nextMatches && group.nextMatches.length > 0 ? (
+                        <NextMatchesRow matches={group.nextMatches.slice(0, 2)} large />
+                      ) : (
+                        <p className="group-overview-empty">
+                          Group analysis will be available after the next match.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </Link>
-      </div>
-    );
-  };
-
-  return (
-    <>
-      <div className="row g-3">
-        {firstHalf.map(renderGroupCard)}
-      </div>
-
-      {adSlot && (
-        <AdBanner slot={adSlot} format="auto" className="my-3" />
-      )}
-
-      <div className="row g-3 mt-0">
-        {secondHalf.map(renderGroupCard)}
-      </div>
-    </>
+        );
+      })}
+    </div>
   );
 }

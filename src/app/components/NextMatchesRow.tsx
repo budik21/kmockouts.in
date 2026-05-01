@@ -11,6 +11,9 @@ export interface NextMatchDisplay {
 
 interface Props {
   matches: NextMatchDisplay[];
+  /** When true, render with larger fonts so the widget can stand on its own
+   *  alongside a standings table without an article above it. */
+  large?: boolean;
 }
 
 function FlagIcon({ code }: { code: string }) {
@@ -21,10 +24,10 @@ function FlagIcon({ code }: { code: string }) {
   return <span className={cls} style={{ width: '1em', height: '0.75em', display: 'inline-block', verticalAlign: 'middle' }} />;
 }
 
-export default function NextMatchesRow({ matches }: Props) {
+export default function NextMatchesRow({ matches, large = false }: Props) {
   if (matches.length === 0) return null;
   return (
-    <div className="next-match-block">
+    <div className={`next-match-block${large ? ' next-match-block-large' : ''}`}>
       {matches.map((m) => (
         <div key={m.id} className="next-match-item">
           <div className="next-match-teams">

@@ -7,18 +7,13 @@ import { getAllCachedProbsOrCompute } from '@/lib/probability-cache';
 import { getCachedQualificationThreshold } from '@/engine/probability';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import GroupOverview from '@/app/components/GroupOverview';
+import GroupOverview, { GroupArticleSummary } from '@/app/components/GroupOverview';
 import BestThirdTable from '@/app/components/BestThirdTable';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import NewsWidget from '@/app/components/NewsWidget';
 import Countdown from '@/app/components/Countdown';
-import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
-
-// AdSense slot IDs — replace with real values from your AdSense console
-const AD_SLOT_BETWEEN_GROUPS = 'XXXXXXXXXX';  // TODO: replace with real slot ID
-const AD_SLOT_BEFORE_THIRD   = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
 interface ScheduledMatchRow {
   id: number;
@@ -254,6 +249,22 @@ interface NewsRow {
   published_at: string | null;
 }
 
+async function getGroupArticles(): Promise<Record<string, GroupArticleSummary>> {
+  try {
+    const rows = await cachedQuery<{ group_id: string; headline: string; lede: string }>(
+      'SELECT group_id, headline, lede FROM ai_group_article_cache',
+    );
+    const out: Record<string, GroupArticleSummary> = {};
+    for (const r of rows) {
+      out[r.group_id] = { headline: r.headline, lede: r.lede };
+    }
+    return out;
+  } catch {
+    // Cache table might not exist yet
+    return {};
+  }
+}
+
 async function getNewsArticles() {
   try {
     const rows = await cachedQuery<NewsRow>(
@@ -271,7 +282,11 @@ async function getNewsArticles() {
 }
 
 export default async function HomePage() {
-  const [{ groups, thirdPlacedTeams, allTeamsPlayedTwo, hasRemainingMatches }, articles] = await Promise.all([buildGroupsData(), getNewsArticles()]);
+  const [{ groups, thirdPlacedTeams, allTeamsPlayedTwo, hasRemainingMatches }, articles, groupArticles] = await Promise.all([
+    buildGroupsData(),
+    getNewsArticles(),
+    getGroupArticles(),
+  ]);
 
   // Load qualification threshold when conditions are met
   let qualificationThreshold: import('@/engine/best-third').QualificationThreshold | null = null;
@@ -368,11 +383,10 @@ export default async function HomePage() {
 
       <main className="container">
         <NewsWidget articles={articles} />
-        <GroupOverview groups={groups} adSlot={AD_SLOT_BETWEEN_GROUPS} />
+        <GroupOverview groups={groups} articles={groupArticles} />
 
         {hasMatchesPlayed && (
           <div className="mt-3">
-            <AdBanner slot={AD_SLOT_BEFORE_THIRD} format="auto" className="mb-3" />
             <Link href="/worldcup2026/best-third-placed" style={{ textDecoration: 'none' }}>
               <div className="group-card">
                 <div className="group-card-header">
