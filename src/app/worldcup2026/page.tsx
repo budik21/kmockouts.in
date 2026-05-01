@@ -408,26 +408,47 @@ export default async function HomePage() {
           </div>
         )}
 
-        {/* SEO content block — keyword-rich descriptive text + internal links */}
+        {/* Methodology + SEO content block — explains how the site works,
+            what makes the data trustworthy and where to go next. Doubles as
+            keyword-rich content for search and AdSense reviewers. */}
         <section className="mt-5" aria-label="About Knockouts.in">
           <h2 className="h4 mb-3">Your FIFA World Cup 2026 Knockout &amp; Play-Off Tracker</h2>
           <p className="text-muted">
             Knockouts.in is the fastest way to follow the <strong>FIFA World Cup 2026</strong> in
             Canada, Mexico and the United States. We track every soccer match in all 12 groups,
-            compute live <strong>standings</strong>, simulate every remaining fixture and tell you
-            exactly who is on course for the <strong>knockout bracket</strong> and the eight
-            best-third <strong>play-off</strong> spots.
+            compute live standings, simulate every remaining fixture and tell you exactly who is
+            on course for the <strong>knockout bracket</strong> and the eight best-third{' '}
+            <strong>play-off</strong> spots.
           </p>
+
+          <h3 className="h5 mt-4 mb-2">How the probabilities are calculated</h3>
+          <p className="text-muted">
+            After every match result, our engine enumerates every remaining outcome combination in
+            each group and computes the final standings using FIFA&apos;s full tie-breaker chain —
+            points, head-to-head, goal difference, goals scored, fair-play points and FIFA ranking.
+            The numbers on every group page are exact qualification probabilities, not Monte Carlo
+            estimates. Once the engine finishes, an AI language model (Anthropic&apos;s Claude) turns
+            those raw scenarios into a short, plain-English analysis on each group page so you can
+            read what the data says, not just stare at percentages.
+          </p>
+
+          <h3 className="h5 mt-4 mb-2">Manually verified results</h3>
+          <p className="text-muted">
+            Every score, yellow card and red card on this site is entered by hand — there is no
+            automated scraper. That&apos;s how we keep the data honest, and why the AI analysis
+            updates within minutes of every match ending. If something looks wrong, email{' '}
+            <a href="mailto:support@knockouts.in">support@knockouts.in</a> and I&apos;ll fix it.
+            Curious about the person behind the site? See the <Link href="/about">About</Link> page.
+          </p>
+
+          <h3 className="h5 mt-4 mb-2">Explore the tournament</h3>
           <p className="text-muted">
             Explore the interactive <Link href="/worldcup2026/knockout-bracket">knockout bracket</Link>,
             check the latest <Link href="/worldcup2026/fifa-ranking">FIFA ranking</Link>, browse the
-            full <Link href="/worldcup2026/fixtures">fixtures &amp; results</Link>, see the
-            current <Link href="/worldcup2026/best-third-placed">best third-placed teams</Link>,
-            or learn{' '}
-            <Link href="/worldcup2026/how-to-clinch-play-off-worldcup2026">
-              how to clinch a play-off spot
-            </Link>
-            . Every group page shows live standings and the exact scenarios each team needs to
+            full <Link href="/worldcup2026/fixtures">fixtures &amp; results</Link>, see the current{' '}
+            <Link href="/worldcup2026/best-third-placed">best third-placed teams</Link>, or learn{' '}
+            <Link href="/worldcup2026/how-to-clinch-play-off-worldcup2026">how to clinch a play-off spot</Link>.
+            Every group page shows live standings and the exact scenarios each team needs to
             qualify for the knockout stage.
           </p>
         </section>
