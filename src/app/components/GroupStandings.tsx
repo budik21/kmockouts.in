@@ -35,6 +35,9 @@ export interface TeamProbData {
 interface GroupStandingsProps {
   standings: TeamStandingData[];
   compact?: boolean;
+  /** When true (and not compact), drops MP/GF/GA columns to keep the
+   * table narrow enough for the side column on the group detail page. */
+  narrow?: boolean;
   groupId?: string;
   /** Record<teamId, probabilities> — shows probability circles when provided */
   probabilities?: Record<number, TeamProbData>;
@@ -55,7 +58,7 @@ function TeamNameContent({ team }: { team: TeamStandingData['team'] }) {
   );
 }
 
-export default function GroupStandings({ standings, compact = false, groupId, probabilities, isSimulated = false }: GroupStandingsProps) {
+export default function GroupStandings({ standings, compact = false, narrow = false, groupId, probabilities, isSimulated = false }: GroupStandingsProps) {
   const router = useRouter();
 
   const handleRowClick = groupId
@@ -128,12 +131,12 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
           <tr>
             <th>#</th>
             <th>Team</th>
-            <th className="text-center">MP</th>
+            {!narrow && <th className="text-center">MP</th>}
             <th className="text-center">W</th>
             <th className="text-center">D</th>
             <th className="text-center">L</th>
-            <th className="text-center">GF</th>
-            <th className="text-center">GA</th>
+            {!narrow && <th className="text-center">GF</th>}
+            {!narrow && <th className="text-center">GA</th>}
             <th className="text-center">GD</th>
             <th className="text-center standings-pts-col">Pts</th>
             {hasProbs && <th className="text-center">%</th>}
@@ -148,12 +151,12 @@ export default function GroupStandings({ standings, compact = false, groupId, pr
                 <td className="team-name">
                   <TeamNameContent team={s.team} />
                 </td>
-                <td className="text-center">{s.matchesPlayed}</td>
+                {!narrow && <td className="text-center">{s.matchesPlayed}</td>}
                 <td className="text-center">{s.wins}</td>
                 <td className="text-center">{s.draws}</td>
                 <td className="text-center">{s.losses}</td>
-                <td className="text-center">{s.goalsFor}</td>
-                <td className="text-center">{s.goalsAgainst}</td>
+                {!narrow && <td className="text-center">{s.goalsFor}</td>}
+                {!narrow && <td className="text-center">{s.goalsAgainst}</td>}
                 <td className="text-center">{s.goalDifference > 0 ? `+${s.goalDifference}` : s.goalDifference}</td>
                 <td className="text-center fw-bold standings-pts-col">{s.points}</td>
                 {hasProbs && (

@@ -60,6 +60,8 @@ export interface GroupDetailClientProps {
   fullMatches: Match[];
   finishedCount: number;
   totalCount: number;
+  /** When true, render the standings in narrow mode (drops MP/GF/GA columns) */
+  narrowStandings?: boolean;
 }
 
 /* ============================================================
@@ -245,6 +247,7 @@ export default function GroupDetailClient({
   fullMatches,
   finishedCount,
   totalCount,
+  narrowStandings = false,
 }: GroupDetailClientProps) {
   const [simActive, setSimActive] = useState(false);
   const [simScores, setSimScores] = useState<SimScores>({});
@@ -343,6 +346,7 @@ export default function GroupDetailClient({
             groupId={groupId}
             probabilities={displayProbabilities}
             isSimulated={simActive}
+            narrow={narrowStandings}
           />
         </div>
       </div>

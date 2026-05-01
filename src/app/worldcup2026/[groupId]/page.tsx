@@ -8,8 +8,10 @@ import GroupDetailClient from './GroupDetailClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import AdBanner from '@/app/components/AdBanner';
+import CollapsibleArticleBody from '@/app/components/CollapsibleArticleBody';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
+import { autoLinkTeams } from '@/lib/auto-link-teams';
 
 const AD_SLOT_GROUP_PAGE = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
@@ -248,27 +250,31 @@ export default async function GroupDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {article && (
-        <article className="group-article mb-4">
-          <h1 className="group-article-headline">{article.headline}</h1>
-          <p className="group-article-lede">{article.lede}</p>
-          <div
-            className="group-article-body"
-            dangerouslySetInnerHTML={{ __html: article.body_html }}
-          />
-        </article>
-      )}
+      <div className="group-detail-layout">
+        {article && (
+          <article className="group-article mb-4">
+            <h1 className="group-article-headline">{article.headline}</h1>
+            <p className="group-article-lede">{article.lede}</p>
+            <CollapsibleArticleBody
+              html={autoLinkTeams(article.body_html, teams, groupId)}
+            />
+          </article>
+        )}
 
-      <GroupDetailClient
-        groupId={groupId}
-        standings={standingsForDisplay}
-        matches={matchesForDisplay}
-        probabilities={probabilities}
-        teams={teams}
-        fullMatches={allMatches}
-        finishedCount={finishedMatches.length}
-        totalCount={allMatches.length}
-      />
+        <div className="group-detail-side">
+          <GroupDetailClient
+            groupId={groupId}
+            standings={standingsForDisplay}
+            matches={matchesForDisplay}
+            probabilities={probabilities}
+            teams={teams}
+            fullMatches={allMatches}
+            finishedCount={finishedMatches.length}
+            totalCount={allMatches.length}
+            narrowStandings
+          />
+        </div>
+      </div>
 
       {/* Ad banner */}
       <AdBanner slot={AD_SLOT_GROUP_PAGE} format="auto" className="mt-4" />
