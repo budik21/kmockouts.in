@@ -210,6 +210,17 @@ export async function initializeSchema(): Promise<void> {
       PRIMARY KEY (group_id, team_id, position)
     );
 
+    -- AI-generated group article cache (one article per group, synthesized
+    -- from the per-team scenario summaries above + standings + remaining matches).
+    CREATE TABLE IF NOT EXISTS ai_group_article_cache (
+      group_id      TEXT PRIMARY KEY,
+      headline      TEXT NOT NULL,
+      lede          TEXT NOT NULL,
+      body_html     TEXT NOT NULL,
+      content_hash  TEXT NOT NULL DEFAULT '',
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     -- Tipovacka: registered users
     CREATE TABLE IF NOT EXISTS tipster_user (
       id            SERIAL PRIMARY KEY,

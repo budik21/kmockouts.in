@@ -5748,3 +5748,37 @@ a.ranking-team-name:hover {
   .pickem-promo-text { display: none; }
   .pickem-promo-bar { font-size: 0.85rem; }
 }
+
+/* AI-generated group article — sits at the top of /worldcup2026/[groupId] */
+.group-article {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.group-article-headline {
+  font-size: 1.85rem;
+  line-height: 1.2;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: var(--wc-text);
+}
+.group-article-lede {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--wc-text);
+  margin: 0 0 1rem;
+}
+.group-article-body p {
+  font-size: 1rem;
+  line-height: 1.65;
+  margin: 0 0 0.85rem;
+  color: var(--wc-text);
+}
+.group-article-body p:last-child { margin-bottom: 0; }
+.group-article-body strong { font-weight: 600; }
+@media (max-width: 576px) {
+  .group-article-headline { font-size: 1.4rem; }
+  .group-article-lede { font-size: 1rem; }
+  .group-article-body p { font-size: 0.95rem; line-height: 1.55; }
+}

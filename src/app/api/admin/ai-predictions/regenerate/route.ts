@@ -82,10 +82,13 @@ export async function POST(request: NextRequest) {
       (usage.outputTokens / 1_000_000) * HAIKU_OUTPUT_USD_PER_MTOK;
 
     const scopeLabel = scope === 'team' ? `team ${teamId} in group ${groupId}` : `group ${groupId}`;
+    // For group scope the call count includes 1 group-article synthesis on top
+    // of the per-team-position summaries; team scope skips the article.
+    const articleNote = scope === 'group' ? ' (includes group article)' : '';
     const message =
       usage.calls === 0
         ? `No summaries regenerated for ${scopeLabel} (no eligible positions — group may be already finished or not enough matches played).`
-        : `Regenerated ${usage.calls} summaries for ${scopeLabel} in ${(elapsedMs / 1000).toFixed(1)}s · ${usage.inputTokens.toLocaleString()} in + ${usage.outputTokens.toLocaleString()} out tokens · ~$${costUsd.toFixed(4)}`;
+        : `Regenerated ${usage.calls} summaries for ${scopeLabel}${articleNote} in ${(elapsedMs / 1000).toFixed(1)}s · ${usage.inputTokens.toLocaleString()} in + ${usage.outputTokens.toLocaleString()} out tokens · ~$${costUsd.toFixed(4)}`;
 
     return NextResponse.json({
       success: true,

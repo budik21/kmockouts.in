@@ -3,6 +3,7 @@ import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
 import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probability-cache';
+import { getCachedGroupArticle } from '@/engine/group-article-ai';
 import GroupDetailClient from './GroupDetailClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -64,10 +65,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const teamNames = teamRows.map((t) => t.name).join(', ');
   const canonical = `/worldcup2026/group-${groupId.toLowerCase()}`;
 
-  const title = `Group ${groupId} — Standings, Fixtures & Knockout Scenarios | FIFA World Cup 2026`;
-  const description = teamNames
-    ? `Group ${groupId} of the FIFA World Cup 2026 features ${teamNames}. Live standings, fixtures, knockout play-off scenarios and qualification probabilities for every team.`
-    : `Live standings, match results and qualification probabilities for Group ${groupId} of the FIFA World Cup 2026 in Canada, Mexico and USA.`;
+  // If we have a cached AI article, prefer its headline + lede in metadata —
+  // they are written for the current state of the group and read like real
+  // editorial copy in search results.
+  const article = await getCachedGroupArticle(groupId);
+
+  const title = article
+    ? `${article.headline} — Group ${groupId} | FIFA World Cup 2026`
+    : `Group ${groupId} — Standings, Fixtures & Knockout Scenarios | FIFA World Cup 2026`;
+
+  const description = article
+    ? article.lede
+    : teamNames
+      ? `Group ${groupId} of the FIFA World Cup 2026 features ${teamNames}. Live standings, fixtures, knockout play-off scenarios and qualification probabilities for every team.`
+      : `Live standings, match results and qualification probabilities for Group ${groupId} of the FIFA World Cup 2026 in Canada, Mexico and USA.`;
 
   return {
     title,
@@ -146,6 +157,10 @@ export default async function GroupDetailPage({ params }: PageProps) {
     ...s,
     team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder, fifaRanking: s.team.fifaRanking },
   }));
+
+  // AI-generated group article (cached). Read-only — never triggers a Claude
+  // call here; the article is pregenerated in the match-update webhook flow.
+  const article = await getCachedGroupArticle(groupId);
 
   // Read cached probabilities (compute if missing)
   let cachedProbs = await getCachedGroupProbs(groupId);
@@ -232,6 +247,17 @@ export default async function GroupDetailPage({ params }: PageProps) {
           </nav>
         </div>
       </div>
+
+      {article && (
+        <article className="group-article mb-4">
+          <h1 className="group-article-headline">{article.headline}</h1>
+          <p className="group-article-lede">{article.lede}</p>
+          <div
+            className="group-article-body"
+            dangerouslySetInnerHTML={{ __html: article.body_html }}
+          />
+        </article>
+      )}
 
       <GroupDetailClient
         groupId={groupId}

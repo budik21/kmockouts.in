@@ -317,6 +317,59 @@ export async function pregenerateTeamScenarioSummaries(
   );
 
   console.log(`[pregenerate] Team scenario AI summaries done for group ${groupId}`);
+
+  // Cascade: now that the granular per-team summaries are fresh in the
+  // ai_summary_cache table, synthesize them into a single readable group
+  // article. Skip when only a single team was targeted (partial regen) —
+  // the article is a whole-group artifact, not a per-team one.
+  if (!options.teamId) {
+    try {
+      const { pregenerateGroupArticle } = await import('../engine/group-article-ai');
+
+      const granularRows = await query<{ team_id: number; position: number; summary_html: string }>(
+        'SELECT team_id, position, summary_html FROM ai_summary_cache WHERE group_id = $1',
+        [groupId],
+      );
+      const granularByTeam = new Map<number, { [pos: number]: string }>();
+      for (const r of granularRows) {
+        if (!granularByTeam.has(r.team_id)) granularByTeam.set(r.team_id, {});
+        granularByTeam.get(r.team_id)![r.position] = r.summary_html;
+      }
+
+      const articleTeams = teams.map(t => {
+        const teamSummary = summaries.find(s => s.teamId === t.id);
+        return {
+          teamName: t.name,
+          probabilities: teamSummary?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
+          granularSummariesByPosition: granularByTeam.get(t.id) ?? {},
+        };
+      });
+
+      await pregenerateGroupArticle(
+        {
+          groupId,
+          currentStandings,
+          remainingMatches: remaining.map(m => ({
+            homeTeam: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+            awayTeam: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+          })),
+          teams: articleTeams,
+        },
+        {
+          force: options.force,
+          ignoreFlags: options.ignoreFlags,
+          // AiUsageStats and GroupArticleUsageStats are structurally identical,
+          // so the granular accumulator doubles as the article one — admin
+          // dashboard ends up reporting combined token spend + call count.
+          usage: options.usage,
+        },
+      );
+
+      console.log(`[pregenerate] Group article done for ${groupId}`);
+    } catch (err) {
+      console.error(`[pregenerate] Group article generation failed for ${groupId}:`, err);
+    }
+  }
 }
 
 /**
