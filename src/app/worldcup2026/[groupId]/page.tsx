@@ -250,8 +250,8 @@ export default async function GroupDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="group-detail-layout">
-        {article && (
+      {article ? (
+        <div className="group-detail-layout">
           <article className="group-article mb-4">
             <h1 className="group-article-headline">{article.headline}</h1>
             <p className="group-article-lede">{article.lede}</p>
@@ -259,22 +259,33 @@ export default async function GroupDetailPage({ params }: PageProps) {
               html={autoLinkTeams(article.body_html, teams, groupId)}
             />
           </article>
-        )}
 
-        <div className="group-detail-side">
-          <GroupDetailClient
-            groupId={groupId}
-            standings={standingsForDisplay}
-            matches={matchesForDisplay}
-            probabilities={probabilities}
-            teams={teams}
-            fullMatches={allMatches}
-            finishedCount={finishedMatches.length}
-            totalCount={allMatches.length}
-            narrowStandings
-          />
+          <div className="group-detail-side">
+            <GroupDetailClient
+              groupId={groupId}
+              standings={standingsForDisplay}
+              matches={matchesForDisplay}
+              probabilities={probabilities}
+              teams={teams}
+              fullMatches={allMatches}
+              finishedCount={finishedMatches.length}
+              totalCount={allMatches.length}
+              narrowStandings
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <GroupDetailClient
+          groupId={groupId}
+          standings={standingsForDisplay}
+          matches={matchesForDisplay}
+          probabilities={probabilities}
+          teams={teams}
+          fullMatches={allMatches}
+          finishedCount={finishedMatches.length}
+          totalCount={allMatches.length}
+        />
+      )}
 
       {/* Ad banner */}
       <AdBanner slot={AD_SLOT_GROUP_PAGE} format="auto" className="mt-4" />
