@@ -49,6 +49,10 @@ export default function Footer() {
               About
             </a>
             <span className="footer-sep">&middot;</span>
+            <a href="/contact">
+              Contact
+            </a>
+            <span className="footer-sep">&middot;</span>
             <a href="/privacy-policy">
               Privacy Policy
             </a>

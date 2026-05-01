@@ -112,9 +112,10 @@ export default function TermsPage() {
       <section className="mb-4">
         <h2 className="h5">10. Contact</h2>
         <p>
-          Questions about these terms? Reach us via the{' '}
-          <Link href="/worldcup2026">Feedback</Link> widget on any page, or visit our{' '}
-          <Link href="/about">About</Link> page.
+          Questions about these terms? Email{' '}
+          <a href="mailto:support@knockouts.in">support@knockouts.in</a> or use the{' '}
+          Feedback widget on any page. See our <Link href="/contact">Contact</Link> page
+          for more options.
         </p>
       </section>
     </main>

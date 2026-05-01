@@ -166,8 +166,9 @@ export default function PrivacyPolicyPage() {
       <section className="mb-4">
         <h2 className="h5">10. Contact</h2>
         <p>
-          If you have any questions about this Privacy Policy, you can reach us through
-          the <Link href="/worldcup2026">Feedback</Link> widget on our website.
+          If you have any questions about this Privacy Policy, email{' '}
+          <a href="mailto:support@knockouts.in">support@knockouts.in</a> or see our{' '}
+          <Link href="/contact">Contact</Link> page.
         </p>
       </section>
     </main>
