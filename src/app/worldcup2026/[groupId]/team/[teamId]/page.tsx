@@ -7,7 +7,10 @@ import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probab
 import { compareThirdPlaced } from '@/engine/best-third';
 import { generateScenarioSummaries } from '@/engine/scenario-summary';
 import { getCachedAiScenarioSummaries } from '@/engine/scenario-summary-ai';
+import { getCachedTeamArticle } from '@/engine/team-article-ai';
 import { isFeatureEnabled } from '@/lib/feature-flags';
+import CollapsibleArticleBody from '@/app/components/CollapsibleArticleBody';
+import { autoLinkTeams } from '@/lib/auto-link-teams';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { slugify } from '@/lib/slugify';
@@ -75,8 +78,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!team) return { title: 'Team not found' };
 
   const canonical = `/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(team.name)}`;
-  const title = `${team.name} at the FIFA World Cup 2026 — Group ${groupId} Standings, Fixtures & Knockout Scenarios`;
-  const description = `Track ${team.name}'s FIFA World Cup 2026 journey in Group ${groupId}: live standings, fixtures, FIFA ranking, knockout play-off probability and every scenario for advancing to the Round of 32.`;
+
+  // Prefer the cached AI team article for title + description when present:
+  // it is written for the current state of the group and reads like real
+  // editorial copy in search results.
+  const article = await getCachedTeamArticle(team.id);
+
+  const title = article
+    ? `${article.headline} — ${team.name}, Group ${groupId} | FIFA World Cup 2026`
+    : `${team.name} at the FIFA World Cup 2026 — Group ${groupId} Standings, Fixtures & Knockout Scenarios`;
+  const description = article
+    ? article.lede
+    : `Track ${team.name}'s FIFA World Cup 2026 journey in Group ${groupId}: live standings, fixtures, FIFA ranking, knockout play-off probability and every scenario for advancing to the Round of 32.`;
 
   return {
     title,
@@ -344,6 +357,10 @@ export default async function TeamDetailPage({ params }: PageProps) {
     }
   }
 
+  // AI-generated team article (cached). Read-only — never triggers a Claude
+  // call here; the article is pregenerated in the match-update webhook flow.
+  const teamArticle = await getCachedTeamArticle(team.id);
+
   const groupSlug = `group-${groupId.toLowerCase()}`;
   const teamRemaining = remaining
     .filter((m) => m.homeTeamId === team.id || m.awayTeamId === team.id)
@@ -428,6 +445,17 @@ export default async function TeamDetailPage({ params }: PageProps) {
           <span className="breadcrumb-current">{team.shortName}</span>
         </nav>
       </div>
+
+      {/* AI-generated team article — same visual pattern as the group page. */}
+      {teamArticle && (
+        <article className="group-article mb-4">
+          <h1 className="group-article-headline">{teamArticle.headline}</h1>
+          <p className="group-article-lede">{teamArticle.lede}</p>
+          <CollapsibleArticleBody
+            html={autoLinkTeams(teamArticle.body_html, teams, groupId)}
+          />
+        </article>
+      )}
 
       {/* Qualify/Eliminate widgets — only after the team has played */}
       {teamHasPlayed && (

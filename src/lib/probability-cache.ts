@@ -319,56 +319,117 @@ export async function pregenerateTeamScenarioSummaries(
   console.log(`[pregenerate] Team scenario AI summaries done for group ${groupId}`);
 
   // Cascade: now that the granular per-team summaries are fresh in the
-  // ai_summary_cache table, synthesize them into a single readable group
-  // article. Skip when only a single team was targeted (partial regen) —
-  // the article is a whole-group artifact, not a per-team one.
-  if (!options.teamId) {
-    try {
-      const { pregenerateGroupArticle } = await import('../engine/group-article-ai');
+  // ai_summary_cache table, synthesize them into:
+  //   1. A whole-group article (skipped on partial single-team regen).
+  //   2. Per-team articles, one per team, written from that team's POV.
+  try {
+    const granularRows = await query<{ team_id: number; position: number; summary_html: string }>(
+      'SELECT team_id, position, summary_html FROM ai_summary_cache WHERE group_id = $1',
+      [groupId],
+    );
+    const granularByTeam = new Map<number, { [pos: number]: string }>();
+    for (const r of granularRows) {
+      if (!granularByTeam.has(r.team_id)) granularByTeam.set(r.team_id, {});
+      granularByTeam.get(r.team_id)![r.position] = r.summary_html;
+    }
 
-      const granularRows = await query<{ team_id: number; position: number; summary_html: string }>(
-        'SELECT team_id, position, summary_html FROM ai_summary_cache WHERE group_id = $1',
+    // 1. Group article — only on whole-group regen.
+    if (!options.teamId) {
+      try {
+        const { pregenerateGroupArticle } = await import('../engine/group-article-ai');
+
+        const articleTeams = teams.map(t => {
+          const teamSummary = summaries.find(s => s.teamId === t.id);
+          return {
+            teamName: t.name,
+            probabilities: teamSummary?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
+            granularSummariesByPosition: granularByTeam.get(t.id) ?? {},
+          };
+        });
+
+        await pregenerateGroupArticle(
+          {
+            groupId,
+            currentStandings,
+            remainingMatches: remaining.map(m => ({
+              homeTeam: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+              awayTeam: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+            })),
+            teams: articleTeams,
+          },
+          {
+            force: options.force,
+            ignoreFlags: options.ignoreFlags,
+            // AiUsageStats and the article usage type are structurally identical,
+            // so the granular accumulator doubles as the article one — admin
+            // dashboard ends up reporting combined token spend + call count.
+            usage: options.usage,
+          },
+        );
+
+        console.log(`[pregenerate] Group article done for ${groupId}`);
+      } catch (err) {
+        console.error(`[pregenerate] Group article generation failed for ${groupId}:`, err);
+      }
+    }
+
+    // 2. Per-team articles. Generated for either the single targeted team or
+    // every team in the group. Best-third qualification probability comes
+    // from probability_cache, which the caller has already refreshed.
+    try {
+      const { pregenerateTeamArticle } = await import('../engine/team-article-ai');
+
+      const probRows = await query<{ team_id: number; prob_third_qual: number }>(
+        'SELECT team_id, prob_third_qual FROM probability_cache WHERE group_id = $1',
         [groupId],
       );
-      const granularByTeam = new Map<number, { [pos: number]: string }>();
-      for (const r of granularRows) {
-        if (!granularByTeam.has(r.team_id)) granularByTeam.set(r.team_id, {});
-        granularByTeam.get(r.team_id)![r.position] = r.summary_html;
+      const bestThirdProbByTeam = new Map<number, number>();
+      for (const r of probRows) {
+        bestThirdProbByTeam.set(r.team_id, r.prob_third_qual);
       }
 
-      const articleTeams = teams.map(t => {
-        const teamSummary = summaries.find(s => s.teamId === t.id);
-        return {
-          teamName: t.name,
-          probabilities: teamSummary?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
-          granularSummariesByPosition: granularByTeam.get(t.id) ?? {},
-        };
-      });
+      const teamArticleTargets = options.teamId
+        ? teams.filter(t => t.id === options.teamId)
+        : teams;
 
-      await pregenerateGroupArticle(
-        {
-          groupId,
-          currentStandings,
-          remainingMatches: remaining.map(m => ({
-            homeTeam: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
-            awayTeam: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
-          })),
-          teams: articleTeams,
-        },
-        {
-          force: options.force,
-          ignoreFlags: options.ignoreFlags,
-          // AiUsageStats and GroupArticleUsageStats are structurally identical,
-          // so the granular accumulator doubles as the article one — admin
-          // dashboard ends up reporting combined token spend + call count.
-          usage: options.usage,
-        },
+      const remainingForCtx = (teamId: number) => remaining.map(m => ({
+        homeTeam: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+        awayTeam: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+        isTeamMatch: m.homeTeamId === teamId || m.awayTeamId === teamId,
+      }));
+
+      await Promise.allSettled(
+        teamArticleTargets.map(t => {
+          const teamSummary = summaries.find(s => s.teamId === t.id);
+          return pregenerateTeamArticle(
+            {
+              groupId,
+              teamId: t.id,
+              teamName: t.name,
+              currentStandings,
+              remainingMatches: remainingForCtx(t.id),
+              probabilities: teamSummary?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
+              bestThirdQualProb: bestThirdProbByTeam.get(t.id) ?? 0,
+              granularSummariesByPosition: granularByTeam.get(t.id) ?? {},
+            },
+            {
+              force: options.force,
+              ignoreFlags: options.ignoreFlags,
+              usage: options.usage,
+            },
+          ).catch(err => {
+            console.error(`[pregenerate] Team article failed for ${t.name}:`, err);
+            return null;
+          });
+        }),
       );
 
-      console.log(`[pregenerate] Group article done for ${groupId}`);
+      console.log(`[pregenerate] Team articles done for group ${groupId} (${teamArticleTargets.length} team${teamArticleTargets.length === 1 ? '' : 's'})`);
     } catch (err) {
-      console.error(`[pregenerate] Group article generation failed for ${groupId}:`, err);
+      console.error(`[pregenerate] Team article generation failed for ${groupId}:`, err);
     }
+  } catch (err) {
+    console.error(`[pregenerate] Article cascade failed for ${groupId}:`, err);
   }
 }
 

@@ -221,6 +221,21 @@ export async function initializeSchema(): Promise<void> {
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- AI-generated team article cache (one article per team, written from
+    -- that team's perspective answering "what does this team need to advance
+    -- to the play-off"). Synthesized from the team's per-position scenario
+    -- summaries + group standings + remaining matches.
+    CREATE TABLE IF NOT EXISTS ai_team_article_cache (
+      team_id       INTEGER PRIMARY KEY,
+      group_id      TEXT NOT NULL,
+      headline      TEXT NOT NULL,
+      lede          TEXT NOT NULL,
+      body_html     TEXT NOT NULL,
+      content_hash  TEXT NOT NULL DEFAULT '',
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_team_article_cache_group ON ai_team_article_cache(group_id);
+
     -- Tipovacka: registered users
     CREATE TABLE IF NOT EXISTS tipster_user (
       id            SERIAL PRIMARY KEY,
