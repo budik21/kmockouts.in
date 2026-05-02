@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, ReactNode } from 'react';
 import GroupStandings, { TeamProbData } from './GroupStandings';
 import ScenariosAccordion, { EnrichedCombination } from './ScenariosAccordion';
 import { calculateStandings } from '@/engine/standings';
@@ -99,6 +99,10 @@ export interface TeamScenarioViewProps {
   teams: Team[];
   /** Finished matches (base data) for recalculation */
   playedMatches: Match[];
+  /** When provided, the standings card is placed on the right of a two-column
+   *  layout with this article slot on the left (desktop). On mobile/tablet the
+   *  layout collapses so the article appears first, then the table. */
+  articleSlot?: ReactNode;
 }
 
 export default function TeamScenarioView({
@@ -112,6 +116,7 @@ export default function TeamScenarioView({
   summaries,
   teams,
   playedMatches,
+  articleSlot,
 }: TeamScenarioViewProps) {
   const [applied, setApplied] = useState<AppliedScenario | null>(null);
   const hasScenarios = Object.values(edgeScenariosByPosition).some((combos) => combos.length > 0);
@@ -166,48 +171,61 @@ export default function TeamScenarioView({
 
   const appliedKey = applied ? `${applied.position}-${applied.comboIndex}` : null;
 
+  const standingsCard = (
+    <div className={`group-card mb-4${applied ? ' sim-active' : ''}`}>
+      <div className="group-card-header">
+        <span>
+          {applied ? 'Scenario Standings' : 'Current Standings'} — Group {groupId}
+          {applied && <span className="sim-badge">Scenario</span>}
+        </span>
+      </div>
+      {applied && (
+        <div className="sim-banner scenario-banner">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
+            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.399l-.451.05.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" />
+          </svg>
+          <div className="scenario-banner-content">
+            <span className="scenario-banner-label">{applied.label}</span>
+            {tiebreakerNotes.length > 0 && (
+              <span className="scenario-tiebreaker-note">
+                Tiebreaker: {tiebreakerNotes.join(' | ')}
+              </span>
+            )}
+          </div>
+          <button
+            className="btn btn-sm btn-outline-warning ms-auto scenario-reset-btn"
+            onClick={() => setApplied(null)}
+          >
+            Reset
+          </button>
+        </div>
+      )}
+      <div className="group-card-body">
+        <GroupStandings
+          standings={displayStandings}
+          groupId={groupId}
+          probabilities={applied ? undefined : probabilities}
+          isSimulated={!!applied}
+          focusTeamId={focusTeamId}
+          narrow={!!articleSlot}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <>
-      {/* Current standings */}
-      <div className={`group-card mb-4${applied ? ' sim-active' : ''}`}>
-        <div className="group-card-header">
-          <span>
-            {applied ? 'Scenario Standings' : 'Current Standings'} — Group {groupId}
-            {applied && <span className="sim-badge">Scenario</span>}
-          </span>
+      {articleSlot ? (
+        <div className="group-detail-layout">
+          <div>{articleSlot}</div>
+          <div>{standingsCard}</div>
         </div>
-        {applied && (
-          <div className="sim-banner scenario-banner">
-            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
-              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.399l-.451.05.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" />
-            </svg>
-            <div className="scenario-banner-content">
-              <span className="scenario-banner-label">{applied.label}</span>
-              {tiebreakerNotes.length > 0 && (
-                <span className="scenario-tiebreaker-note">
-                  Tiebreaker: {tiebreakerNotes.join(' | ')}
-                </span>
-              )}
-            </div>
-            <button
-              className="btn btn-sm btn-outline-warning ms-auto scenario-reset-btn"
-              onClick={() => setApplied(null)}
-            >
-              Reset
-            </button>
-          </div>
-        )}
-        <div className="group-card-body">
-          <GroupStandings
-            standings={displayStandings}
-            groupId={groupId}
-            probabilities={applied ? undefined : probabilities}
-            isSimulated={!!applied}
-          />
-        </div>
-      </div>
+      ) : (
+        standingsCard
+      )}
 
-      {/* Scenarios accordion — only when there are scenarios */}
+      {/* Scenarios accordion — only when there are scenarios. Always rendered
+          full-width below the article+table layout. */}
       {hasScenarios && (
         <ScenariosAccordion
           edgeScenariosByPosition={edgeScenariosByPosition}

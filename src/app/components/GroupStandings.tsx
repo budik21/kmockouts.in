@@ -43,6 +43,9 @@ interface GroupStandingsProps {
   probabilities?: Record<number, TeamProbData>;
   /** When true, adds visual simulation indicator to the table */
   isSimulated?: boolean;
+  /** When set, the row for this team is visually highlighted (used on team
+   *  detail pages so the visitor sees their team picked out in the table). */
+  focusTeamId?: number;
 }
 
 function TeamNameContent({ team }: { team: TeamStandingData['team'] }) {
@@ -58,7 +61,7 @@ function TeamNameContent({ team }: { team: TeamStandingData['team'] }) {
   );
 }
 
-export default function GroupStandings({ standings, compact = false, narrow = false, groupId, probabilities, isSimulated = false }: GroupStandingsProps) {
+export default function GroupStandings({ standings, compact = false, narrow = false, groupId, probabilities, isSimulated = false, focusTeamId }: GroupStandingsProps) {
   const router = useRouter();
 
   const handleRowClick = groupId
@@ -94,7 +97,7 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
           {standings.map((s) => {
             const prob = probabilities?.[s.team.id];
             return (
-              <tr key={s.team.id} className={`pos-${s.position}`} {...rowProps(s.team.name)}>
+              <tr key={s.team.id} className={`pos-${s.position}${focusTeamId === s.team.id ? ' standings-row-focus' : ''}`} {...rowProps(s.team.name)}>
                 <td>{s.position}</td>
                 <td className="team-name">
                   <TeamNameContent team={s.team} />
@@ -146,7 +149,7 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
           {standings.map((s) => {
             const prob = probabilities?.[s.team.id];
             return (
-              <tr key={s.team.id} className={`pos-${s.position}`} {...rowProps(s.team.name)}>
+              <tr key={s.team.id} className={`pos-${s.position}${focusTeamId === s.team.id ? ' standings-row-focus' : ''}`} {...rowProps(s.team.name)}>
                 <td>{s.position}</td>
                 <td className="team-name">
                   <TeamNameContent team={s.team} />

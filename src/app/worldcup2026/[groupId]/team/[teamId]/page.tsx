@@ -446,18 +446,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
         </nav>
       </div>
 
-      {/* AI-generated team article — same visual pattern as the group page. */}
-      {teamArticle && (
-        <article className="group-article mb-4">
-          <h1 className="group-article-headline">{teamArticle.headline}</h1>
-          <p className="group-article-lede">{teamArticle.lede}</p>
-          <CollapsibleArticleBody
-            html={autoLinkTeams(teamArticle.body_html, teams, groupId)}
-          />
-        </article>
-      )}
-
-      {/* Qualify/Eliminate widgets — only after the team has played */}
+      {/* Qualify/Eliminate widgets — placed ABOVE the article+table layout so
+          the headline probabilities are the first thing visitors see. */}
       {teamHasPlayed && (
         <QualifyWidgets
           qualifyProb={qualifyProb}
@@ -487,7 +477,11 @@ export default async function TeamDetailPage({ params }: PageProps) {
         />
       )}
 
-      {/* Standings + Scenarios (interactive: click scenario to apply) */}
+      {/* Article on the left, standings on the right (desktop). On mobile the
+          layout collapses; the focus team's row in the table is highlighted
+          in the same blue used by the playoff bracket. Self-references are
+          excluded from auto-linking — every other team mention links to its
+          page (every occurrence, not just the first). */}
       <TeamScenarioView
         groupId={groupId}
         standings={standingsForDisplay}
@@ -499,6 +493,15 @@ export default async function TeamDetailPage({ params }: PageProps) {
         summaries={remaining.length > 0 && teamHasPlayed ? scenarioSummaries : undefined}
         teams={teams}
         playedMatches={played}
+        articleSlot={teamArticle ? (
+          <article className="group-article mb-4">
+            <h1 className="group-article-headline">{teamArticle.headline}</h1>
+            <p className="group-article-lede">{teamArticle.lede}</p>
+            <CollapsibleArticleBody
+              html={autoLinkTeams(teamArticle.body_html, teams, groupId, team.name)}
+            />
+          </article>
+        ) : undefined}
       />
 
       {remaining.length === 0 && (
