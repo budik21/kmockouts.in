@@ -25,25 +25,35 @@ export function autoLinkTeams(
   const sorted = [...teams].sort((a, b) => b.name.length - a.name.length);
   const replacements: { token: string; htmlOut: string }[] = [];
   let result = html;
+  let tokenCounter = 0;
 
-  for (let i = 0; i < sorted.length; i++) {
-    const teamName = sorted[i].name;
+  for (const t of sorted) {
+    const teamName = t.name;
     if (excludeTeamName && teamName === excludeTeamName) continue;
 
     const escaped = teamName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // Word-boundary that also rejects letters with diacritics on either side.
     const re = new RegExp(`(?<![\\p{L}])${escaped}(?![\\p{L}])`, 'gu');
 
-    if (!re.test(result)) continue;
-
-    const token = `\x00TEAMLINK${i}\x00`;
-    result = result.replace(re, token);
-
     const slug = slugify(teamName);
     const href = `/worldcup2026/group-${groupId.toLowerCase()}/team/${slug}`;
-    replacements.push({
-      token,
-      htmlOut: `<a class="team-link" href="${href}">${teamName}</a>`,
+
+    let occurrenceIdx = 0;
+    // Replace every match with a sentinel token so shorter team names in a
+    // later iteration cannot re-match this team's text. Only every third
+    // occurrence (the 1st, 4th, 7th, ...) renders as an anchor; the rest
+    // emit the plain team name.
+    result = result.replace(re, () => {
+      const idx = occurrenceIdx++;
+      const token = `\x00TT${tokenCounter++}\x00`;
+      const linkable = idx % 3 === 0;
+      replacements.push({
+        token,
+        htmlOut: linkable
+          ? `<a class="team-link" href="${href}">${teamName}</a>`
+          : teamName,
+      });
+      return token;
     });
   }
 

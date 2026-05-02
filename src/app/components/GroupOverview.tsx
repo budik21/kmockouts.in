@@ -29,18 +29,7 @@ interface GroupData {
 export interface GroupArticleSummary {
   headline: string;
   lede: string;
-  /** Full article body (HTML). The homepage card pulls the first paragraph
-   *  from it to fill the widget alongside the lede so the widget height
-   *  roughly matches the standings table next to it. */
   body_html?: string;
-}
-
-/** Pull the first <p>...</p> from a body_html string and return its inner
- *  HTML (without the wrapping <p> tags). Returns null if no paragraph found. */
-function firstParagraphInner(html: string | undefined): string | null {
-  if (!html) return null;
-  const match = html.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-  return match ? match[1].trim() : null;
 }
 
 interface GroupOverviewProps {
@@ -60,8 +49,6 @@ export default function GroupOverview({ groups, articles }: GroupOverviewProps) 
         const group = groups[gid];
         const article = articles?.[gid];
         const groupHref = `/worldcup2026/group-${gid.toLowerCase()}`;
-
-        const firstBodyParagraph = article ? firstParagraphInner(article.body_html) : null;
 
         // Counter in header: finished out of total matches across the group
         // (not rounds-played-per-team). Falls back to per-team count for
@@ -100,21 +87,9 @@ export default function GroupOverview({ groups, articles }: GroupOverviewProps) 
                         <h2 className="group-overview-headline">{article.headline}</h2>
                       </Link>
                       <p className="group-overview-lede">{article.lede}</p>
-                      {firstBodyParagraph && (
-                        <p
-                          className="group-overview-body-excerpt"
-                          dangerouslySetInnerHTML={{
-                            __html: `${firstBodyParagraph} <a class="group-overview-readmore-inline" href="${groupHref}">Read more &rarr;</a>`,
-                          }}
-                        />
-                      )}
-                      {!firstBodyParagraph && (
-                        <p className="group-overview-lede">
-                          <Link href={groupHref} className="group-overview-readmore-inline">
-                            Read more &rarr;
-                          </Link>
-                        </p>
-                      )}
+                      <Link href={groupHref} className="group-overview-readmore-bottom">
+                        Read more &rarr;
+                      </Link>
                     </>
                   ) : (
                     <>
