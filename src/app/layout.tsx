@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "flag-icons/css/flag-icons.min.css";
 import "./globals.css";
@@ -9,8 +8,6 @@ import BootstrapClient from "./components/BootstrapClient";
 import CookieConsent from "./components/CookieConsent";
 import Footer from "./components/Footer";
 import JsonLd from "./components/JsonLd";
-
-const ADSENSE_ID = "ca-pub-4440685571892428";
 import {
   SITE_URL,
   SITE_NAME,
@@ -142,11 +139,6 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('wc2026-theme');document.documentElement.setAttribute('data-bs-theme',t==='light'?'light':'dark');})();` }} />
       </head>
       <body>
-        <Script
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_ID}`}
-          strategy="afterInteractive"
-          crossOrigin="anonymous"
-        />
         <Navbar />
         <RecalcIndicator />
         {children}

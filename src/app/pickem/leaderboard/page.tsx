@@ -1,7 +1,6 @@
 import { cachedQuery } from '@/lib/cached-db';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
 import type { Metadata } from 'next';
-import AdBanner from '@/app/components/AdBanner';
 import LeaderboardTable from './LeaderboardTable';
 import LeaderboardRecalcBanner from './LeaderboardRecalcBanner';
 import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubheader';
@@ -163,10 +162,6 @@ export default async function LeaderboardPage() {
       <LeaderboardRecalcBanner />
 
       <LeaderboardTable rows={data} currentUserToken={currentUserToken} />
-
-      <div className="mt-4">
-        <AdBanner slot="leaderboard" />
-      </div>
     </main>
   );
 }

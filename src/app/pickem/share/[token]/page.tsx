@@ -1,7 +1,6 @@
 import { query, queryOne } from '@/lib/db';
 import Link from 'next/link';
 import PublicTipsView from '../../components/PublicTipsView';
-import AdBanner from '@/app/components/AdBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -162,8 +161,6 @@ export default async function PublicSharePage({ params }: Props) {
       </div>
 
       <PublicTipsView matches={matches} tips={tips} userName={firstName} shareToken={token} />
-
-      <AdBanner slot="predictions-share" />
     </div>
   );
 }

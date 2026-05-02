@@ -7,13 +7,10 @@ import { getCachedGroupArticle } from '@/engine/group-article-ai';
 import GroupDetailClient from './GroupDetailClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import AdBanner from '@/app/components/AdBanner';
 import CollapsibleArticleBody from '@/app/components/CollapsibleArticleBody';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 import { autoLinkTeams } from '@/lib/auto-link-teams';
-
-const AD_SLOT_GROUP_PAGE = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -286,9 +283,6 @@ export default async function GroupDetailPage({ params }: PageProps) {
           totalCount={allMatches.length}
         />
       )}
-
-      {/* Ad banner */}
-      <AdBanner slot={AD_SLOT_GROUP_PAGE} format="auto" className="mt-4" />
 
       {/* SEO text */}
       <p className="text-muted mt-4" style={{ fontSize: '0.9rem' }}>

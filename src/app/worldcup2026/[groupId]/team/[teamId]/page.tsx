@@ -22,11 +22,8 @@ import NextMatchDate from '@/app/components/NextMatchDate';
 import ProjectedOpponent from '@/app/components/ProjectedOpponent';
 import { resolveKnockoutBracket } from '@/engine/knockout-resolver';
 import { ROUND_LABELS } from '@/lib/knockout-bracket';
-import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
-
-const AD_SLOT_TEAM_PAGE = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -562,9 +559,6 @@ export default async function TeamDetailPage({ params }: PageProps) {
           matchNumber={projectedOpponent.matchNumber}
         />
       )}
-
-      {/* Ad banner */}
-      <AdBanner slot={AD_SLOT_TEAM_PAGE} format="auto" className="mt-4" />
 
       {/* SEO text */}
       <p className="text-muted mt-4" style={{ fontSize: '0.9rem' }}>

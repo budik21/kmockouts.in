@@ -12,11 +12,8 @@ import { isFeatureEnabled } from '@/lib/feature-flags';
 import QualificationThresholdBox from '@/app/components/QualificationThreshold';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import AdBanner from '@/app/components/AdBanner';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
-
-const AD_SLOT_BEST_THIRD = 'XXXXXXXXXX';  // TODO: replace with real slot ID
 
 // Opt out of build-time static prerendering. Without this, Next.js renders
 // the page during `next build` using whatever standings data exists then
@@ -316,8 +313,6 @@ export default async function BestThirdPlacedPage() {
         <ThirdPlacedMatchesGrid teams={matchesGridData} />
       )}
 
-      {/* Ad banner */}
-      <AdBanner slot={AD_SLOT_BEST_THIRD} format="auto" className="mt-4" />
     </main>
   );
 }
