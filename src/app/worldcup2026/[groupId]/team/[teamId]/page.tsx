@@ -464,53 +464,13 @@ export default async function TeamDetailPage({ params }: PageProps) {
         />
       )}
 
-      {/* Projected knockout opponent based on current group + 3rd-place standings */}
-      {projectedOpponent && (
-        <ProjectedOpponent
-          roundLabel={projectedOpponent.roundLabel}
-          opponent={projectedOpponent.opponent}
-          opponentPlaceholder={projectedOpponent.opponentPlaceholder}
-          kickOff={projectedOpponent.kickOff}
-          venue={projectedOpponent.venue}
-          teamName={team.name}
-          matchNumber={projectedOpponent.matchNumber}
-        />
-      )}
-
       {/* Article on the left, standings on the right (desktop). On mobile the
           layout collapses; the focus team's row in the table is highlighted
           in the same blue used by the playoff bracket. Self-references are
           excluded from auto-linking — every other team mention links to its
-          page (every occurrence, not just the first). */}
-      <TeamScenarioView
-        groupId={groupId}
-        standings={standingsForDisplay}
-        probabilities={probabilities}
-        edgeScenariosByPosition={remaining.length > 0 && teamHasPlayed ? enrichedEdges : {}}
-        scenarioProbabilities={remaining.length > 0 && teamHasPlayed ? probs : {}}
-        teamName={team.name}
-        focusTeamId={team.id}
-        summaries={remaining.length > 0 && teamHasPlayed ? scenarioSummaries : undefined}
-        teams={teams}
-        playedMatches={played}
-        articleSlot={teamArticle ? (
-          <article className="group-article mb-4">
-            <h1 className="group-article-headline">{teamArticle.headline}</h1>
-            <p className="group-article-lede">{teamArticle.lede}</p>
-            <CollapsibleArticleBody
-              html={autoLinkTeams(teamArticle.body_html, teams, groupId, team.name)}
-            />
-          </article>
-        ) : undefined}
-      />
-
-      {remaining.length === 0 && (
-        <div className="alert alert-success">
-          All matches have been played. Final standings are confirmed.
-        </div>
-      )}
-
-      {/* Team matches */}
+          page (every occurrence, not just the first). The team-matches widget
+          is rendered in the right column directly under the standings table.
+       */}
       {(() => {
         const teamMatches = allMatches
           .filter((m) => m.homeTeamId === team.id || m.awayTeamId === team.id)
@@ -545,7 +505,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
             kickOff: m.kickOff,
             status: m.status,
           }));
-        return teamMatches.length > 0 ? (
+        const matchesWidget = teamMatches.length > 0 ? (
           <div className="group-card mb-4">
             <div className="group-card-header">
               <span>Matches</span>
@@ -555,7 +515,53 @@ export default async function TeamDetailPage({ params }: PageProps) {
             </div>
           </div>
         ) : null;
+
+        return (
+          <TeamScenarioView
+            groupId={groupId}
+            standings={standingsForDisplay}
+            probabilities={probabilities}
+            edgeScenariosByPosition={remaining.length > 0 && teamHasPlayed ? enrichedEdges : {}}
+            scenarioProbabilities={remaining.length > 0 && teamHasPlayed ? probs : {}}
+            teamName={team.name}
+            focusTeamId={team.id}
+            summaries={remaining.length > 0 && teamHasPlayed ? scenarioSummaries : undefined}
+            teams={teams}
+            playedMatches={played}
+            articleSlot={teamArticle ? (
+              <article className="group-article mb-4">
+                <h1 className="group-article-headline">{teamArticle.headline}</h1>
+                <p className="group-article-lede">{teamArticle.lede}</p>
+                <CollapsibleArticleBody
+                  html={autoLinkTeams(teamArticle.body_html, teams, groupId, team.name)}
+                />
+              </article>
+            ) : undefined}
+            belowStandingsSlot={matchesWidget}
+          />
+        );
       })()}
+
+      {remaining.length === 0 && (
+        <div className="alert alert-success">
+          All matches have been played. Final standings are confirmed.
+        </div>
+      )}
+
+      {/* Projected knockout opponent — placed AFTER the scenarios accordion
+          so the visitor first sees what their team needs, then sees who
+          they would face if current standings hold. */}
+      {projectedOpponent && (
+        <ProjectedOpponent
+          roundLabel={projectedOpponent.roundLabel}
+          opponent={projectedOpponent.opponent}
+          opponentPlaceholder={projectedOpponent.opponentPlaceholder}
+          kickOff={projectedOpponent.kickOff}
+          venue={projectedOpponent.venue}
+          teamName={team.name}
+          matchNumber={projectedOpponent.matchNumber}
+        />
+      )}
 
       {/* Ad banner */}
       <AdBanner slot={AD_SLOT_TEAM_PAGE} format="auto" className="mt-4" />

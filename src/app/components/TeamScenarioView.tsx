@@ -103,6 +103,10 @@ export interface TeamScenarioViewProps {
    *  layout with this article slot on the left (desktop). On mobile/tablet the
    *  layout collapses so the article appears first, then the table. */
   articleSlot?: ReactNode;
+  /** Optional slot rendered directly under the standings card on desktop
+   *  (and after the standings on mobile). Used for the team-matches widget
+   *  on the team detail page so it stacks with the table. */
+  belowStandingsSlot?: ReactNode;
 }
 
 export default function TeamScenarioView({
@@ -117,6 +121,7 @@ export default function TeamScenarioView({
   teams,
   playedMatches,
   articleSlot,
+  belowStandingsSlot,
 }: TeamScenarioViewProps) {
   const [applied, setApplied] = useState<AppliedScenario | null>(null);
   const hasScenarios = Object.values(edgeScenariosByPosition).some((combos) => combos.length > 0);
@@ -218,10 +223,16 @@ export default function TeamScenarioView({
       {articleSlot ? (
         <div className="group-detail-layout">
           <div>{articleSlot}</div>
-          <div>{standingsCard}</div>
+          <div>
+            {standingsCard}
+            {belowStandingsSlot}
+          </div>
         </div>
       ) : (
-        standingsCard
+        <>
+          {standingsCard}
+          {belowStandingsSlot}
+        </>
       )}
 
       {/* Scenarios accordion — only when there are scenarios. Always rendered
