@@ -68,11 +68,33 @@ LANGUAGE & STYLE:
 ACCURACY:
 - The probabilities are exact. If a team has 0% chance of finishing 1st, do not suggest they could top the group.
 - "Already qualified" / "guaranteed top" / "eliminated" claims must match the probability data exactly (100% or 0%).
-- If two teams have very similar probabilities, treat the race as open. Do not pick a favourite when the data says it is a coin flip.`;
+- If two teams have very similar probabilities, treat the race as open. Do not pick a favourite when the data says it is a coin flip.
+
+MATCH SCORES — NON-NEGOTIABLE RULE:
+- The "Played matches" block lists every already-played match in the
+  group with its EXACT final score. That is the ONLY source of truth
+  for past results.
+- NEVER state a specific scoreline (e.g. "3-0 win", "1-0 defeat") for
+  any match unless that exact scoreline appears in the Played matches
+  block.
+- Do NOT infer or guess scorelines from goal difference, points, or any
+  other data. Inventing plausible-sounding scores is a critical failure.
+- If you want to describe a past match without quoting the score, use
+  qualitative language ("opening defeat", "comfortable win", "heavy loss")
+  — never numbers.
+- The same rule applies to remaining matches: they have not been played,
+  so you must NEVER predict a specific scoreline for them.`;
 
 interface RemainingMatchSummary {
   homeTeam: string;
   awayTeam: string;
+}
+
+interface PlayedMatchSummary {
+  homeTeam: string;
+  awayTeam: string;
+  homeGoals: number;
+  awayGoals: number;
 }
 
 interface TeamGranularSummary {
@@ -87,6 +109,8 @@ export interface GroupArticleContext {
   groupId: string;
   /** Current standings, ordered 1..4 */
   currentStandings: { teamName: string; points: number; gd: number; position: number }[];
+  /** Already-played matches in the group with actual final scores. */
+  playedMatches: PlayedMatchSummary[];
   remainingMatches: RemainingMatchSummary[];
   /** One entry per team in the group */
   teams: TeamGranularSummary[];
@@ -130,6 +154,10 @@ function buildUserPrompt(ctx: GroupArticleContext): string {
     .map(s => `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}`)
     .join('\n');
 
+  const played = ctx.playedMatches.length
+    ? ctx.playedMatches.map((m, i) => `  Match ${i + 1}: ${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam}`).join('\n')
+    : '  (no matches played yet)';
+
   const remaining = ctx.remainingMatches.length
     ? ctx.remainingMatches.map((m, i) => `  Match ${i + 1}: ${m.homeTeam} vs ${m.awayTeam}`).join('\n')
     : '  (no remaining matches)';
@@ -152,7 +180,10 @@ function buildUserPrompt(ctx: GroupArticleContext): string {
 Current standings:
 ${standings}
 
-Remaining matches in the group:
+Played matches in the group (these are the ONLY scorelines you may quote):
+${played}
+
+Remaining matches in the group (no scoreline yet — do NOT predict one):
 ${remaining}
 
 Per-team data:
@@ -250,6 +281,10 @@ function hashContext(ctx: GroupArticleContext): string {
     .map(s => `${s.position}:${s.teamName}:${s.points}:${s.gd}`)
     .join('|');
 
+  const played = ctx.playedMatches
+    .map(m => `${m.homeTeam}-${m.awayTeam}:${m.homeGoals}-${m.awayGoals}`)
+    .join('|');
+
   const remaining = ctx.remainingMatches
     .map(m => `${m.homeTeam}-${m.awayTeam}`)
     .join('|');
@@ -264,7 +299,9 @@ function hashContext(ctx: GroupArticleContext): string {
     })
     .join('||');
 
-  const str = `v1:${ctx.groupId}|${standings}|${remaining}|${perTeam}`;
+  // v2: prompt now includes played match scores; bump to invalidate stale
+  // articles that may have hallucinated scorelines.
+  const str = `v2:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}`;
 
   // djb2-ish 32-bit hash
   let hash = 0;

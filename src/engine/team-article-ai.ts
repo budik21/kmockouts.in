@@ -109,12 +109,36 @@ ACCURACY:
   the probability data exactly (100% or 0%).
 - "Best-third route" should only be discussed when P(3rd) > 0.
 - Do not pick a favourite finishing place when two probabilities are
-  similar — present the race as open.`;
+  similar — present the race as open.
+
+MATCH SCORES — NON-NEGOTIABLE RULE:
+- The "Played matches" block lists every already-played match in the
+  group with its EXACT final score. That is the ONLY source of truth
+  for past results.
+- NEVER state a specific scoreline (e.g. "3-0 loss", "1-0 defeat",
+  "won 2-1") for any match unless that exact scoreline appears in the
+  Played matches block.
+- Do NOT infer or guess scorelines from goal difference, points, or any
+  other data. Inventing plausible-sounding scores is a critical failure.
+- If you want to describe a past match without quoting the score, use
+  qualitative language ("opening defeat", "comfortable win", "heavy loss")
+  — never numbers.
+- The same rule applies to remaining matches: they have not been played,
+  so you must NEVER predict a specific scoreline for them.`;
 
 interface RemainingMatchSummary {
   homeTeam: string;
   awayTeam: string;
   /** True when this is the team's own remaining match. */
+  isTeamMatch: boolean;
+}
+
+interface PlayedMatchSummary {
+  homeTeam: string;
+  awayTeam: string;
+  homeGoals: number;
+  awayGoals: number;
+  /** True when this is the team's own already-played match. */
   isTeamMatch: boolean;
 }
 
@@ -124,6 +148,8 @@ export interface TeamArticleContext {
   teamName: string;
   /** Current standings of the whole group, ordered 1..4. */
   currentStandings: { teamName: string; points: number; gd: number; position: number }[];
+  /** Already-played matches in the group with actual final scores. */
+  playedMatches: PlayedMatchSummary[];
   /** Remaining matches in the group (with isTeamMatch flag). */
   remainingMatches: RemainingMatchSummary[];
   /** Map of position (1..4) -> probability percent (0..100) for THIS team. */
@@ -189,6 +215,12 @@ function buildUserPrompt(ctx: TeamArticleContext): string {
     })
     .join('\n');
 
+  const played = ctx.playedMatches.length
+    ? ctx.playedMatches
+        .map((m, i) => `  Match ${i + 1}: ${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam}${m.isTeamMatch ? '  ← team\'s own match' : ''}`)
+        .join('\n')
+    : '  (no matches played yet)';
+
   const remaining = ctx.remainingMatches.length
     ? ctx.remainingMatches
         .map((m, i) => `  Match ${i + 1}: ${m.homeTeam} vs ${m.awayTeam}${m.isTeamMatch ? '  ← team\'s own match' : ''}`)
@@ -213,7 +245,10 @@ function buildUserPrompt(ctx: TeamArticleContext): string {
 Current standings of the whole group:
 ${standings}
 
-Remaining matches in the group:
+Played matches in the group (these are the ONLY scorelines you may quote):
+${played}
+
+Remaining matches in the group (no scoreline yet — do NOT predict one):
 ${remaining}
 
 Position probabilities for ${ctx.teamName}:
@@ -293,6 +328,10 @@ function hashContext(ctx: TeamArticleContext): string {
     .map(s => `${s.position}:${s.teamName}:${s.points}:${s.gd}`)
     .join('|');
 
+  const played = ctx.playedMatches
+    .map(m => `${m.homeTeam}-${m.awayTeam}:${m.homeGoals}-${m.awayGoals}`)
+    .join('|');
+
   const remaining = ctx.remainingMatches
     .map(m => `${m.homeTeam}-${m.awayTeam}:${m.isTeamMatch ? '1' : '0'}`)
     .join('|');
@@ -302,7 +341,10 @@ function hashContext(ctx: TeamArticleContext): string {
     .map(p => ctx.granularSummariesByPosition[p] ?? '')
     .join('§');
 
-  const str = `v1:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>`;
+  // v2: prompt now includes played match scores; bump to invalidate stale
+  // articles that were written without that data (and may have hallucinated
+  // scorelines).
+  const str = `v2:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

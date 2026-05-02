@@ -333,6 +333,15 @@ export async function pregenerateTeamScenarioSummaries(
       granularByTeam.get(r.team_id)![r.position] = r.summary_html;
     }
 
+    // Played matches with actual scorelines — fed into both article prompts
+    // so the model never has to guess past results from goal difference.
+    const playedMatchesForArticles = played.map(m => ({
+      homeTeam: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+      awayTeam: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+      homeGoals: m.homeGoals ?? 0,
+      awayGoals: m.awayGoals ?? 0,
+    }));
+
     // 1. Group article — only on whole-group regen.
     if (!options.teamId) {
       try {
@@ -351,6 +360,7 @@ export async function pregenerateTeamScenarioSummaries(
           {
             groupId,
             currentStandings,
+            playedMatches: playedMatchesForArticles,
             remainingMatches: remaining.map(m => ({
               homeTeam: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
               awayTeam: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
@@ -407,6 +417,10 @@ export async function pregenerateTeamScenarioSummaries(
               teamId: t.id,
               teamName: t.name,
               currentStandings,
+              playedMatches: playedMatchesForArticles.map((pm, i) => ({
+                ...pm,
+                isTeamMatch: played[i].homeTeamId === t.id || played[i].awayTeamId === t.id,
+              })),
               remainingMatches: remainingForCtx(t.id),
               probabilities: teamSummary?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
               bestThirdQualProb: bestThirdProbByTeam.get(t.id) ?? 0,
