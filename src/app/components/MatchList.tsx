@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { slugify } from '@/lib/slugify';
 import TeamFlag from './TeamFlag';
 import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from './CardIcons';
 import {
@@ -32,6 +34,36 @@ interface MatchData {
 interface MatchListProps {
   matches: MatchData[];
   compact?: boolean;
+  /** When set, team names link to /worldcup2026/group-{id}/team/{slug} */
+  groupId?: string;
+}
+
+function TeamName({
+  team,
+  compact,
+  groupId,
+}: {
+  team: { name: string; shortName: string };
+  compact: boolean;
+  groupId?: string;
+}) {
+  const inner = compact ? (
+    <span title={team.name}>{team.shortName}</span>
+  ) : (
+    <>
+      <span className="match-name-full">{team.name}</span>
+      <span className="match-name-short" title={team.name}>{team.shortName}</span>
+    </>
+  );
+  if (!groupId) return <>{inner}</>;
+  return (
+    <Link
+      href={`/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(team.name)}`}
+      className="match-team-link"
+    >
+      {inner}
+    </Link>
+  );
 }
 
 function formatDate(iso: string): string {
@@ -99,7 +131,7 @@ function FppLabel({ yc, yc2, rc, ycRc }: { yc: number; yc2: number; rc: number; 
   );
 }
 
-export default function MatchList({ matches, compact = false }: MatchListProps) {
+export default function MatchList({ matches, compact = false, groupId }: MatchListProps) {
   // Group by round
   const rounds = new Map<number, MatchData[]>();
   for (const m of matches) {
@@ -123,14 +155,7 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
               <div key={m.id} className="match-item-wrap">
                 <div className="match-item">
                   <div className="match-team home">
-                    {compact ? (
-                      <span title={m.homeTeam.name}>{m.homeTeam.shortName}</span>
-                    ) : (
-                      <>
-                        <span className="match-name-full">{m.homeTeam.name}</span>
-                        <span className="match-name-short" title={m.homeTeam.name}>{m.homeTeam.shortName}</span>
-                      </>
-                    )}
+                    <TeamName team={m.homeTeam} compact={compact} groupId={groupId} />
                     {m.homeTeam.fifaRanking && (
                       <span className="match-ranking" title={`FIFA Ranking: ${m.homeTeam.fifaRanking}`}>
                         ({m.homeTeam.fifaRanking})
@@ -145,14 +170,7 @@ export default function MatchList({ matches, compact = false }: MatchListProps) 
                   </div>
                   <div className="match-team away">
                     <TeamFlag countryCode={m.awayTeam.countryCode} className="me-2" />
-                    {compact ? (
-                      <span title={m.awayTeam.name}>{m.awayTeam.shortName}</span>
-                    ) : (
-                      <>
-                        <span className="match-name-full">{m.awayTeam.name}</span>
-                        <span className="match-name-short" title={m.awayTeam.name}>{m.awayTeam.shortName}</span>
-                      </>
-                    )}
+                    <TeamName team={m.awayTeam} compact={compact} groupId={groupId} />
                     {m.awayTeam.fifaRanking && (
                       <span className="match-ranking" title={`FIFA Ranking: ${m.awayTeam.fifaRanking}`}>
                         ({m.awayTeam.fifaRanking})

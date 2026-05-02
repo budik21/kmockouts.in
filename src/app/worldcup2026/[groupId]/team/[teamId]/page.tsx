@@ -508,7 +508,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
               <span>Matches</span>
             </div>
             <div className="group-card-body">
-              <MatchList matches={teamMatches} />
+              <MatchList matches={teamMatches} groupId={groupId} />
             </div>
           </div>
         ) : null;

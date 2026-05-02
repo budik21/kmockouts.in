@@ -446,6 +446,15 @@ a { color: inherit; text-decoration: none; }
 
 .match-team.home { text-align: right; }
 
+.match-team-link {
+  color: inherit;
+  text-decoration: none;
+}
+.match-team-link:hover {
+  color: var(--bs-link-hover-color, #0d6efd);
+  text-decoration: underline;
+}
+
 .match-score {
   font-weight: 700;
   font-size: 1.1rem;

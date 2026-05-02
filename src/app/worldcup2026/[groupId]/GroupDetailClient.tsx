@@ -380,7 +380,7 @@ export default function GroupDetailClient({
               onScoreChange={handleScoreChange}
             />
           ) : (
-            <MatchList matches={matches} />
+            <MatchList matches={matches} groupId={groupId} />
           )}
         </div>
       </div>
