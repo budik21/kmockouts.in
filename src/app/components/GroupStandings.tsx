@@ -134,7 +134,7 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
           <tr>
             <th>#</th>
             <th>Team</th>
-            {!narrow && <th className="text-center">MP</th>}
+            <th className="text-center">MP</th>
             <th className="text-center">W</th>
             <th className="text-center">D</th>
             <th className="text-center">L</th>
@@ -154,7 +154,7 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
                 <td className="team-name">
                   <TeamNameContent team={s.team} />
                 </td>
-                {!narrow && <td className="text-center">{s.matchesPlayed}</td>}
+                <td className="text-center">{s.matchesPlayed}</td>
                 <td className="text-center">{s.wins}</td>
                 <td className="text-center">{s.draws}</td>
                 <td className="text-center">{s.losses}</td>
