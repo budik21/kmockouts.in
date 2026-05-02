@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, ReactNode } from 'react';
+import { useState, useMemo, useCallback, useRef, ReactNode } from 'react';
 import GroupStandings, { TeamProbData } from './GroupStandings';
 import ScenariosAccordion, { EnrichedCombination } from './ScenariosAccordion';
 import { calculateStandings } from '@/engine/standings';
@@ -124,13 +124,13 @@ export default function TeamScenarioView({
   belowStandingsSlot,
 }: TeamScenarioViewProps) {
   const [applied, setApplied] = useState<AppliedScenario | null>(null);
+  const standingsCardRef = useRef<HTMLDivElement | null>(null);
   const hasScenarios = Object.values(edgeScenariosByPosition).some((combos) => combos.length > 0);
 
   const handleScenarioClick = useCallback((position: number, combo: EnrichedCombination) => {
     // Find the combo index within its position group
     const combos = edgeScenariosByPosition[position] ?? [];
     const idx = combos.indexOf(combo);
-    const key = `${position}-${idx}`;
 
     // Toggle off if already applied
     if (applied && applied.position === position && applied.comboIndex === idx) {
@@ -143,6 +143,10 @@ export default function TeamScenarioView({
       comboIndex: idx,
       combo,
       label: buildScenarioLabel(position, combo, teamName),
+    });
+
+    requestAnimationFrame(() => {
+      standingsCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [applied, edgeScenariosByPosition, teamName]);
 
@@ -177,7 +181,7 @@ export default function TeamScenarioView({
   const appliedKey = applied ? `${applied.position}-${applied.comboIndex}` : null;
 
   const standingsCard = (
-    <div className={`group-card mb-4${applied ? ' sim-active' : ''}`}>
+    <div ref={standingsCardRef} className={`group-card mb-4${applied ? ' sim-active' : ''}`} style={{ scrollMarginTop: '80px' }}>
       <div className="group-card-header">
         <span>
           {applied ? 'Scenario Standings' : 'Current Standings'} — Group {groupId}
