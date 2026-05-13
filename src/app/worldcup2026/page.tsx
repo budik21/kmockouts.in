@@ -1,4 +1,5 @@
 import { cachedQuery } from '@/lib/cached-db';
+import { query } from '@/lib/db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
@@ -269,7 +270,7 @@ async function getGroupArticles(): Promise<Record<string, GroupArticleSummary>> 
 
 async function getNewsArticles() {
   try {
-    const rows = await cachedQuery<NewsRow>(
+    const rows = await query<NewsRow>(
       'SELECT id, external_url, title, image_url, published_at FROM news_article ORDER BY published_at DESC NULLS LAST, id DESC LIMIT 10'
     );
     return rows.map((r) => ({
