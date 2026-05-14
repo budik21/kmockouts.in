@@ -5982,3 +5982,265 @@ a.ranking-team-name:hover {
   .group-overview-headline { font-size: 1.2rem; }
   .group-overview-lede { font-size: 0.95rem; }
 }
+
+/* ===== Tipping leagues ===== */
+
+.leagues-view {
+  margin-top: 0.5rem;
+}
+.leagues-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+.leagues-tabs {
+  display: inline-flex;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+.leagues-tab {
+  background: transparent;
+  border: 0;
+  color: var(--wc-text-muted);
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.35rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.leagues-tab:hover {
+  color: var(--wc-text);
+}
+.leagues-tab.active {
+  background: var(--wc-accent);
+  color: #2a1a00;
+  font-weight: 700;
+}
+.leagues-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.leagues-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.leagues-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+}
+.leagues-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.leagues-item-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.leagues-item-name a {
+  color: var(--wc-text);
+  text-decoration: none;
+}
+.leagues-item-name a:hover {
+  color: var(--wc-accent);
+  text-decoration: underline;
+}
+.leagues-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--wc-text-muted);
+  font-size: 0.9rem;
+}
+.leagues-meta-dot { opacity: 0.6; }
+.leagues-code-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--wc-border);
+  color: var(--wc-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.3rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.leagues-code-chip:hover {
+  border-color: var(--wc-accent);
+}
+.leagues-item-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.leagues-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--wc-text-muted);
+  border: 1px dashed var(--wc-border);
+  border-radius: 0.5rem;
+  background: var(--wc-surface);
+}
+
+/* Modal */
+.leagues-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+}
+.leagues-modal {
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  width: 100%;
+  max-width: 520px;
+  border: 1px solid var(--wc-border);
+  border-radius: 0.5rem;
+  padding: 1.75rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+.leagues-modal-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.35rem;
+}
+.leagues-modal-desc {
+  color: var(--wc-text-muted);
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+.leagues-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.leagues-code-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.4rem;
+  text-transform: uppercase;
+  padding: 1rem;
+  height: auto;
+}
+
+.leagues-created-code {
+  background: rgba(255, 184, 0, 0.08);
+  border: 1px solid var(--wc-accent);
+  border-radius: 0.4rem;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+.leagues-created-label {
+  color: var(--wc-text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.leagues-created-code-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.leagues-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 20, 0.92);
+  color: #fff;
+  padding: 0.6rem 1.1rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--wc-border);
+  z-index: 1100;
+  font-size: 0.9rem;
+}
+
+/* League public page */
+.league-header {
+  margin-bottom: 1.25rem;
+}
+.league-title {
+  margin: 0 0 0.4rem 0;
+}
+.league-subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--wc-text-muted);
+}
+.league-code-pill {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 0.1rem 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.3rem;
+  font-size: 0.85rem;
+}
+.league-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Invite landing */
+.invite-card {
+  max-width: 560px;
+  margin: 0 auto;
+  text-align: center;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.75rem;
+  padding: 2.5rem 1.75rem;
+}
+.invite-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+.invite-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.6rem;
+}
+.invite-desc {
+  color: var(--wc-text-muted);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}

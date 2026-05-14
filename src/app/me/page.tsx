@@ -51,6 +51,15 @@ export default async function MePage() {
             </div>
           </Link>
         </div>
+        <div className="col-md-6">
+          <Link href="/me/leagues" className="me-tile">
+            <div className="me-tile-icon">🏆</div>
+            <div className="me-tile-title">Tipping leagues</div>
+            <div className="me-tile-desc">
+              Create your own private leagues with friends, or join one with a code.
+            </div>
+          </Link>
+        </div>
       </div>
 
       <div className="me-danger-zone">

@@ -2,14 +2,22 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { LEADERBOARD_TAG, LEAGUES_TAG } from '@/lib/cache-tags';
+import { recalculateLeagueStandings } from '@/lib/league-standings';
 import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * DELETE /api/me — permanently delete the signed-in user.
- * Cascade removes all their tips (tip.user_id has ON DELETE CASCADE).
+ * Cascade removes:
+ *   - tip rows (tip.user_id ON DELETE CASCADE)
+ *   - leagues they own (pickem_league.owner_user_id ON DELETE CASCADE)
+ *   - membership rows (pickem_league_member.user_id ON DELETE CASCADE)
+ *   - standings rows (pickem_league_standings.user_id ON DELETE CASCADE)
+ *
+ * After cascade, surviving leagues need a standings rebuild so the rank
+ * column reflects the now-missing member.
  */
 export async function DELETE() {
   const session = await auth();
@@ -19,7 +27,10 @@ export async function DELETE() {
 
   await query('DELETE FROM tipster_user WHERE id = $1', [session.tipsterId]);
 
+  await recalculateLeagueStandings();
+
   revalidateTag(LEADERBOARD_TAG, 'max');
+  revalidateTag(LEAGUES_TAG, 'max');
   await purgeCloudflareCache().catch(() => null);
 
   return NextResponse.json({ success: true });

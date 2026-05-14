@@ -13,3 +13,11 @@ export const WC_TAG = 'wc-data';
 
 /** Public predictions leaderboard (depends on scored tips). */
 export const LEADERBOARD_TAG = 'predictions-leaderboard';
+
+/** Per-league standings cache. */
+export function leagueStandingsTag(code: string): string {
+  return `league-standings:${code.toUpperCase()}`;
+}
+
+/** Anything that depends on league listings (membership, owner profile lists). */
+export const LEAGUES_TAG = 'leagues-membership';

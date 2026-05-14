@@ -11,6 +11,9 @@ export const dynamic = 'force-dynamic';
 /**
  * Recalculate points for all tips on finished matches.
  * Called after admin updates match results. Admin-only.
+ *
+ * recalculateAllTipPoints() also rebuilds every league's standings and busts
+ * the per-league cache tags, so callers don't need to repeat that here.
  */
 export async function POST() {
   const unauthorized = await requireAdminApi();

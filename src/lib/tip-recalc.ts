@@ -1,4 +1,5 @@
 import { query } from './db';
+import { recalculateLeagueStandings } from './league-standings';
 
 /**
  * A tip whose points value just changed (either newly scored or rescored
@@ -68,6 +69,10 @@ export async function recalculateAllTipPoints(): Promise<TipTransition[]> {
        FROM changed c
        JOIN updated u ON u.id = c.id`,
   );
+
+  // Rebuild every league's standings (and bust their cache tags). Tip
+  // points are global, so any recalc here can reorder rows in any league.
+  await recalculateLeagueStandings();
 
   return rows.map((r) => ({
     tipId: r.id,

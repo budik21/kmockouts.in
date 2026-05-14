@@ -270,6 +270,46 @@ export async function initializeSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_tip_user ON tip(user_id);
     CREATE INDEX IF NOT EXISTS idx_tip_match ON tip(match_id);
 
+    -- Tipovacka: user-created leagues (subgroups within the global ranking).
+    -- Tips themselves are global (one set per user); a league is just a
+    -- filtered standings view over its members.
+    CREATE TABLE IF NOT EXISTS pickem_league (
+      id              SERIAL PRIMARY KEY,
+      code            CHAR(6) NOT NULL UNIQUE,
+      name            VARCHAR(40) NOT NULL,
+      name_normalized VARCHAR(40) NOT NULL UNIQUE,
+      owner_user_id   INTEGER NOT NULL REFERENCES tipster_user(id) ON DELETE CASCADE,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pickem_league_owner ON pickem_league(owner_user_id);
+
+    CREATE TABLE IF NOT EXISTS pickem_league_member (
+      league_id  INTEGER NOT NULL REFERENCES pickem_league(id) ON DELETE CASCADE,
+      user_id    INTEGER NOT NULL REFERENCES tipster_user(id) ON DELETE CASCADE,
+      joined_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (league_id, user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pickem_league_member_user ON pickem_league_member(user_id);
+
+    -- Pre-aggregated standings, rebuilt on tip recalc and on join/leave.
+    CREATE TABLE IF NOT EXISTS pickem_league_standings (
+      league_id      INTEGER NOT NULL REFERENCES pickem_league(id) ON DELETE CASCADE,
+      user_id        INTEGER NOT NULL REFERENCES tipster_user(id) ON DELETE CASCADE,
+      total_tips     INTEGER NOT NULL DEFAULT 0,
+      exact_count    INTEGER NOT NULL DEFAULT 0,
+      outcome_count  INTEGER NOT NULL DEFAULT 0,
+      wrong_count    INTEGER NOT NULL DEFAULT 0,
+      pending_count  INTEGER NOT NULL DEFAULT 0,
+      total_points   INTEGER NOT NULL DEFAULT 0,
+      rank           INTEGER NOT NULL DEFAULT 0,
+      updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (league_id, user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pickem_league_standings_user ON pickem_league_standings(user_id);
+
     -- Twitter (X) posts published via this app. The Free tier of X API does
     -- NOT expose GET endpoints to read the account timeline, so we keep our
     -- own log to render history in the admin Twitter tab.
