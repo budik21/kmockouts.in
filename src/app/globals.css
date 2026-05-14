@@ -6244,3 +6244,6 @@ a.ranking-team-name:hover {
   line-height: 1.6;
   margin-bottom: 1rem;
 }
+.invite-card .tipovacka-btn {
+  margin: 1.5rem auto 0;
+}
