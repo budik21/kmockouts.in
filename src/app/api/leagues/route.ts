@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { auth } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-import { generateUniqueLeagueCode } from '@/lib/league-code';
+import { generateUniqueLeagueCode } from '@/lib/league-code-server';
 import { createInviteHash } from '@/lib/league-hash';
 import { LEAGUE_LIMIT_PER_USER, validateLeagueName } from '@/lib/league-validation';
 import { recalculateLeagueStandings } from '@/lib/league-standings';
