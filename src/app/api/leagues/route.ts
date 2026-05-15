@@ -6,6 +6,7 @@ import { generateUniqueLeagueCode } from '@/lib/league-code-server';
 import { createInviteHash } from '@/lib/league-hash';
 import { LEAGUE_LIMIT_PER_USER, validateLeagueName } from '@/lib/league-validation';
 import { recalculateLeagueStandings } from '@/lib/league-standings';
+import { sendLeagueWelcomeIfFirstJoin } from '@/lib/league-welcome';
 import { LEAGUES_TAG } from '@/lib/cache-tags';
 
 export const dynamic = 'force-dynamic';
@@ -90,6 +91,8 @@ export async function POST(req: NextRequest) {
 
     await recalculateLeagueStandings(inserted.id);
     revalidateTag(LEAGUES_TAG, 'max');
+
+    await sendLeagueWelcomeIfFirstJoin(session.tipsterId);
 
     inviteHash = createInviteHash(code, validation.display!);
     return NextResponse.json(

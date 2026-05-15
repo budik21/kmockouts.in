@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { isValidLeagueCode, normalizeLeagueCode } from '@/lib/league-code';
 import { recalculateLeagueStandings } from '@/lib/league-standings';
+import { sendLeagueWelcomeIfFirstJoin } from '@/lib/league-welcome';
 import { LEAGUES_TAG } from '@/lib/cache-tags';
 
 export const dynamic = 'force-dynamic';
@@ -62,6 +63,8 @@ export async function POST(req: NextRequest) {
 
   await recalculateLeagueStandings(league.id);
   revalidateTag(LEAGUES_TAG, 'max');
+
+  await sendLeagueWelcomeIfFirstJoin(session.tipsterId);
 
   return NextResponse.json({
     success: true,
