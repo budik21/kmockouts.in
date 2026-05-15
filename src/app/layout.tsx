@@ -85,6 +85,12 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// Navbar reads the signed-in user via `auth()` (cookies). Without this the
+// layout could be served from cache populated by a previous user's request,
+// leading to the navbar avatar showing one user while the page body shows
+// another.
+export const dynamic = "force-dynamic";
+
 /**
  * Global JSON-LD: WebSite + SportsEvent describing the tournament itself.
  * Group/team-level structured data is added on the corresponding pages.
