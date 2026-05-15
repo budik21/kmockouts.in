@@ -3,10 +3,11 @@
 import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signIn, signOut } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 import ThemeToggle from './ThemeToggle';
 import FeedbackWidget from './FeedbackWidget';
 import TeamSearch from './TeamSearch';
+import { logoutAction } from './auth-actions';
 
 interface NavbarUser {
   name: string;
@@ -63,7 +64,7 @@ export default function NavbarClient({ user }: Props) {
     (e: React.MouseEvent) => {
       e.preventDefault();
       closeOffcanvas();
-      signOut({ callbackUrl: '/' });
+      logoutAction();
     },
     [closeOffcanvas],
   );

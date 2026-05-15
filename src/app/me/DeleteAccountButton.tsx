@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signOut } from 'next-auth/react';
+import { logoutAction } from '../components/auth-actions';
 
 export default function DeleteAccountButton() {
   const [confirming, setConfirming] = useState(false);
@@ -17,7 +17,7 @@ export default function DeleteAccountButton() {
         const msg = await res.text().catch(() => '');
         throw new Error(msg || 'Failed to delete account');
       }
-      await signOut({ callbackUrl: '/' });
+      await logoutAction();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete account');
       setLoading(false);
