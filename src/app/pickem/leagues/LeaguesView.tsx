@@ -6,6 +6,7 @@ import Link from 'next/link';
 import CreateLeagueModal from './CreateLeagueModal';
 import EntryLeagueModal from './EntryLeagueModal';
 import ShareLeagueModal from './ShareLeagueModal';
+import ConfirmActionModal from './ConfirmActionModal';
 import { LEAGUE_LIMIT_PER_USER } from '@/lib/league-validation';
 
 function IosShareIcon({ className }: { className?: string }) {
@@ -35,6 +36,14 @@ interface SharePayload {
   inviteUrl: string;
 }
 
+type ConfirmKind = 'delete' | 'leave';
+
+interface ConfirmPayload {
+  kind: ConfirmKind;
+  code: string;
+  name: string;
+}
+
 export interface LeagueListItem {
   code: string;
   name: string;
@@ -58,6 +67,7 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
   const [showCreate, setShowCreate] = useState(false);
   const [showEntry, setShowEntry] = useState(false);
   const [share, setShare] = useState<SharePayload | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmPayload | null>(null);
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -92,9 +102,8 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
     [showToast],
   );
 
-  const handleDelete = useCallback(
+  const performDelete = useCallback(
     async (code: string, name: string) => {
-      if (!window.confirm(`Delete league "${name}"? This cannot be undone.`)) return;
       setError(null);
       setPendingCode(code);
       try {
@@ -102,9 +111,11 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || 'Failed to delete league.');
         showToast(`League "${name}" deleted.`);
+        setConfirm(null);
         refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
+        setConfirm(null);
       } finally {
         setPendingCode(null);
       }
@@ -112,9 +123,8 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
     [refresh, showToast],
   );
 
-  const handleLeave = useCallback(
+  const performLeave = useCallback(
     async (code: string, name: string) => {
-      if (!window.confirm(`Leave league "${name}"?`)) return;
       setError(null);
       setPendingCode(code);
       try {
@@ -122,9 +132,11 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.error || 'Failed to leave league.');
         showToast(`Left league "${name}".`);
+        setConfirm(null);
         refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
+        setConfirm(null);
       } finally {
         setPendingCode(null);
       }
@@ -240,7 +252,7 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
                   <button
                     type="button"
                     className="leagues-action-btn"
-                    onClick={() => handleDelete(l.code, l.name)}
+                    onClick={() => setConfirm({ kind: 'delete', code: l.code, name: l.name })}
                     disabled={l.memberCount > 1 || pendingCode === l.code}
                     title={
                       l.memberCount > 1
@@ -255,7 +267,7 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
                   <button
                     type="button"
                     className="leagues-action-btn"
-                    onClick={() => handleLeave(l.code, l.name)}
+                    onClick={() => setConfirm({ kind: 'leave', code: l.code, name: l.name })}
                     disabled={pendingCode === l.code}
                   >
                     Leave
@@ -287,6 +299,49 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
           name={share.name}
           inviteUrl={share.inviteUrl}
           onClose={() => setShare(null)}
+        />
+      )}
+      {confirm && confirm.kind === 'delete' && (
+        <ConfirmActionModal
+          title="Delete this league?"
+          body={
+            <>
+              <p className="mb-2">
+                You&apos;re about to delete <strong>“{confirm.name}”</strong>.
+              </p>
+              <p className="mb-0 text-muted small">
+                The league, its code and its standings will be removed. This
+                cannot be undone.
+              </p>
+            </>
+          }
+          confirmLabel="Delete league"
+          busyLabel="Deleting…"
+          variant="danger"
+          onConfirm={() => performDelete(confirm.code, confirm.name)}
+          onClose={() => setConfirm(null)}
+        />
+      )}
+      {confirm && confirm.kind === 'leave' && (
+        <ConfirmActionModal
+          title="Leave this league?"
+          body={
+            <>
+              <p className="mb-2">
+                You&apos;re about to leave <strong>“{confirm.name}”</strong>.
+              </p>
+              <p className="mb-0 text-muted small">
+                Your tips stay saved, but you won&apos;t appear in this
+                league&apos;s standings anymore. You can rejoin later with the
+                league code if the owner shares it again.
+              </p>
+            </>
+          }
+          confirmLabel="Leave league"
+          busyLabel="Leaving…"
+          variant="danger"
+          onConfirm={() => performLeave(confirm.code, confirm.name)}
+          onClose={() => setConfirm(null)}
         />
       )}
 

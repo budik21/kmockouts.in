@@ -6340,6 +6340,66 @@ a.ranking-team-name:hover {
   color: #1a0b00;
 }
 
+/* Confirm modal (Delete / Leave) */
+.leagues-confirm-modal {
+  max-width: 460px;
+}
+.leagues-confirm-body {
+  color: var(--wc-text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+.leagues-confirm-body p {
+  margin-bottom: 0.5rem;
+}
+.leagues-confirm-body p:last-child {
+  margin-bottom: 0;
+}
+.leagues-confirm-action {
+  font-weight: 600;
+  padding: 0.45rem 1.1rem;
+  border-radius: 0.4rem;
+  transition: background 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+.leagues-confirm-action:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.leagues-confirm-action--danger {
+  background: #c0392b;
+  border: 1px solid #c0392b;
+  color: #fff;
+}
+.leagues-confirm-action--danger:hover:not(:disabled) {
+  background: #a93226;
+  border-color: #a93226;
+  color: #fff;
+}
+.leagues-confirm-action--danger:focus-visible {
+  outline: 2px solid #c0392b;
+  outline-offset: 2px;
+}
+.leagues-confirm-action--primary {
+  background: var(--wc-accent);
+  border: 1px solid var(--wc-accent);
+  color: #2a1a00;
+}
+.leagues-confirm-action--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--wc-accent) 85%, #fff);
+  color: #2a1a00;
+}
+[data-bs-theme="dark"] .leagues-confirm-action--danger {
+  background: #e25c4e;
+  border-color: #e25c4e;
+  color: #1a0500;
+}
+[data-bs-theme="dark"] .leagues-confirm-action--danger:hover:not(:disabled) {
+  background: #ec7367;
+  border-color: #ec7367;
+  color: #1a0500;
+}
+
 /* League public page */
 .league-header {
   margin-bottom: 1.25rem;
