@@ -125,7 +125,7 @@ export default async function LeaguePage({ params }: Props) {
   return (
     <main className="container py-4">
       <p className="mb-2">
-        <Link href="/me/leagues" className="text-decoration-none">← Back to my leagues</Link>
+        <Link href="/pickem/tips?tab=leagues" className="text-decoration-none">← Back to my leagues</Link>
       </p>
 
       <header className="league-header">

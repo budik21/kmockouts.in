@@ -16,7 +16,7 @@ interface Params {
  * POST /api/leagues/[code]/leave — leave a league.
  *
  * Auth required. The owner is allowed to leave too — the league row stays
- * (so the owner can still administer it from /me/leagues), they just won't
+ * (so the owner can still administer it from the Leagues tab), they just won't
  * appear in its standings.
  */
 export async function POST(_req: Request, ctx: Params) {

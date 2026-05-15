@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  *
  * Unlike /join (used by the invite landing page), this endpoint requires no
  * hash — the code itself is the access ticket. Used by the "Entry to
- * League" modal in /me/leagues.
+ * League" modal in the Leagues tab on /pickem/tips.
  *
  * Returns 200 with `alreadyMember` flag, 404 with "Wrong code" message on
  * unknown codes (deliberately uniform "Wrong" error so we don't confirm

@@ -11,7 +11,7 @@ export default function LeagueNotFound() {
           6-character code, or ask the league owner to send you the invite link.
         </p>
         <div className="d-flex gap-2 justify-content-center flex-wrap">
-          <Link href="/me/leagues" className="tipovacka-revoked-link">
+          <Link href="/pickem/tips?tab=leagues" className="tipovacka-revoked-link">
             My leagues
           </Link>
           <Link href="/pickem/leaderboard" className="tipovacka-revoked-link">

@@ -1,7 +1,9 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { query, queryOne } from '@/lib/db';
+import { createInviteHash } from '@/lib/league-hash';
 import PredictionsApp from '../components/PredictionsApp';
+import type { LeagueListItem } from '../leagues/LeaguesView';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +41,29 @@ export interface TipMatch {
   awayTeam: { name: string; shortName: string; countryCode: string };
 }
 
-export default async function TipsPage() {
+interface OwnedLeagueRow {
+  code: string;
+  name: string;
+  member_count: string;
+  created_at: string;
+}
+
+interface MemberLeagueRow {
+  code: string;
+  name: string;
+  member_count: string;
+  owner_name: string;
+  joined_at: string;
+}
+
+type Tab = 'dashboard' | 'predictions' | 'groups' | 'leagues';
+const VALID_TABS: Tab[] = ['dashboard', 'predictions', 'groups', 'leagues'];
+
+export default async function TipsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }>;
+}) {
   let session;
   try {
     session = await auth();
@@ -50,22 +74,51 @@ export default async function TipsPage() {
     redirect('/pickem');
   }
 
-  const rows = await query<MatchRow>(`
-    SELECT m.id, m.group_id, m.round, m.home_team_id, m.away_team_id,
-      m.home_goals, m.away_goals, m.venue, m.kick_off, m.status,
-      ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
-      at2.name as away_name, at2.short_name as away_short, at2.country_code as away_cc
-    FROM match m
-    JOIN team ht ON m.home_team_id = ht.id
-    JOIN team at2 ON m.away_team_id = at2.id
-    ORDER BY m.kick_off, m.group_id, m.id
-  `);
+  const sp = (await searchParams) ?? {};
+  const initialTab: Tab | undefined = VALID_TABS.includes(sp.tab as Tab)
+    ? (sp.tab as Tab)
+    : undefined;
 
-  // Check if user has any tips already (returning user vs new user)
-  const tipCountRow = await queryOne<{ cnt: string }>(
-    'SELECT COUNT(*) as cnt FROM tip WHERE user_id = $1',
-    [session.tipsterId],
-  );
+  const myUserId = session.tipsterId;
+
+  const [rows, tipCountRow, ownedRows, memberRows] = await Promise.all([
+    query<MatchRow>(`
+      SELECT m.id, m.group_id, m.round, m.home_team_id, m.away_team_id,
+        m.home_goals, m.away_goals, m.venue, m.kick_off, m.status,
+        ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
+        at2.name as away_name, at2.short_name as away_short, at2.country_code as away_cc
+      FROM match m
+      JOIN team ht ON m.home_team_id = ht.id
+      JOIN team at2 ON m.away_team_id = at2.id
+      ORDER BY m.kick_off, m.group_id, m.id
+    `),
+    queryOne<{ cnt: string }>(
+      'SELECT COUNT(*) as cnt FROM tip WHERE user_id = $1',
+      [myUserId],
+    ),
+    query<OwnedLeagueRow>(
+      `SELECT l.code, l.name,
+              (SELECT COUNT(*) FROM pickem_league_member m WHERE m.league_id = l.id)::text AS member_count,
+              l.created_at::text AS created_at
+         FROM pickem_league l
+        WHERE l.owner_user_id = $1
+        ORDER BY l.created_at DESC`,
+      [myUserId],
+    ),
+    query<MemberLeagueRow>(
+      `SELECT l.code, l.name,
+              (SELECT COUNT(*) FROM pickem_league_member m2 WHERE m2.league_id = l.id)::text AS member_count,
+              owner.name AS owner_name,
+              m.joined_at::text AS joined_at
+         FROM pickem_league_member m
+         JOIN pickem_league l ON l.id = m.league_id
+         JOIN tipster_user owner ON owner.id = l.owner_user_id
+        WHERE m.user_id = $1
+        ORDER BY m.joined_at DESC`,
+      [myUserId],
+    ),
+  ]);
+
   const hasTips = parseInt(tipCountRow?.cnt || '0') > 0;
 
   const matches: TipMatch[] = rows.map((r) => ({
@@ -83,6 +136,22 @@ export default async function TipsPage() {
     awayTeam: { name: r.away_name, shortName: r.away_short, countryCode: r.away_cc },
   }));
 
+  const myLeagues: LeagueListItem[] = ownedRows.map((r) => ({
+    code: r.code,
+    name: r.name,
+    memberCount: parseInt(r.member_count, 10),
+    inviteHash: createInviteHash(r.code, r.name),
+    isOwner: true,
+  }));
+
+  const participatingLeagues: LeagueListItem[] = memberRows.map((r) => ({
+    code: r.code,
+    name: r.name,
+    memberCount: parseInt(r.member_count, 10),
+    ownerName: r.owner_name,
+    isOwner: false,
+  }));
+
   return (
     <PredictionsApp
       matches={matches}
@@ -90,6 +159,10 @@ export default async function TipsPage() {
       shareToken={session.shareToken || ''}
       tipsPublic={session.tipsPublic || false}
       isReturningUser={hasTips}
+      myLeagues={myLeagues}
+      participatingLeagues={participatingLeagues}
+      isAdmin={!!session.isAdmin}
+      initialTab={initialTab}
     />
   );
 }

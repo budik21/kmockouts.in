@@ -6,8 +6,9 @@ import type { TipMatch } from '../tips/page';
 import TipEditor from './TipEditor';
 import Dashboard from './Dashboard';
 import GroupComparison from './GroupComparison';
+import LeaguesView, { type LeagueListItem } from '../leagues/LeaguesView';
 
-type Tab = 'dashboard' | 'predictions' | 'groups';
+type Tab = 'dashboard' | 'predictions' | 'groups' | 'leagues';
 
 interface TipData {
   homeGoals: number;
@@ -21,11 +22,25 @@ interface Props {
   shareToken: string;
   tipsPublic: boolean;
   isReturningUser: boolean;
+  myLeagues: LeagueListItem[];
+  participatingLeagues: LeagueListItem[];
+  isAdmin: boolean;
+  initialTab?: Tab;
 }
 
-export default function PredictionsApp({ matches, userName, shareToken, tipsPublic: initialPublic, isReturningUser }: Props) {
-  // New users see predictions first; returning users see dashboard first
-  const [tab, setTab] = useState<Tab>(isReturningUser ? 'dashboard' : 'predictions');
+export default function PredictionsApp({
+  matches,
+  userName,
+  shareToken,
+  tipsPublic: initialPublic,
+  isReturningUser,
+  myLeagues,
+  participatingLeagues,
+  isAdmin,
+  initialTab,
+}: Props) {
+  // URL ?tab=... wins; otherwise new users see predictions first, returning users see dashboard first.
+  const [tab, setTab] = useState<Tab>(initialTab ?? (isReturningUser ? 'dashboard' : 'predictions'));
   const [tips, setTips] = useState<Record<number, TipData>>({});
   const [loading, setLoading] = useState(true);
   const [tipsPublic, setTipsPublic] = useState(initialPublic);
@@ -188,6 +203,12 @@ export default function PredictionsApp({ matches, userName, shareToken, tipsPubl
             >
               Groups
             </button>
+            <button
+              className={`tipovacka-tab ${tab === 'leagues' ? 'active' : ''}`}
+              onClick={() => setTab('leagues')}
+            >
+              Leagues
+            </button>
           </div>
         </div>
       </div>
@@ -220,6 +241,14 @@ export default function PredictionsApp({ matches, userName, shareToken, tipsPubl
             matches={matches}
             tips={tips}
             allGroups={allGroups}
+          />
+        )}
+
+        {tab === 'leagues' && (
+          <LeaguesView
+            myLeagues={myLeagues}
+            participating={participatingLeagues}
+            isAdmin={isAdmin}
           />
         )}
       </div>

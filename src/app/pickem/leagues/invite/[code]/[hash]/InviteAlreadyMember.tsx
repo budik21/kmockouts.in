@@ -20,7 +20,7 @@ export default function InviteAlreadyMember({ code, leagueName }: Props) {
         <Link href={`/pickem/leagues/${code}`} className="tipovacka-btn tipovacka-btn-google">
           View leaderboard
         </Link>
-        <Link href="/me/leagues" className="btn btn-outline-secondary">
+        <Link href="/pickem/tips?tab=leagues" className="btn btn-outline-secondary">
           My leagues
         </Link>
       </div>
