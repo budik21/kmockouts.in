@@ -5,7 +5,35 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import CreateLeagueModal from './CreateLeagueModal';
 import EntryLeagueModal from './EntryLeagueModal';
+import ShareLeagueModal from './ShareLeagueModal';
 import { LEAGUE_LIMIT_PER_USER } from '@/lib/league-validation';
+
+function IosShareIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+      <polyline points="16 6 12 2 8 6" />
+      <line x1="12" y1="2" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+interface SharePayload {
+  code: string;
+  name: string;
+  inviteUrl: string;
+}
 
 export interface LeagueListItem {
   code: string;
@@ -29,6 +57,7 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
   const [tab, setTab] = useState<Tab>('mine');
   const [showCreate, setShowCreate] = useState(false);
   const [showEntry, setShowEntry] = useState(false);
+  const [share, setShare] = useState<SharePayload | null>(null);
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -43,18 +72,12 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
     setTimeout(() => setToast(null), 2500);
   }, []);
 
-  const copyInviteLink = useCallback(
-    async (code: string, hash: string) => {
-      const url = `${window.location.origin}/pickem/leagues/invite/${code}/${hash}`;
-      try {
-        await navigator.clipboard.writeText(url);
-        showToast('Invite link copied to clipboard.');
-      } catch {
-        // Older browsers / insecure contexts: fall back to selecting in a prompt.
-        window.prompt('Copy invite link:', url);
-      }
+  const openShare = useCallback(
+    (code: string, name: string, hash: string) => {
+      const inviteUrl = `${window.location.origin}/pickem/leagues/invite/${code}/${hash}`;
+      setShare({ code, name, inviteUrl });
     },
-    [showToast],
+    [],
   );
 
   const copyCode = useCallback(
@@ -199,23 +222,24 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
               <div className="leagues-item-actions">
                 <Link
                   href={`/pickem/leagues/${l.code}`}
-                  className="btn btn-sm btn-outline-secondary"
+                  className="leagues-action-btn"
                 >
                   Leaderboard
                 </Link>
                 {tab === 'mine' && l.inviteHash && (
                   <button
                     type="button"
-                    className="btn btn-sm btn-outline-primary"
-                    onClick={() => copyInviteLink(l.code, l.inviteHash!)}
+                    className="leagues-action-btn"
+                    onClick={() => openShare(l.code, l.name, l.inviteHash!)}
                   >
+                    <IosShareIcon className="leagues-action-icon" />
                     Share
                   </button>
                 )}
                 {tab === 'mine' && (
                   <button
                     type="button"
-                    className="btn btn-sm btn-outline-danger"
+                    className="leagues-action-btn"
                     onClick={() => handleDelete(l.code, l.name)}
                     disabled={l.memberCount > 1 || pendingCode === l.code}
                     title={
@@ -230,7 +254,7 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
                 {tab === 'participating' && (
                   <button
                     type="button"
-                    className="btn btn-sm btn-outline-danger"
+                    className="leagues-action-btn"
                     onClick={() => handleLeave(l.code, l.name)}
                     disabled={pendingCode === l.code}
                   >
@@ -255,6 +279,14 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
         <EntryLeagueModal
           onClose={() => setShowEntry(false)}
           onJoined={() => refresh()}
+        />
+      )}
+      {share && (
+        <ShareLeagueModal
+          code={share.code}
+          name={share.name}
+          inviteUrl={share.inviteUrl}
+          onClose={() => setShare(null)}
         />
       )}
 
