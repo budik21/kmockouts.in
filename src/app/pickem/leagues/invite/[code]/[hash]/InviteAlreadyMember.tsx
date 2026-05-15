@@ -16,12 +16,12 @@ export default function InviteAlreadyMember({ code, leagueName }: Props) {
         You&apos;re already a member of &ldquo;<strong>{leagueName}</strong>&rdquo;.
         No need to join again.
       </p>
-      <div className="d-flex gap-2 justify-content-center flex-wrap">
-        <Link href={`/pickem/leagues/${code}`} className="tipovacka-btn tipovacka-btn-google">
-          View leaderboard
-        </Link>
-        <Link href="/pickem/tips?tab=leagues" className="btn btn-outline-secondary">
+      <div className="invite-actions">
+        <Link href="/pickem/tips?tab=leagues" className="invite-action-secondary">
           My leagues
+        </Link>
+        <Link href={`/pickem/leagues/${code}`} className="invite-action-cta">
+          View leaderboard
         </Link>
       </div>
     </div>
