@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
+import { queryOne } from '@/lib/db';
 import { cachedQuery } from '@/lib/cached-db';
 import { isValidLeagueCode, normalizeLeagueCode } from '@/lib/league-code';
 import { LEAGUES_TAG, leagueStandingsTag } from '@/lib/cache-tags';
@@ -93,9 +93,17 @@ export default async function LeaguePage({ params }: Props) {
     [leagueStandingsTag(code)],
   );
 
-  // Is the current user a member? Cheaper to check standings (already loaded)
-  // than another DB hit.
-  const isMember = myUserId !== null && standings.some((s) => s.user_id === myUserId);
+  // Is the current user a member? Query the source of truth directly rather
+  // than relying on the cached standings — after a just-completed invite join
+  // the standings cache can still serve a snapshot without the new member,
+  // which would render a spurious "Join this league" button.
+  const myMembership = myUserId !== null
+    ? await queryOne<{ user_id: number }>(
+        'SELECT user_id FROM pickem_league_member WHERE league_id = $1 AND user_id = $2',
+        [league.id, myUserId],
+      )
+    : null;
+  const isMember = !!myMembership;
 
   // Owner-of-league flag (so the page can show admin links if needed).
   const isOwner = myUserId !== null && league.owner_user_id === myUserId;
