@@ -61,7 +61,6 @@ export default function SettingsTab({ initialNotify, tipsPublic, shareUrl, onTog
         <h5>Notifications</h5>
         <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>
           Choose which e-mails you&apos;d like to receive after your tips are scored.
-          All notifications are off by default.
         </p>
         <div className="me-notif-list">
           <NotifyRow
@@ -110,20 +109,41 @@ export default function SettingsTab({ initialNotify, tipsPublic, shareUrl, onTog
             </span>
           </div>
           {tipsPublic && (
-            <div className="tipovacka-share-copy">
-              {copied ? (
-                <span className="tipovacka-share-copied">URL Copied</span>
-              ) : (
-                <button className="tipovacka-cta-btn tipovacka-cta-btn-icon w-100" onClick={handleCopy}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 3v13" />
-                    <path d="M7 8l5-5 5 5" />
-                    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
-                  </svg>
-                  <span>Share link</span>
+            <>
+              <div className="tipovacka-share-url-row">
+                <input
+                  type="text"
+                  readOnly
+                  value={shareUrl}
+                  className="tipovacka-share-url-input"
+                  onFocus={(e) => e.currentTarget.select()}
+                  aria-label="Your public share URL"
+                />
+                <button
+                  type="button"
+                  className="tipovacka-share-url-copy"
+                  onClick={handleCopy}
+                  title={copied ? 'Copied!' : 'Copy link'}
+                  aria-label={copied ? 'Copied to clipboard' : 'Copy share link'}
+                >
+                  {copied ? (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                      <path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 3v13" />
+                      <path d="M7 8l5-5 5 5" />
+                      <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+                    </svg>
+                  )}
                 </button>
-              )}
-            </div>
+              </div>
+              <p className="tipovacka-share-explainer">
+                Anyone with this link can see all your predictions and your standings
+                in each group, computed from your tips.
+              </p>
+            </>
           )}
         </div>
       </section>

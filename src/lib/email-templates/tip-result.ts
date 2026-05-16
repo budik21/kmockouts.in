@@ -171,10 +171,10 @@ export function buildTipResultEmail(data: TipResultEmailData): TemplateOutput {
 
           <tr>
             <td style="background:#f9fafb;padding:16px 28px;color:#6b7280;font-size:12px;text-align:center;border-top:1px solid #e5e7eb;">
-              You received this e-mail because you opted in to tip-result notifications.
+              You received this e-mail because tip-result notifications are turned on
+              in your Knockouts.in profile. If you&rsquo;d rather not get these,
+              <a href="${unsubscribeUrl}" style="color:#6b7280;text-decoration:underline;">change your notification settings</a>.
               <br/>
-              <a href="${unsubscribeUrl}" style="color:#6b7280;text-decoration:underline;">Manage notification settings</a>
-              &nbsp;·&nbsp;
               <a href="${SITE_URL}" style="color:#6b7280;text-decoration:underline;">Knockouts.in</a>
             </td>
           </tr>

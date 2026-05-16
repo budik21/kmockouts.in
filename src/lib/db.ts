@@ -259,10 +259,14 @@ export async function initializeSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_tipster_user_share ON tipster_user(share_token);
 
-    -- Email notification preferences (default: all opt-out)
-    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_exact_score BOOLEAN NOT NULL DEFAULT FALSE;
+    -- Email notification preferences. Exact-score notifications are on by
+    -- default (the most satisfying scoring event); the others are opt-in.
+    -- Pre-existing rows with exact-score off were flipped once via the
+    -- 'notify_exact_score_default_2026_05_16' data migration below.
+    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_exact_score BOOLEAN NOT NULL DEFAULT TRUE;
     ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_winner_only BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_wrong_tip   BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE tipster_user ALTER COLUMN notify_exact_score SET DEFAULT TRUE;
 
     -- Tipovacka: individual match predictions
     CREATE TABLE IF NOT EXISTS tip (
@@ -381,6 +385,19 @@ export async function initializeSchema(): Promise<void> {
       IF NOT EXISTS (SELECT 1 FROM data_migration WHERE name = 'tips_public_default_2026_05_16') THEN
         UPDATE tipster_user SET tips_public = TRUE WHERE tips_public = FALSE;
         INSERT INTO data_migration (name) VALUES ('tips_public_default_2026_05_16');
+      END IF;
+    END $$;
+  `);
+
+  // Turn exact-score notifications on for everyone once. New default is TRUE;
+  // this catches accounts created before that change. Same guard so later
+  // opt-outs are preserved.
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM data_migration WHERE name = 'notify_exact_score_default_2026_05_16') THEN
+        UPDATE tipster_user SET notify_exact_score = TRUE WHERE notify_exact_score = FALSE;
+        INSERT INTO data_migration (name) VALUES ('notify_exact_score_default_2026_05_16');
       END IF;
     END $$;
   `);

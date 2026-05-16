@@ -5046,6 +5046,56 @@ a.ranking-team-name:hover {
   width: 100%;
 }
 
+.tipovacka-share-url-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.tipovacka-share-url-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--wc-bg, #1a0a14);
+  border: 1px solid var(--wc-border);
+  border-radius: 0.375rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  color: var(--wc-text);
+  font-family: inherit;
+}
+
+.tipovacka-share-url-input:focus {
+  outline: none;
+  border-color: var(--wc-accent);
+}
+
+.tipovacka-share-url-copy {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  background: transparent;
+  color: var(--wc-accent);
+  border: 1px solid var(--wc-accent);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.tipovacka-share-url-copy:hover {
+  background: var(--wc-accent);
+  color: #2a1a00;
+}
+
+.tipovacka-share-explainer {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--wc-text-muted);
+  line-height: 1.4;
+}
+
 /* Recent tips */
 .tipovacka-recent-tips {
   display: flex;
