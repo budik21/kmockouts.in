@@ -26,7 +26,7 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
 
   const tipsUrl = `${SITE_URL}/pickem/tips`;
   const leaguesUrl = `${SITE_URL}/pickem/tips?tab=leagues`;
-  const notificationsUrl = `${SITE_URL}/me/notifications`;
+  const notificationsUrl = `${SITE_URL}/pickem/tips?tab=settings`;
   const homeUrl = SITE_URL;
   const paypalUrl = `https://www.paypal.com/donate/?hosted_button_id=${PAYPAL_BUTTON_ID}`;
 

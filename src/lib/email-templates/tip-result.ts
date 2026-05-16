@@ -80,7 +80,7 @@ export function buildTipResultEmail(data: TipResultEmailData): TemplateOutput {
   const teamUrl = (name: string) => `${SITE_URL}/worldcup2026/${groupSlug}/team/${slugify(name)}`;
   const groupUrl = `${SITE_URL}/worldcup2026/${groupSlug}`;
   const leaderboardUrl = `${SITE_URL}/pickem/leaderboard`;
-  const unsubscribeUrl = `${SITE_URL}/me/notifications`;
+  const unsubscribeUrl = `${SITE_URL}/pickem/tips?tab=settings`;
 
   const html = `
 <!DOCTYPE html>

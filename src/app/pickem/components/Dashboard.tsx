@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { TipMatch } from '../tips/page';
 import { teamLabel } from '@/lib/team-label';
 
@@ -23,9 +23,6 @@ interface Props {
   stats: Stats;
   tips: Record<number, TipData>;
   matches: TipMatch[];
-  tipsPublic: boolean;
-  shareUrl: string;
-  onTogglePublic: () => void;
   onGoToTips: () => void;
 }
 
@@ -53,15 +50,7 @@ function formatTime(kickOff: string): string {
   } catch { return ''; }
 }
 
-export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, onTogglePublic, onGoToTips }: Props) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 4000);
-  };
-
+export default function Dashboard({ stats, tips, matches, onGoToTips }: Props) {
   // Recent scored tips
   const scoredTips = matches
     .filter((m) => tips[m.id]?.points !== null && tips[m.id]?.points !== undefined)
@@ -85,7 +74,6 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
 
   return (
     <div>
-      {/* Top dashboard row: score cards + progress + share (one row on desktop) */}
       <div className="tipovacka-dashboard-row mb-4">
       {/* Score cards — matching public profile layout */}
       <div className="tipovacka-score-cards tipovacka-score-cards-wide">
@@ -133,39 +121,6 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
         )}
       </div>
 
-      {/* Share settings */}
-      <div className="tipovacka-share-section tipovacka-dashboard-row-item">
-        <h5>Sharing</h5>
-        <div className="d-flex align-items-center gap-3 mb-2">
-          <label className="tipovacka-toggle">
-            <input
-              type="checkbox"
-              checked={tipsPublic}
-              onChange={onTogglePublic}
-            />
-            <span className="tipovacka-toggle-slider" />
-          </label>
-          <span>
-            {tipsPublic ? 'Your predictions are public' : 'Your predictions are private'}
-          </span>
-        </div>
-        {tipsPublic && (
-          <div className="tipovacka-share-copy">
-            {copied ? (
-              <span className="tipovacka-share-copied">URL Copied</span>
-            ) : (
-              <button className="tipovacka-cta-btn tipovacka-cta-btn-icon w-100" onClick={handleCopy}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M12 3v13" />
-                  <path d="M7 8l5-5 5 5" />
-                  <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
-                </svg>
-                <span>Share link</span>
-              </button>
-            )}
-          </div>
-        )}
-      </div>
       </div>
 
       {/* Recent scored tips */}

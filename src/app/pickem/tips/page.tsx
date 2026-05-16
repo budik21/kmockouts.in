@@ -58,8 +58,14 @@ interface MemberLeagueRow {
   joined_at: string;
 }
 
-type Tab = 'dashboard' | 'predictions' | 'groups' | 'leagues';
-const VALID_TABS: Tab[] = ['dashboard', 'predictions', 'groups', 'leagues'];
+interface NotifyPrefsRow {
+  notify_exact_score: boolean;
+  notify_winner_only: boolean;
+  notify_wrong_tip: boolean;
+}
+
+type Tab = 'dashboard' | 'predictions' | 'groups' | 'leagues' | 'settings';
+const VALID_TABS: Tab[] = ['dashboard', 'predictions', 'groups', 'leagues', 'settings'];
 
 export default async function TipsPage({
   searchParams,
@@ -83,7 +89,7 @@ export default async function TipsPage({
 
   const myUserId = session.tipsterId;
 
-  const [rows, tipCountRow, ownedRows, memberRows] = await Promise.all([
+  const [rows, tipCountRow, ownedRows, memberRows, notifyRow] = await Promise.all([
     query<MatchRow>(`
       SELECT m.id, m.group_id, m.round, m.home_team_id, m.away_team_id,
         m.home_goals, m.away_goals, m.venue, m.kick_off, m.status,
@@ -121,6 +127,10 @@ export default async function TipsPage({
         ORDER BY m.joined_at DESC`,
       [myUserId],
     ),
+    queryOne<NotifyPrefsRow>(
+      'SELECT notify_exact_score, notify_winner_only, notify_wrong_tip FROM tipster_user WHERE id = $1',
+      [myUserId],
+    ),
   ]);
 
   const hasTips = parseInt(tipCountRow?.cnt || '0') > 0;
@@ -156,6 +166,12 @@ export default async function TipsPage({
     isOwner: false,
   }));
 
+  const initialNotify = {
+    exactScore: !!notifyRow?.notify_exact_score,
+    winnerOnly: !!notifyRow?.notify_winner_only,
+    wrongTip: !!notifyRow?.notify_wrong_tip,
+  };
+
   return (
     <PredictionsApp
       matches={matches}
@@ -167,6 +183,7 @@ export default async function TipsPage({
       participatingLeagues={participatingLeagues}
       isAdmin={!!session.isAdmin}
       initialTab={initialTab}
+      initialNotify={initialNotify}
     />
   );
 }

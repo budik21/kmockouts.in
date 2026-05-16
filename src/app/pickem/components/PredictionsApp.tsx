@@ -7,8 +7,15 @@ import TipEditor from './TipEditor';
 import Dashboard from './Dashboard';
 import GroupComparison from './GroupComparison';
 import LeaguesView, { type LeagueListItem } from '../leagues/LeaguesView';
+import SettingsTab from './SettingsTab';
 
-type Tab = 'dashboard' | 'predictions' | 'groups' | 'leagues';
+type Tab = 'dashboard' | 'predictions' | 'groups' | 'leagues' | 'settings';
+
+interface NotifyPrefs {
+  exactScore: boolean;
+  winnerOnly: boolean;
+  wrongTip: boolean;
+}
 
 interface TipData {
   homeGoals: number;
@@ -26,6 +33,7 @@ interface Props {
   participatingLeagues: LeagueListItem[];
   isAdmin: boolean;
   initialTab?: Tab;
+  initialNotify: NotifyPrefs;
 }
 
 export default function PredictionsApp({
@@ -38,6 +46,7 @@ export default function PredictionsApp({
   participatingLeagues,
   isAdmin,
   initialTab,
+  initialNotify,
 }: Props) {
   // URL ?tab=... wins; otherwise new users see predictions first, returning users see dashboard first.
   const [tab, setTab] = useState<Tab>(initialTab ?? (isReturningUser ? 'dashboard' : 'predictions'));
@@ -209,6 +218,12 @@ export default function PredictionsApp({
             >
               Leagues
             </button>
+            <button
+              className={`tipovacka-tab ${tab === 'settings' ? 'active' : ''}`}
+              onClick={() => setTab('settings')}
+            >
+              Settings
+            </button>
           </div>
         </div>
       </div>
@@ -220,9 +235,6 @@ export default function PredictionsApp({
             stats={stats}
             tips={tips}
             matches={matches}
-            tipsPublic={tipsPublic}
-            shareUrl={shareUrl}
-            onTogglePublic={handleTogglePublic}
             onGoToTips={() => setTab('predictions')}
           />
         )}
@@ -249,6 +261,15 @@ export default function PredictionsApp({
             myLeagues={myLeagues}
             participating={participatingLeagues}
             isAdmin={isAdmin}
+          />
+        )}
+
+        {tab === 'settings' && (
+          <SettingsTab
+            initialNotify={initialNotify}
+            tipsPublic={tipsPublic}
+            shareUrl={shareUrl}
+            onTogglePublic={handleTogglePublic}
           />
         )}
       </div>
