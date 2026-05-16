@@ -5300,6 +5300,11 @@ a.ranking-team-name:hover {
   flex-direction: column;
 }
 
+/* Match the height of a 2-line notification row so toggles line up across columns */
+.tipovacka-share-toggle-row {
+  min-height: 3rem;
+}
+
 .tipovacka-share-section > .tipovacka-share-copy {
   margin-top: auto;
 }

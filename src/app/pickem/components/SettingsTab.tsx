@@ -95,7 +95,7 @@ export default function SettingsTab({ initialNotify, tipsPublic, shareUrl, onTog
           Members of any league you join can still see your tips.
         </p>
         <div className="tipovacka-share-section">
-          <div className="d-flex align-items-center gap-3 mb-2">
+          <div className="tipovacka-share-toggle-row d-flex align-items-center gap-3 mb-2">
             <label className="tipovacka-toggle">
               <input
                 type="checkbox"
