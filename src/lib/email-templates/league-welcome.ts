@@ -51,12 +51,12 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
           </tr>
 
           <tr>
-            <td align="center" style="padding:40px 28px 12px;">
-              <div style="font-size:88px;line-height:1;">&#127919;</div>
-              <h1 style="font-size:24px;margin:20px 0 8px;color:#111827;">Welcome aboard, ${esc(firstName)}!</h1>
+            <td align="center" style="padding:36px 28px 8px;">
+              <div style="font-size:72px;line-height:1;">&#127919;</div>
+              <h1 style="font-size:24px;margin:18px 0 8px;color:#111827;">Welcome aboard, ${esc(firstName)}!</h1>
               <p style="margin:0 auto;max-width:480px;color:#374151;font-size:15px;line-height:1.6;">
-                You&rsquo;re officially in. Pick&rsquo;em is our friendly little tipping game for the
-                FIFA World Cup 2026 group stage &mdash; here&rsquo;s the gist before you start.
+                You&rsquo;re officially in. Here&rsquo;s the 30-second tour of our Pick&rsquo;em game for the
+                FIFA World Cup 2026 group stage.
               </p>
             </td>
           </tr>
@@ -66,14 +66,68 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
               <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
                 <tr>
                   <td style="padding:22px 24px;">
-                    <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:12px;">How it works</div>
-                    <ul style="margin:0;padding-left:20px;color:#1f2937;font-size:14px;line-height:1.65;">
-                      <li style="margin-bottom:10px;">You predict scores for all <strong>group-stage matches</strong> &mdash; the first 48 games. No knockouts; the bracket plays itself out.</li>
-                      <li style="margin-bottom:10px;">Tips can be entered or changed anytime, but each match&rsquo;s tip <strong>locks at kick-off</strong>.</li>
-                      <li style="margin-bottom:10px;">Scoring is simple: <strong>4 points</strong> for the exact score, <strong>1 point</strong> for the correct winner or draw, <strong>0 points</strong> otherwise.</li>
-                      <li style="margin-bottom:10px;">Want results delivered? Opt in to <a href="${notificationsUrl}" style="color:#6f003c;font-weight:600;text-decoration:none;">e-mail notifications</a> and we&rsquo;ll send your score after each match you tipped.</li>
-                      <li style="margin-bottom:10px;">There&rsquo;s a global, world-wide leaderboard everyone can climb &mdash; but if you&rsquo;d rather keep your tips private, you can opt out of the public ranking from your profile.</li>
-                      <li style="margin-bottom:0;">Playing with friends? <strong>Create your own private league</strong>, share the 6-character code, and you&rsquo;ll have your own little leaderboard. Your tips count once and score in every league you&rsquo;re part of.</li>
+                    <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:14px;">Get started in 3 steps</div>
+
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+                      <tr>
+                        <td valign="top" width="44" style="width:44px;padding-right:12px;">
+                          <div style="width:32px;height:32px;border-radius:50%;background:#16a34a;color:#ffffff;font-size:16px;font-weight:800;line-height:32px;text-align:center;">&#10003;</div>
+                        </td>
+                        <td valign="top" style="color:#1f2937;font-size:14px;line-height:1.5;">
+                          <div style="font-weight:700;color:#111827;">You&rsquo;re in</div>
+                          <div style="color:#6b7280;font-size:13px;">You just joined your first Pick&rsquo;em league &mdash; that part is done.</div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+                      <tr>
+                        <td valign="top" width="44" style="width:44px;padding-right:12px;">
+                          <div style="width:32px;height:32px;border-radius:50%;background:#d4a843;color:#1a1a1a;font-size:14px;font-weight:800;line-height:32px;text-align:center;">2</div>
+                        </td>
+                        <td valign="top" style="color:#1f2937;font-size:14px;line-height:1.5;">
+                          <div style="font-weight:700;color:#111827;">Predict the scores</div>
+                          <div style="color:#374151;font-size:13px;">
+                            <a href="${tipsUrl}" style="color:#6f003c;font-weight:600;text-decoration:none;">Fill in your tips</a>
+                            for the 48 group-stage matches. Each tip locks at kick-off. Earn
+                            <strong>4 pts</strong> for the exact score, <strong>1 pt</strong> for the right winner, <strong>0 pts</strong> otherwise.
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td valign="top" width="44" style="width:44px;padding-right:12px;">
+                          <div style="width:32px;height:32px;border-radius:50%;background:#d4a843;color:#1a1a1a;font-size:14px;font-weight:800;line-height:32px;text-align:center;">3</div>
+                        </td>
+                        <td valign="top" style="color:#1f2937;font-size:14px;line-height:1.5;">
+                          <div style="font-weight:700;color:#111827;">Climb the leaderboard</div>
+                          <div style="color:#374151;font-size:13px;">
+                            Race the world on the global ranking &mdash; and every private league you join
+                            keeps its own leaderboard for you and your friends.
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:8px 28px 4px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                  <td style="padding:18px 24px;">
+                    <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:10px;">Good to know</div>
+                    <ul style="margin:0;padding-left:20px;color:#1f2937;font-size:13px;line-height:1.6;">
+                      <li style="margin-bottom:8px;">It&rsquo;s just the group stage &mdash; once those 48 games are done, the knockout bracket plays itself out.</li>
+                      <li style="margin-bottom:8px;">Turn on <a href="${notificationsUrl}" style="color:#6f003c;font-weight:600;text-decoration:none;">e-mail notifications</a> to get your result after every match you tipped.</li>
+                      <li style="margin-bottom:8px;">Your name shows on the public leaderboard by default &mdash; you can hide it from your profile.</li>
+                      <li style="margin-bottom:0;">Playing in several leagues? Each tip counts once and scores in every league you&rsquo;re part of.</li>
                     </ul>
                   </td>
                 </tr>
