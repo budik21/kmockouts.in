@@ -21,9 +21,11 @@ interface MatchRow {
   home_name: string;
   home_short: string;
   home_cc: string;
+  home_fifa: number | null;
   away_name: string;
   away_short: string;
   away_cc: string;
+  away_fifa: number | null;
 }
 
 export interface TipMatch {
@@ -37,8 +39,8 @@ export interface TipMatch {
   venue: string;
   kickOff: string;
   status: string;
-  homeTeam: { name: string; shortName: string; countryCode: string };
-  awayTeam: { name: string; shortName: string; countryCode: string };
+  homeTeam: { name: string; shortName: string; countryCode: string; fifaRanking: number | null };
+  awayTeam: { name: string; shortName: string; countryCode: string; fifaRanking: number | null };
 }
 
 interface OwnedLeagueRow {
@@ -86,7 +88,9 @@ export default async function TipsPage({
       SELECT m.id, m.group_id, m.round, m.home_team_id, m.away_team_id,
         m.home_goals, m.away_goals, m.venue, m.kick_off, m.status,
         ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
-        at2.name as away_name, at2.short_name as away_short, at2.country_code as away_cc
+        ht.fifa_ranking as home_fifa,
+        at2.name as away_name, at2.short_name as away_short, at2.country_code as away_cc,
+        at2.fifa_ranking as away_fifa
       FROM match m
       JOIN team ht ON m.home_team_id = ht.id
       JOIN team at2 ON m.away_team_id = at2.id
@@ -132,8 +136,8 @@ export default async function TipsPage({
     venue: r.venue,
     kickOff: r.kick_off,
     status: r.status,
-    homeTeam: { name: r.home_name, shortName: r.home_short, countryCode: r.home_cc },
-    awayTeam: { name: r.away_name, shortName: r.away_short, countryCode: r.away_cc },
+    homeTeam: { name: r.home_name, shortName: r.home_short, countryCode: r.home_cc, fifaRanking: r.home_fifa },
+    awayTeam: { name: r.away_name, shortName: r.away_short, countryCode: r.away_cc, fifaRanking: r.away_fifa },
   }));
 
   const myLeagues: LeagueListItem[] = ownedRows.map((r) => ({

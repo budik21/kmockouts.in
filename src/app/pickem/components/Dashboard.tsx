@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { TipMatch } from '../tips/page';
+import { teamLabel } from '@/lib/team-label';
 
 interface TipData {
   homeGoals: number;
@@ -184,11 +185,11 @@ export default function Dashboard({ stats, tips, matches, tipsPublic, shareUrl, 
                     <span className="tipovacka-match-group">{match.groupId}</span>
                     <span className="tipovacka-match-team-labels">
                       <FlagIcon code={match.homeTeam.countryCode} />
-                      <span className="tipovacka-team-full">{match.homeTeam.name}</span>
-                      <span className="tipovacka-team-short">{match.homeTeam.shortName}</span>
+                      <span className="tipovacka-team-full">{teamLabel(match.homeTeam.name, match.homeTeam.fifaRanking)}</span>
+                      <span className="tipovacka-team-short">{teamLabel(match.homeTeam.shortName, match.homeTeam.fifaRanking)}</span>
                       <span className="tipovacka-match-vs">vs</span>
-                      <span className="tipovacka-team-full">{match.awayTeam.name}</span>
-                      <span className="tipovacka-team-short">{match.awayTeam.shortName}</span>
+                      <span className="tipovacka-team-full">{teamLabel(match.awayTeam.name, match.awayTeam.fifaRanking)}</span>
+                      <span className="tipovacka-team-short">{teamLabel(match.awayTeam.shortName, match.awayTeam.fifaRanking)}</span>
                       <FlagIcon code={match.awayTeam.countryCode} />
                     </span>
                   </div>

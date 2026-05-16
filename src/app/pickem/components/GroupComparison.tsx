@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { TipMatch } from '../tips/page';
+import { teamLabel } from '@/lib/team-label';
 
 interface TipData {
   homeGoals: number;
@@ -19,6 +20,7 @@ interface StandingRow {
   teamName: string;
   shortName: string;
   countryCode: string;
+  fifaRanking: number | null;
   played: number;
   wins: number;
   draws: number;
@@ -41,6 +43,7 @@ function buildStandings(
         teamName: m.homeTeam.name,
         shortName: m.homeTeam.shortName,
         countryCode: m.homeTeam.countryCode,
+        fifaRanking: m.homeTeam.fifaRanking,
         played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, pts: 0,
       });
     }
@@ -49,6 +52,7 @@ function buildStandings(
         teamName: m.awayTeam.name,
         shortName: m.awayTeam.shortName,
         countryCode: m.awayTeam.countryCode,
+        fifaRanking: m.awayTeam.fifaRanking,
         played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, pts: 0,
       });
     }
@@ -109,8 +113,8 @@ function StandingsTable({ rows, label }: { rows: StandingRow[]; label: string })
                 <td>{i + 1}</td>
                 <td>
                   <FlagIcon code={r.countryCode} />{' '}
-                  <span className="d-none d-sm-inline">{r.teamName}</span>
-                  <span className="d-inline d-sm-none">{r.shortName}</span>
+                  <span className="d-none d-sm-inline">{teamLabel(r.teamName, r.fifaRanking)}</span>
+                  <span className="d-inline d-sm-none">{teamLabel(r.shortName, r.fifaRanking)}</span>
                 </td>
                 <td className="text-center">{r.played}</td>
                 <td className="text-center">{r.wins}</td>
@@ -170,11 +174,11 @@ function MatchResults({
               <div className="tipovacka-match-header-row">
                 <span className="tipovacka-match-team-labels">
                   <FlagIcon code={m.homeTeam.countryCode} />
-                  <span className="tipovacka-team-full">{m.homeTeam.name}</span>
-                  <span className="tipovacka-team-short">{m.homeTeam.shortName}</span>
+                  <span className="tipovacka-team-full">{teamLabel(m.homeTeam.name, m.homeTeam.fifaRanking)}</span>
+                  <span className="tipovacka-team-short">{teamLabel(m.homeTeam.shortName, m.homeTeam.fifaRanking)}</span>
                   <span className="tipovacka-match-vs">vs</span>
-                  <span className="tipovacka-team-full">{m.awayTeam.name}</span>
-                  <span className="tipovacka-team-short">{m.awayTeam.shortName}</span>
+                  <span className="tipovacka-team-full">{teamLabel(m.awayTeam.name, m.awayTeam.fifaRanking)}</span>
+                  <span className="tipovacka-team-short">{teamLabel(m.awayTeam.shortName, m.awayTeam.fifaRanking)}</span>
                   <FlagIcon code={m.awayTeam.countryCode} />
                 </span>
               </div>

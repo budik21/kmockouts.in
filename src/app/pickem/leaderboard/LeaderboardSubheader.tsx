@@ -4,14 +4,17 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import TeamFlag from '@/app/components/TeamFlag';
 import LeaderboardMeWidget from './LeaderboardMeWidget';
+import { teamLabel } from '@/lib/team-label';
 
 export interface LastScoredMatch {
   homeName: string;
   homeShort: string;
   homeCode: string;
+  homeFifa: number | null;
   awayName: string;
   awayShort: string;
   awayCode: string;
+  awayFifa: number | null;
   homeGoals: number;
   awayGoals: number;
   kickOff: string;
@@ -53,13 +56,13 @@ export default function LeaderboardSubheader({ description, lastScored, currentU
             <span className="leaderboard-last-scored-label">Last scored match:</span>
             <span className="leaderboard-last-scored-match">
               <TeamFlag countryCode={lastScored.homeCode} />
-              <span className="leaderboard-last-scored-team-full">{lastScored.homeName}</span>
-              <span className="leaderboard-last-scored-team-short">{lastScored.homeShort}</span>
+              <span className="leaderboard-last-scored-team-full">{teamLabel(lastScored.homeName, lastScored.homeFifa)}</span>
+              <span className="leaderboard-last-scored-team-short">{teamLabel(lastScored.homeShort, lastScored.homeFifa)}</span>
               <span className="leaderboard-last-scored-score">
                 {lastScored.homeGoals} : {lastScored.awayGoals}
               </span>
-              <span className="leaderboard-last-scored-team-full">{lastScored.awayName}</span>
-              <span className="leaderboard-last-scored-team-short">{lastScored.awayShort}</span>
+              <span className="leaderboard-last-scored-team-full">{teamLabel(lastScored.awayName, lastScored.awayFifa)}</span>
+              <span className="leaderboard-last-scored-team-short">{teamLabel(lastScored.awayShort, lastScored.awayFifa)}</span>
               <TeamFlag countryCode={lastScored.awayCode} />
               <span className="leaderboard-last-scored-date">· {formatKickOff(lastScored.kickOff)}</span>
             </span>

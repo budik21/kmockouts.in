@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { TipMatch } from '../tips/page';
 import ArrowStepper from '@/app/components/ArrowStepper';
+import { teamLabel } from '@/lib/team-label';
 
 interface TipData {
   homeGoals: number;
@@ -148,9 +149,11 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
                     <span className="tipovacka-match-group">{match.groupId}</span>
                     <span className="tipovacka-match-team-labels">
                       <FlagIcon code={match.homeTeam.countryCode} />
-                      <span>{match.homeTeam.shortName}</span>
+                      <span className="tipovacka-team-full">{teamLabel(match.homeTeam.name, match.homeTeam.fifaRanking)}</span>
+                      <span className="tipovacka-team-short">{teamLabel(match.homeTeam.shortName, match.homeTeam.fifaRanking)}</span>
                       <span className="tipovacka-match-vs">vs</span>
-                      <span>{match.awayTeam.shortName}</span>
+                      <span className="tipovacka-team-full">{teamLabel(match.awayTeam.name, match.awayTeam.fifaRanking)}</span>
+                      <span className="tipovacka-team-short">{teamLabel(match.awayTeam.shortName, match.awayTeam.fifaRanking)}</span>
                       <FlagIcon code={match.awayTeam.countryCode} />
                     </span>
                     <span className="tipovacka-match-time">{formatTime(match.kickOff)}</span>

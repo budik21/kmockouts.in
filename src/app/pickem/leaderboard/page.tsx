@@ -59,9 +59,11 @@ interface LastScoredDbRow {
   home_name: string;
   home_short: string;
   home_code: string;
+  home_fifa: number | null;
   away_name: string;
   away_short: string;
   away_code: string;
+  away_fifa: number | null;
   home_goals: number;
   away_goals: number;
   kick_off: string;
@@ -134,7 +136,9 @@ export default async function LeaderboardPage() {
     `
     SELECT
       ht.name AS home_name, ht.short_name AS home_short, ht.country_code AS home_code,
+      ht.fifa_ranking AS home_fifa,
       at.name AS away_name, at.short_name AS away_short, at.country_code AS away_code,
+      at.fifa_ranking AS away_fifa,
       m.home_goals, m.away_goals, m.kick_off
     FROM match m
     JOIN team ht ON ht.id = m.home_team_id
@@ -154,9 +158,11 @@ export default async function LeaderboardPage() {
         homeName: lastScoredRows[0].home_name,
         homeShort: lastScoredRows[0].home_short,
         homeCode: lastScoredRows[0].home_code,
+        homeFifa: lastScoredRows[0].home_fifa,
         awayName: lastScoredRows[0].away_name,
         awayShort: lastScoredRows[0].away_short,
         awayCode: lastScoredRows[0].away_code,
+        awayFifa: lastScoredRows[0].away_fifa,
         homeGoals: lastScoredRows[0].home_goals,
         awayGoals: lastScoredRows[0].away_goals,
         kickOff: lastScoredRows[0].kick_off,
