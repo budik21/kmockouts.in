@@ -119,15 +119,17 @@ export default async function LeaguePage({ params }: Props) {
   );
   const memberCount = parseInt(memberCountRow[0]?.cnt ?? '0', 10);
 
-  // Disambiguate same-name members within this league. The raw e-mail stays
-  // server-side; only the resolved displayName is sent to the client table.
+  // Disambiguate same-name members within this league. Raw e-mails stay
+  // server-side; only the bare name + suffix fragment ship to the client,
+  // where the suffix is rendered as a muted "(…)" trailer.
   const disambiguated = disambiguateNames(
     standings.map((s) => ({ ...s, name: s.user_name, email: s.user_email })),
   );
 
   const rows: LeagueRow[] = disambiguated.map((s) => ({
     userId: s.user_id,
-    name: s.displayName,
+    name: s.name,
+    nameSuffix: s.nameSuffix,
     shareToken: s.share_token,
     totalTips: s.total_tips,
     exact: s.exact_count,

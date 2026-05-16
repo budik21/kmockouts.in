@@ -4,21 +4,23 @@ export interface DisambiguatableUser {
 }
 
 /**
- * Append a disambiguator suffix to users who share a name on the same
- * leaderboard. For each input, returns the object with an added `displayName`:
+ * Resolve a disambiguator suffix for users who share a name on the same
+ * leaderboard. For each input, returns the object plus two fields:
  *
- *   - "Name"                 — the name is unique within the set
- *   - "Name | domain.tld"    — another user has the same name, but a different
- *                              email domain disambiguates this user
- *   - "Name | local-part"    — even the email domain repeats within the
- *                              name collision, so the part before "@" is used
+ *   - `nameSuffix` — the bare email fragment that distinguishes this row from
+ *     same-name rivals, or `null` if the name is unique within the set. The
+ *     suffix is the email domain when it alone disambiguates, otherwise the
+ *     local-part (text before "@"). Callers wrap and style it on render —
+ *     typically as a smaller muted "(suffix)" trailing the name.
+ *   - `displayName` — `name` with the suffix inlined in parentheses, suitable
+ *     for plain-text contexts (title attributes, aria-labels, sort keys).
  *
  * Full e-mail addresses are never returned — only the smallest distinguishing
  * fragment. Empty/malformed e-mails on a colliding row fall back to bare name.
  */
 export function disambiguateNames<T extends DisambiguatableUser>(
   users: T[],
-): (T & { displayName: string })[] {
+): (T & { nameSuffix: string | null; displayName: string })[] {
   const byName = new Map<string, T[]>();
   for (const u of users) {
     const key = u.name.trim();
@@ -29,12 +31,12 @@ export function disambiguateNames<T extends DisambiguatableUser>(
 
   return users.map((u) => {
     const group = byName.get(u.name.trim()) ?? [u];
-    if (group.length <= 1) return { ...u, displayName: u.name };
+    if (group.length <= 1) return { ...u, nameSuffix: null, displayName: u.name };
 
     const email = (u.email ?? '').trim();
     const atIdx = email.lastIndexOf('@');
     if (atIdx < 1 || atIdx === email.length - 1) {
-      return { ...u, displayName: u.name };
+      return { ...u, nameSuffix: null, displayName: u.name };
     }
     const domain = email.slice(atIdx + 1);
     const localPart = email.slice(0, atIdx);
@@ -46,6 +48,6 @@ export function disambiguateNames<T extends DisambiguatableUser>(
     }).length;
 
     const suffix = sameDomainCount > 1 ? localPart : domain;
-    return { ...u, displayName: `${u.name} | ${suffix}` };
+    return { ...u, nameSuffix: suffix, displayName: `${u.name} (${suffix})` };
   });
 }

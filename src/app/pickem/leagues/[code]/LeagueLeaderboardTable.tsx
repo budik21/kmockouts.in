@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 export interface LeagueRow {
   userId: number;
   name: string;
+  nameSuffix: string | null;
   shareToken: string | null;
   totalTips: number;
   exact: number;
@@ -78,6 +79,9 @@ export default function LeagueLeaderboardTable({ rows, myUserId }: Props) {
                     </Link>
                   ) : (
                     r.name
+                  )}
+                  {r.nameSuffix && (
+                    <span className="leaderboard-name-suffix"> ({r.nameSuffix})</span>
                   )}
                 </td>
                 <td className="text-center leaderboard-col-hide-mobile">{r.totalTips}</td>

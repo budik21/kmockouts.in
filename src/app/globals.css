@@ -5455,6 +5455,14 @@ a.ranking-team-name:hover {
 /* Column widths — rank narrow, name flexible, stat cols equal, pts slightly wider, link tiny */
 .leaderboard-col-rank  { width: 3rem; }
 .leaderboard-col-name  { /* flex */ }
+/* Email-domain or local-part suffix appended to same-name rows on a
+   leaderboard. Visually de-emphasised — smaller, muted, normal weight. */
+.leaderboard-name-suffix {
+  color: var(--wc-text-muted);
+  font-size: 0.78em;
+  font-weight: 400;
+  white-space: nowrap;
+}
 .leaderboard-col-stat  { width: 9rem; }
 .leaderboard-col-pts   { width: 9rem; }
 .leaderboard-col-link  { width: 2.5rem; }

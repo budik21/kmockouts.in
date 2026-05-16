@@ -35,6 +35,7 @@ export const metadata: Metadata = {
 export interface LeaderboardRow {
   shareToken: string;
   name: string;
+  nameSuffix: string | null;
   totalTips: number;
   exact: number;
   outcome: number;
@@ -91,7 +92,8 @@ export default async function LeaderboardPage() {
   );
 
   // Disambiguate same-name users with email-domain (or local-part) suffix.
-  // Raw e-mails stay server-side; only the resolved displayName ships to the client.
+  // Raw e-mails stay server-side; only the bare name + suffix fragment ship to
+  // the client, where the suffix is rendered as a muted "(…)" trailer.
   const disambiguated = disambiguateNames(rows);
 
   const data: LeaderboardRow[] = disambiguated.map((r) => {
@@ -99,7 +101,8 @@ export default async function LeaderboardPage() {
     const outcome = parseInt(r.outcome, 10);
     return {
       shareToken: r.share_token,
-      name: r.displayName,
+      name: r.name,
+      nameSuffix: r.nameSuffix,
       totalTips: parseInt(r.total_tips, 10),
       exact,
       outcome,
@@ -117,7 +120,10 @@ export default async function LeaderboardPage() {
       if (b.exact !== a.exact) return b.exact - a.exact;
       if (b.outcome !== a.outcome) return b.outcome - a.outcome;
       if (a.totalTips !== b.totalTips) return a.totalTips - b.totalTips;
-      return a.name.localeCompare(b.name);
+      return (
+        a.name.localeCompare(b.name) ||
+        (a.nameSuffix ?? '').localeCompare(b.nameSuffix ?? '')
+      );
     });
     const idx = sorted.findIndex((r) => r.shareToken === currentUserToken);
     if (idx === -1) return null;
