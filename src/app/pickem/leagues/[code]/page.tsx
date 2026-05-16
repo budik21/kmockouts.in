@@ -9,6 +9,7 @@ import type { Metadata } from 'next';
 import { SITE_URL } from '@/lib/seo';
 import LeagueLeaderboardTable, { type LeagueRow } from './LeagueLeaderboardTable';
 import LeagueMembershipActions from './LeagueMembershipActions';
+import { disambiguateNames } from '@/lib/name-disambiguate';
 
 // League pages are public but per-league dynamic — never pre-rendered with
 // stale data; data still cached via tag-based unstable_cache and busted
@@ -30,6 +31,7 @@ interface LeagueRowDb {
 interface StandingDb {
   user_id: number;
   user_name: string;
+  user_email: string;
   share_token: string | null;
   total_tips: number;
   exact_count: number;
@@ -82,7 +84,7 @@ export default async function LeaguePage({ params }: Props) {
   if (!league) notFound();
 
   const standings = await cachedQuery<StandingDb>(
-    `SELECT s.user_id, u.name AS user_name, u.share_token,
+    `SELECT s.user_id, u.name AS user_name, u.email AS user_email, u.share_token,
             s.total_tips, s.exact_count, s.outcome_count, s.wrong_count, s.pending_count,
             s.total_points, s.rank
        FROM pickem_league_standings s
@@ -117,9 +119,15 @@ export default async function LeaguePage({ params }: Props) {
   );
   const memberCount = parseInt(memberCountRow[0]?.cnt ?? '0', 10);
 
-  const rows: LeagueRow[] = standings.map((s) => ({
+  // Disambiguate same-name members within this league. The raw e-mail stays
+  // server-side; only the resolved displayName is sent to the client table.
+  const disambiguated = disambiguateNames(
+    standings.map((s) => ({ ...s, name: s.user_name, email: s.user_email })),
+  );
+
+  const rows: LeagueRow[] = disambiguated.map((s) => ({
     userId: s.user_id,
-    name: s.user_name,
+    name: s.displayName,
     shareToken: s.share_token,
     totalTips: s.total_tips,
     exact: s.exact_count,

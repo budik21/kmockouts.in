@@ -30,6 +30,10 @@ export default async function MePage() {
       <div className="me-hero">
         <h1 className="me-hero-title">Hi, {name}!</h1>
         <p className="me-hero-subtitle">Manage your Knockouts.in profile.</p>
+        <div className="me-hero-email" aria-label="Signed-in e-mail address">
+          <span className="me-hero-email-label">Signed in as</span>
+          <span className="me-hero-email-value">{session.user.email}</span>
+        </div>
       </div>
 
       <div className="row g-4 me-tiles">

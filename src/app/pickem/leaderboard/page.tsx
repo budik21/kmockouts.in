@@ -7,6 +7,7 @@ import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubhead
 import LeaderboardMeWidget from './LeaderboardMeWidget';
 import { SITE_URL } from '@/lib/seo';
 import { auth } from '@/lib/auth';
+import { disambiguateNames } from '@/lib/name-disambiguate';
 
 // Opt out of build-time static prerendering. Without this, Next.js renders
 // the page during `next build` using whatever `tip.points` values exist then
@@ -45,6 +46,7 @@ export interface LeaderboardRow {
 interface DbRow {
   share_token: string;
   name: string;
+  email: string;
   total_tips: string;
   exact: string;
   outcome: string;
@@ -73,6 +75,7 @@ export default async function LeaderboardPage() {
     SELECT
       u.share_token,
       u.name,
+      u.email,
       COUNT(t.id)                                           AS total_tips,
       COUNT(t.id) FILTER (WHERE t.points = 4)               AS exact,
       COUNT(t.id) FILTER (WHERE t.points = 1)               AS outcome,
@@ -81,18 +84,22 @@ export default async function LeaderboardPage() {
     FROM tipster_user u
     LEFT JOIN tip t ON t.user_id = u.id
     WHERE u.tips_public = true
-    GROUP BY u.id, u.share_token, u.name
+    GROUP BY u.id, u.share_token, u.name, u.email
   `,
     [],
     [LEADERBOARD_TAG],
   );
 
-  const data: LeaderboardRow[] = rows.map((r) => {
+  // Disambiguate same-name users with email-domain (or local-part) suffix.
+  // Raw e-mails stay server-side; only the resolved displayName ships to the client.
+  const disambiguated = disambiguateNames(rows);
+
+  const data: LeaderboardRow[] = disambiguated.map((r) => {
     const exact = parseInt(r.exact, 10);
     const outcome = parseInt(r.outcome, 10);
     return {
       shareToken: r.share_token,
-      name: r.name,
+      name: r.displayName,
       totalTips: parseInt(r.total_tips, 10),
       exact,
       outcome,
