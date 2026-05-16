@@ -5339,10 +5339,12 @@ a.ranking-team-name:hover {
   }
 }
 
-/* Settings tab: stack on narrow, two columns on wide.
-   Headings naturally align (both are the first child of their column).
-   Descriptions get a shared min-height so the controls underneath line up
-   across columns even when one description wraps to two lines. */
+/* Settings tab: stack on narrow; on wide, lay out as a single 2-column ×
+   3-row grid so headings, descriptions, and bodies stay locked on the same
+   horizontal lines across both columns. Each .tipovacka-settings-col uses
+   display: contents so its children become direct grid items of the
+   parent. Row heights auto-size to the taller column, so the boxes start
+   at the same Y even when one description wraps to two lines. */
 .tipovacka-settings-col + .tipovacka-settings-col {
   margin-top: 1.5rem;
 }
@@ -5350,14 +5352,28 @@ a.ranking-team-name:hover {
   .tipovacka-settings {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
     column-gap: 2rem;
-    align-items: start;
   }
   .tipovacka-settings-col {
-    margin-top: 0;
+    display: contents;
   }
-  .tipovacka-settings-col > p {
-    min-height: 3em;
+  .tipovacka-settings-col:first-child > * {
+    grid-column: 1;
+  }
+  .tipovacka-settings-col:last-child > * {
+    grid-column: 2;
+  }
+  .tipovacka-settings-col > h5 {
+    grid-row: 1;
+    margin-bottom: 0;
+  }
+  .tipovacka-settings-col > p:first-of-type {
+    grid-row: 2;
+  }
+  .tipovacka-settings-col > .me-notif-list,
+  .tipovacka-settings-col > .tipovacka-share-section {
+    grid-row: 3;
   }
 }
 
