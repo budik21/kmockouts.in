@@ -181,32 +181,6 @@ export default function PredictionsApp({
         </div>
       </div>
 
-      {/* How-it-works strip — always visible above the tabs */}
-      <div className="tipovacka-howto-banner">
-        <div className="container">
-          <div className="tipovacka-howto-strip">
-            <span className="tipovacka-howto-intro">How it works</span>
-            <span className="tipovacka-howto-step tipovacka-howto-step-done">
-              <span className="tipovacka-howto-num" aria-hidden="true">&#10003;</span>
-              <span>Joined</span>
-            </span>
-            <span className="tipovacka-howto-step">
-              <span className="tipovacka-howto-num" aria-hidden="true">2</span>
-              <span>
-                <strong>Predict scores</strong>
-                <small> &middot; 4 pts exact &middot; 1 pt for winner</small>
-              </span>
-            </span>
-            <span className="tipovacka-howto-step">
-              <span className="tipovacka-howto-num" aria-hidden="true">3</span>
-              <span>
-                <strong>Climb the leaderboard</strong>
-              </span>
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Tabs — Dashboard is first */}
       <div className="tipovacka-tabs">
         <div className="container">

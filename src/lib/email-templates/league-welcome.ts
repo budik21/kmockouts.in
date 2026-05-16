@@ -4,6 +4,8 @@ const PAYPAL_BUTTON_ID = 'KL6HYXE53XDTG';
 
 export interface LeagueWelcomeEmailData {
   userName: string;
+  leagueName: string;
+  leagueCode: string;
 }
 
 interface TemplateOutput {
@@ -23,11 +25,14 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
   const subject = "Welcome to World Cup 2026 Pick'em game!";
 
   const tipsUrl = `${SITE_URL}/pickem/tips`;
+  const leaguesUrl = `${SITE_URL}/pickem/tips?tab=leagues`;
   const notificationsUrl = `${SITE_URL}/me/notifications`;
   const homeUrl = SITE_URL;
   const paypalUrl = `https://www.paypal.com/donate/?hosted_button_id=${PAYPAL_BUTTON_ID}`;
 
   const firstName = (data.userName || '').trim().split(/\s+/)[0] || 'there';
+  const leagueName = (data.leagueName || '').trim();
+  const leagueCode = (data.leagueCode || '').trim().toUpperCase();
 
   const html = `
 <!DOCTYPE html>
@@ -74,8 +79,12 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
                           <div style="width:32px;height:32px;border-radius:50%;background:#16a34a;color:#ffffff;font-size:16px;font-weight:800;line-height:32px;text-align:center;">&#10003;</div>
                         </td>
                         <td valign="top" style="color:#1f2937;font-size:14px;line-height:1.5;">
-                          <div style="font-weight:700;color:#111827;">You&rsquo;re in</div>
-                          <div style="color:#6b7280;font-size:13px;">You just joined your first Pick&rsquo;em league &mdash; that part is done.</div>
+                          <div style="font-weight:700;color:#111827;">You&rsquo;re in: ${esc(leagueName)}</div>
+                          <div style="color:#374151;font-size:13px;">
+                            Joined via code
+                            <span style="display:inline-block;background:#1f2937;color:#f9fafb;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12px;font-weight:700;letter-spacing:0.08em;padding:2px 8px;border-radius:4px;vertical-align:1px;">${esc(leagueCode)}</span>
+                            &mdash; share that with friends to pull them into the same standings.
+                          </div>
                         </td>
                       </tr>
                     </table>
@@ -127,7 +136,8 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
                       <li style="margin-bottom:8px;">It&rsquo;s just the group stage &mdash; once those 48 games are done, the knockout bracket plays itself out.</li>
                       <li style="margin-bottom:8px;">Turn on <a href="${notificationsUrl}" style="color:#6f003c;font-weight:600;text-decoration:none;">e-mail notifications</a> to get your result after every match you tipped.</li>
                       <li style="margin-bottom:8px;">Your name shows on the public leaderboard by default &mdash; you can hide it from your profile.</li>
-                      <li style="margin-bottom:0;">Playing in several leagues? Each tip counts once and scores in every league you&rsquo;re part of.</li>
+                      <li style="margin-bottom:8px;">Playing in several leagues? Each tip counts once and scores in every league you&rsquo;re part of.</li>
+                      <li style="margin-bottom:0;">Want your own league? On the <a href="${leaguesUrl}" style="color:#6f003c;font-weight:600;text-decoration:none;">Leagues tab</a> in Pick&rsquo;em, hit <strong>Create</strong> &mdash; you can run up to <strong>3</strong> of your own and invite friends with a 6-char code or link.</li>
                     </ul>
                   </td>
                 </tr>
@@ -148,7 +158,7 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
               <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e5e7eb;">
                 <tr>
                   <td align="center" style="padding-top:26px;">
-                    <div style="font-size:34px;line-height:1;margin-bottom:8px;">&#128202;</div>
+                    <div style="font-size:34px;line-height:1;margin-bottom:8px;">&#128302;</div>
                     <h2 style="font-size:18px;margin:0 0 10px;color:#111827;">More than just picks</h2>
                     <p style="margin:0 auto 14px;max-width:480px;color:#374151;font-size:14px;line-height:1.6;">
                       Once the group stage gets going, knockouts.in keeps live
@@ -180,7 +190,7 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
 
           <tr>
             <td style="background:#f9fafb;padding:14px 28px;color:#6b7280;font-size:12px;text-align:center;border-top:1px solid #e5e7eb;">
-              You&rsquo;re receiving this once because you just joined your first Pick&rsquo;em league.
+              You&rsquo;re receiving this once because you just joined your first Knockouts.in Pick&rsquo;em league.
               <br/>
               <a href="${notificationsUrl}" style="color:#6b7280;text-decoration:underline;">Notification settings</a>
               &nbsp;&middot;&nbsp;

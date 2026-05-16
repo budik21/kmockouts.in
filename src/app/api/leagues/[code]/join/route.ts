@@ -66,7 +66,10 @@ export async function POST(req: NextRequest, ctx: Params) {
   await recalculateLeagueStandings(league.id);
   revalidateTag(LEAGUES_TAG, 'max');
 
-  await sendLeagueWelcomeIfFirstJoin(session.tipsterId);
+  await sendLeagueWelcomeIfFirstJoin(session.tipsterId, {
+    name: league.name,
+    code,
+  });
 
   return NextResponse.json({ success: true, alreadyMember: false });
 }

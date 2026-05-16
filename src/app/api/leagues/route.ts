@@ -92,7 +92,10 @@ export async function POST(req: NextRequest) {
     await recalculateLeagueStandings(inserted.id);
     revalidateTag(LEAGUES_TAG, 'max');
 
-    await sendLeagueWelcomeIfFirstJoin(session.tipsterId);
+    await sendLeagueWelcomeIfFirstJoin(session.tipsterId, {
+      name: validation.display!,
+      code,
+    });
 
     inviteHash = createInviteHash(code, validation.display!);
     return NextResponse.json(

@@ -11,13 +11,24 @@ interface CountRow {
   cnt: string;
 }
 
+export interface FirstJoinLeague {
+  name: string;
+  code: string;
+}
+
 /**
  * Send a one-time welcome e-mail when a user becomes a member of their FIRST
  * pick'em league — whether they created one, used an invite link, or typed a
  * code. Detection: SELECT COUNT(*) FROM pickem_league_member WHERE user_id=?
  * == 1 right after the INSERT. Fire-and-forget — never throws.
+ *
+ * The league info (name + 6-char code) is surfaced in the first step of the
+ * e-mail so the user sees which league they just landed in.
  */
-export async function sendLeagueWelcomeIfFirstJoin(userId: number): Promise<void> {
+export async function sendLeagueWelcomeIfFirstJoin(
+  userId: number,
+  league: FirstJoinLeague,
+): Promise<void> {
   try {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
@@ -37,7 +48,11 @@ export async function sendLeagueWelcomeIfFirstJoin(userId: number): Promise<void
 
     const from = process.env.RESEND_FROM_EMAIL ?? 'Knockouts.in <onboarding@resend.dev>';
     const resend = new Resend(apiKey);
-    const { subject, html } = buildLeagueWelcomeEmail({ userName: user.name ?? '' });
+    const { subject, html } = buildLeagueWelcomeEmail({
+      userName: user.name ?? '',
+      leagueName: league.name,
+      leagueCode: league.code,
+    });
 
     await resend.emails.send({
       from,
