@@ -149,7 +149,8 @@ export default function LeaguesView({ myLeagues, participating, isAdmin }: Props
   return (
     <div className="leagues-view">
       <div className="leagues-toolbar">
-        <div className="leagues-tabs" role="tablist">
+        <div className="leagues-tabs" data-active={tab} role="tablist">
+          <span className="leagues-tabs-thumb" aria-hidden="true" />
           <button
             type="button"
             role="tab"

@@ -236,16 +236,20 @@ export async function initializeSchema(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_ai_team_article_cache_group ON ai_team_article_cache(group_id);
 
-    -- Tipovacka: registered users
+    -- Tipovacka: registered users.
+    -- Note: tips_public defaults to TRUE so new players land on the global
+    -- leaderboard out of the box. Existing rows are left unchanged — anyone
+    -- who explicitly opted out keeps their setting.
     CREATE TABLE IF NOT EXISTS tipster_user (
       id            SERIAL PRIMARY KEY,
       email         TEXT NOT NULL UNIQUE,
       name          TEXT NOT NULL DEFAULT '',
       image         TEXT NOT NULL DEFAULT '',
       share_token   TEXT UNIQUE,
-      tips_public   BOOLEAN NOT NULL DEFAULT false,
+      tips_public   BOOLEAN NOT NULL DEFAULT TRUE,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    ALTER TABLE tipster_user ALTER COLUMN tips_public SET DEFAULT TRUE;
 
     CREATE INDEX IF NOT EXISTS idx_tipster_user_share ON tipster_user(share_token);
 

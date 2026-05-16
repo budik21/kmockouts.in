@@ -17,8 +17,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user.email) {
         const token = generateShareToken(user.name || user.email.split('@')[0]);
         await query(
-          `INSERT INTO tipster_user (email, name, image, share_token)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO tipster_user (email, name, image, share_token, tips_public)
+           VALUES ($1, $2, $3, $4, TRUE)
            ON CONFLICT (email) DO UPDATE SET
              name = EXCLUDED.name,
              image = EXCLUDED.image,
