@@ -5282,6 +5282,22 @@ a.ranking-team-name:hover {
   }
 }
 
+/* Settings tab: stack on narrow, two columns on wide */
+.tipovacka-settings-col + .tipovacka-settings-col {
+  margin-top: 1.5rem;
+}
+@media (min-width: 992px) {
+  .tipovacka-settings {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+  .tipovacka-settings-col + .tipovacka-settings-col {
+    margin-top: 0;
+  }
+}
+
 /* CTA button (dashboard → predictions) */
 .tipovacka-cta-btn {
   background: transparent;

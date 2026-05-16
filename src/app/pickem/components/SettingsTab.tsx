@@ -57,7 +57,39 @@ export default function SettingsTab({ initialNotify, tipsPublic, shareUrl, onTog
 
   return (
     <div className="tipovacka-settings">
-      <section className="mb-4">
+      <section className="tipovacka-settings-col">
+        <h5>Notifications</h5>
+        <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>
+          Choose which e-mails you&apos;d like to receive after your tips are scored.
+          All notifications are off by default.
+        </p>
+        <div className="me-notif-list">
+          <NotifyRow
+            title="🎯 Exact score"
+            desc="E-mail me when I guess the exact final score (+4 points)."
+            checked={notify.exactScore}
+            disabled={savingNotify === 'exactScore'}
+            onChange={() => toggleNotify('exactScore')}
+          />
+          <NotifyRow
+            title="✅ Correct winner"
+            desc="E-mail me when I guess the correct outcome but not the exact score (+1 point)."
+            checked={notify.winnerOnly}
+            disabled={savingNotify === 'winnerOnly'}
+            onChange={() => toggleNotify('winnerOnly')}
+          />
+          <NotifyRow
+            title="😢 Wrong tip"
+            desc="E-mail me when my prediction is wrong (0 points)."
+            checked={notify.wrongTip}
+            disabled={savingNotify === 'wrongTip'}
+            onChange={() => toggleNotify('wrongTip')}
+          />
+        </div>
+        {notifyError && <p className="text-danger mt-3">{notifyError}</p>}
+      </section>
+
+      <section className="tipovacka-settings-col">
         <h5>Sharing</h5>
         <div className="tipovacka-share-section">
           <div className="d-flex align-items-center gap-3 mb-2">
@@ -90,38 +122,6 @@ export default function SettingsTab({ initialNotify, tipsPublic, shareUrl, onTog
             </div>
           )}
         </div>
-      </section>
-
-      <section>
-        <h5>Notifications</h5>
-        <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>
-          Choose which e-mails you&apos;d like to receive after your tips are scored.
-          All notifications are off by default.
-        </p>
-        <div className="me-notif-list">
-          <NotifyRow
-            title="🎯 Exact score"
-            desc="E-mail me when I guess the exact final score (+4 points)."
-            checked={notify.exactScore}
-            disabled={savingNotify === 'exactScore'}
-            onChange={() => toggleNotify('exactScore')}
-          />
-          <NotifyRow
-            title="✅ Correct winner"
-            desc="E-mail me when I guess the correct outcome but not the exact score (+1 point)."
-            checked={notify.winnerOnly}
-            disabled={savingNotify === 'winnerOnly'}
-            onChange={() => toggleNotify('winnerOnly')}
-          />
-          <NotifyRow
-            title="😢 Wrong tip"
-            desc="E-mail me when my prediction is wrong (0 points)."
-            checked={notify.wrongTip}
-            disabled={savingNotify === 'wrongTip'}
-            onChange={() => toggleNotify('wrongTip')}
-          />
-        </div>
-        {notifyError && <p className="text-danger mt-3">{notifyError}</p>}
       </section>
     </div>
   );

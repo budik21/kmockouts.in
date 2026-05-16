@@ -236,10 +236,16 @@ export async function initializeSchema(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_ai_team_article_cache_group ON ai_team_article_cache(group_id);
 
+    -- One-shot data migration bookkeeping (each migration runs at most once).
+    CREATE TABLE IF NOT EXISTS data_migration (
+      name        TEXT PRIMARY KEY,
+      applied_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     -- Tipovacka: registered users.
-    -- Note: tips_public defaults to TRUE so new players land on the global
-    -- leaderboard out of the box. Existing rows are left unchanged — anyone
-    -- who explicitly opted out keeps their setting.
+    -- tips_public defaults to TRUE so new players land on the global leaderboard
+    -- out of the box. Pre-existing private rows were flipped once via the
+    -- 'tips_public_default_2026_05_16' data migration below.
     CREATE TABLE IF NOT EXISTS tipster_user (
       id            SERIAL PRIMARY KEY,
       email         TEXT NOT NULL UNIQUE,
@@ -364,6 +370,19 @@ export async function initializeSchema(): Promise<void> {
   await pool.query(`
     DELETE FROM probability_cache WHERE group_id IN ('A','B','D','F','I','K')
       AND EXISTS (SELECT 1 FROM team WHERE id IN (4,6,16,23,35,42) AND is_placeholder = false AND short_name IN ('CZE','BIH','TUR','SWE','IRQ','COD'));
+  `);
+
+  // Flip pre-existing accounts to public once. New defaults make all signups
+  // public; this catches accounts created before that change. Guarded by
+  // data_migration so later opt-outs won't be re-flipped on subsequent deploys.
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM data_migration WHERE name = 'tips_public_default_2026_05_16') THEN
+        UPDATE tipster_user SET tips_public = TRUE WHERE tips_public = FALSE;
+        INSERT INTO data_migration (name) VALUES ('tips_public_default_2026_05_16');
+      END IF;
+    END $$;
   `);
 }
 
