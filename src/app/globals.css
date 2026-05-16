@@ -4987,12 +4987,13 @@ a.ranking-team-name:hover {
 }
 .tipovacka-score-points .tipovacka-score-card-value { color: var(--wc-accent); }
 
-/* Toggle switch */
+/* Toggle switch — dimensions match .ios-toggle so user-facing toggles look uniform */
 .tipovacka-toggle {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 52px;
+  height: 30px;
+  flex-shrink: 0;
 }
 
 .tipovacka-toggle input {
@@ -5006,17 +5007,17 @@ a.ranking-team-name:hover {
   cursor: pointer;
   inset: 0;
   background: #8a8a8a;
-  border-radius: 24px;
+  border-radius: 30px;
   transition: background 0.2s ease;
 }
 
 .tipovacka-toggle-slider::before {
   content: '';
   position: absolute;
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
+  height: 26px;
+  width: 26px;
+  left: 2px;
+  top: 2px;
   background: #fff;
   border-radius: 50%;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
@@ -5028,7 +5029,7 @@ a.ranking-team-name:hover {
 }
 
 .tipovacka-toggle input:checked + .tipovacka-toggle-slider::before {
-  transform: translateX(20px);
+  transform: translateX(22px);
 }
 
 /* Share URL */
