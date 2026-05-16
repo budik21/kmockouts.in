@@ -91,6 +91,10 @@ export default function SettingsTab({ initialNotify, tipsPublic, shareUrl, onTog
 
       <section className="tipovacka-settings-col">
         <h5>Sharing</h5>
+        <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>
+          Turning this off only hides your predictions from the global leaderboard.
+          Members of any league you join can still see your tips.
+        </p>
         <div className="tipovacka-share-section">
           <div className="d-flex align-items-center gap-3 mb-2">
             <label className="tipovacka-toggle">
