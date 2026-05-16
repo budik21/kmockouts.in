@@ -6030,16 +6030,20 @@ a.ranking-team-name:hover {
   margin-bottom: 1.25rem;
 }
 /* Pill-style segmented toggle with a sliding gold thumb that animates
-   between the two options. The two buttons share equal width (flex:1) so
-   the thumb can be a simple 50%-wide block that translates 0% / 100%. */
+   between the two options. inline-grid with `1fr 1fr` makes both columns
+   equal-width and sized to the wider label so the shorter label can never
+   overflow its half. The thumb is a simple 50%-wide block that translates
+   0% / 100% — its width therefore matches one column exactly. */
 .leagues-tabs {
   position: relative;
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);
   border-radius: 999px;
   padding: 4px;
   isolation: isolate;
+  max-width: 100%;
 }
 .leagues-tabs-thumb {
   position: absolute;
@@ -6060,8 +6064,6 @@ a.ranking-team-name:hover {
 .leagues-tab {
   position: relative;
   z-index: 1;
-  flex: 1 1 0;
-  min-width: 0;
   background: transparent;
   border: 0;
   color: var(--wc-text-muted);
