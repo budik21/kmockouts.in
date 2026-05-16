@@ -5339,7 +5339,10 @@ a.ranking-team-name:hover {
   }
 }
 
-/* Settings tab: stack on narrow, two columns with aligned rows on wide */
+/* Settings tab: stack on narrow, two columns on wide.
+   Headings naturally align (both are the first child of their column).
+   Descriptions get a shared min-height so the controls underneath line up
+   across columns even when one description wraps to two lines. */
 .tipovacka-settings-col + .tipovacka-settings-col {
   margin-top: 1.5rem;
 }
@@ -5347,16 +5350,14 @@ a.ranking-team-name:hover {
   .tipovacka-settings {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr;
     column-gap: 2rem;
     align-items: start;
   }
   .tipovacka-settings-col {
-    display: grid;
-    grid-template-rows: subgrid;
-    grid-row: span 3;
-    row-gap: 0;
     margin-top: 0;
+  }
+  .tipovacka-settings-col > p {
+    min-height: 3em;
   }
 }
 
