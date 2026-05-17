@@ -64,8 +64,8 @@ interface NotifyPrefsRow {
   notify_wrong_tip: boolean;
 }
 
-type Tab = 'dashboard' | 'predictions' | 'groups' | 'leagues' | 'settings';
-const VALID_TABS: Tab[] = ['dashboard', 'predictions', 'groups', 'leagues', 'settings'];
+type Tab = 'predictions' | 'groups' | 'leagues' | 'settings';
+const VALID_TABS: Tab[] = ['predictions', 'groups', 'leagues', 'settings'];
 
 export default async function TipsPage({
   searchParams,
@@ -89,7 +89,7 @@ export default async function TipsPage({
 
   const myUserId = session.tipsterId;
 
-  const [rows, tipCountRow, ownedRows, memberRows, notifyRow] = await Promise.all([
+  const [rows, ownedRows, memberRows, notifyRow] = await Promise.all([
     query<MatchRow>(`
       SELECT m.id, m.group_id, m.round, m.home_team_id, m.away_team_id,
         m.home_goals, m.away_goals, m.venue, m.kick_off, m.status,
@@ -102,10 +102,6 @@ export default async function TipsPage({
       JOIN team at2 ON m.away_team_id = at2.id
       ORDER BY m.kick_off, m.group_id, m.id
     `),
-    queryOne<{ cnt: string }>(
-      'SELECT COUNT(*) as cnt FROM tip WHERE user_id = $1',
-      [myUserId],
-    ),
     query<OwnedLeagueRow>(
       `SELECT l.code, l.name,
               (SELECT COUNT(*) FROM pickem_league_member m WHERE m.league_id = l.id)::text AS member_count,
@@ -132,8 +128,6 @@ export default async function TipsPage({
       [myUserId],
     ),
   ]);
-
-  const hasTips = parseInt(tipCountRow?.cnt || '0') > 0;
 
   const matches: TipMatch[] = rows.map((r) => ({
     id: r.id,
@@ -178,7 +172,6 @@ export default async function TipsPage({
       userName={session.user?.name || ''}
       shareToken={session.shareToken || ''}
       tipsPublic={session.tipsPublic || false}
-      isReturningUser={hasTips}
       myLeagues={myLeagues}
       participatingLeagues={participatingLeagues}
       isAdmin={!!session.isAdmin}

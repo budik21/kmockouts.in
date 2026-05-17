@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { signOut } from 'next-auth/react';
 import type { TipMatch } from '../tips/page';
 import TipEditor from './TipEditor';
-import Dashboard from './Dashboard';
 import GroupComparison from './GroupComparison';
 import LeaguesView, { type LeagueListItem } from '../leagues/LeaguesView';
 import SettingsTab from './SettingsTab';
 
-type Tab = 'dashboard' | 'predictions' | 'groups' | 'leagues' | 'settings';
+type Tab = 'predictions' | 'groups' | 'leagues' | 'settings';
 
 interface NotifyPrefs {
   exactScore: boolean;
@@ -28,7 +27,6 @@ interface Props {
   userName: string;
   shareToken: string;
   tipsPublic: boolean;
-  isReturningUser: boolean;
   myLeagues: LeagueListItem[];
   participatingLeagues: LeagueListItem[];
   isAdmin: boolean;
@@ -41,15 +39,13 @@ export default function PredictionsApp({
   userName,
   shareToken,
   tipsPublic: initialPublic,
-  isReturningUser,
   myLeagues,
   participatingLeagues,
   isAdmin,
   initialTab,
   initialNotify,
 }: Props) {
-  // URL ?tab=... wins; otherwise new users see predictions first, returning users see dashboard first.
-  const [tab, setTab] = useState<Tab>(initialTab ?? (isReturningUser ? 'dashboard' : 'predictions'));
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'predictions');
   const [tips, setTips] = useState<Record<number, TipData>>({});
   const [loading, setLoading] = useState(true);
   const [tipsPublic, setTipsPublic] = useState(initialPublic);
@@ -155,6 +151,12 @@ export default function PredictionsApp({
     };
   }, [tips]);
 
+  const totalTipped = Object.keys(tips).length;
+  const totalMatches = matches.length;
+  const progress = totalMatches > 0 ? Math.round((totalTipped / totalMatches) * 100) : 0;
+  const scored = stats.exact + stats.outcome + stats.wrong;
+  const pct = (n: number) => (scored > 0 ? Math.round((n / scored) * 100) : 0);
+
   if (loading) {
     return (
       <div className="container py-5 text-center">
@@ -190,21 +192,15 @@ export default function PredictionsApp({
         </div>
       </div>
 
-      {/* Tabs — Dashboard is first */}
+      {/* Tabs */}
       <div className="tipovacka-tabs">
         <div className="container">
           <div className="d-flex gap-1">
             <button
-              className={`tipovacka-tab ${tab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setTab('dashboard')}
-            >
-              Dashboard
-            </button>
-            <button
               className={`tipovacka-tab ${tab === 'predictions' ? 'active' : ''}`}
               onClick={() => setTab('predictions')}
             >
-              Predictions
+              Your tips
             </button>
             <button
               className={`tipovacka-tab ${tab === 'groups' ? 'active' : ''}`}
@@ -230,22 +226,58 @@ export default function PredictionsApp({
 
       {/* Content */}
       <div className="container py-3">
-        {tab === 'dashboard' && (
-          <Dashboard
-            stats={stats}
-            tips={tips}
-            matches={matches}
-            onGoToTips={() => setTab('predictions')}
-          />
-        )}
-
         {tab === 'predictions' && (
-          <TipEditor
-            matches={matches}
-            tips={tips}
-            onTipUpdate={handleTipUpdate}
-            allGroups={allGroups}
-          />
+          <>
+            <div className="tipovacka-dashboard-row mb-4">
+              <div className="tipovacka-score-cards tipovacka-score-cards-wide">
+                <div className="tipovacka-score-card tipovacka-score-matches">
+                  <div className="tipovacka-score-card-value">{totalMatches}</div>
+                  <div className="tipovacka-score-card-label">Tips Total</div>
+                </div>
+                <div className="tipovacka-score-card tipovacka-score-exact">
+                  <div className="tipovacka-score-card-value">{stats.exact}</div>
+                  <div className="tipovacka-score-card-pct">{pct(stats.exact)}%</div>
+                  <div className="tipovacka-score-card-label">Exact Score Match</div>
+                </div>
+                <div className="tipovacka-score-card tipovacka-score-outcome">
+                  <div className="tipovacka-score-card-value">{stats.outcome}</div>
+                  <div className="tipovacka-score-card-pct">{pct(stats.outcome)}%</div>
+                  <div className="tipovacka-score-card-label">Winner Match</div>
+                </div>
+                <div className="tipovacka-score-card tipovacka-score-wrong">
+                  <div className="tipovacka-score-card-value">{stats.wrong}</div>
+                  <div className="tipovacka-score-card-pct">{pct(stats.wrong)}%</div>
+                  <div className="tipovacka-score-card-label">Bad Tips</div>
+                </div>
+                <div className="tipovacka-score-card tipovacka-score-points">
+                  <div className="tipovacka-score-card-value">{stats.totalPoints}</div>
+                  <div className="tipovacka-score-card-label">Points</div>
+                </div>
+              </div>
+
+              <div className="tipovacka-progress-section tipovacka-dashboard-row-item">
+                <div className="d-flex justify-content-between align-items-center mb-1">
+                  <strong style={{ fontSize: '0.85rem' }}>Predicted</strong>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--wc-text-muted)' }}>
+                    {totalTipped}/{totalMatches}
+                  </span>
+                </div>
+                <div className="progress" style={{ height: '6px' }}>
+                  <div
+                    className="progress-bar"
+                    style={{ width: `${progress}%`, backgroundColor: 'var(--wc-accent)' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <TipEditor
+              matches={matches}
+              tips={tips}
+              onTipUpdate={handleTipUpdate}
+              allGroups={allGroups}
+            />
+          </>
         )}
 
         {tab === 'groups' && (
