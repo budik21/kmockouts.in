@@ -85,7 +85,7 @@ const jobs: ScraperJob[] = [
   },
   {
     name: 'Daily Summary Email',
-    schedule: '0 7 * * *',     // once daily at 07:00 UTC
+    schedule: '0 3 * * *',     // once daily at 03:00 UTC (05:00 Prague in CEST, 04:00 in CET)
     run: sendDailySummaryEmail,
     skipOnStartup: true,       // don't re-send on every process restart
   },
