@@ -131,6 +131,24 @@ export default function PredictionsApp({
     });
   }, [tipsPublic]);
 
+  // Untipped-only filter lives next to the Predicted widget; snapshot is
+  // frozen the moment the toggle flips on so saving a tip doesn't make a
+  // row vanish under the user.
+  const [untippedOnly, setUntippedOnly] = useState(false);
+  const [untippedSnapshot, setUntippedSnapshot] = useState<Set<number> | null>(null);
+  const handleUntippedToggle = useCallback(() => {
+    setUntippedOnly((prev) => {
+      const next = !prev;
+      if (next) {
+        const ids = new Set(matches.filter((m) => !tips[m.id]).map((m) => m.id));
+        setUntippedSnapshot(ids);
+      } else {
+        setUntippedSnapshot(null);
+      }
+      return next;
+    });
+  }, [matches, tips]);
+
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
     return `${window.location.origin}/pickem/share/${shareToken}`;
@@ -283,12 +301,23 @@ export default function PredictionsApp({
                     {totalTipped}/{totalMatches}
                   </span>
                 </div>
-                <div className="progress" style={{ height: '6px' }}>
+                <div className="progress mb-2" style={{ height: '6px' }}>
                   <div
                     className="progress-bar"
                     style={{ width: `${progress}%`, backgroundColor: 'var(--wc-accent)' }}
                   />
                 </div>
+                <label className="tipovacka-untipped-toggle">
+                  <span className="tipovacka-toggle tipovacka-toggle-sm">
+                    <input
+                      type="checkbox"
+                      checked={untippedOnly}
+                      onChange={handleUntippedToggle}
+                    />
+                    <span className="tipovacka-toggle-slider" />
+                  </span>
+                  <span className="tipovacka-untipped-label">Show untipped only</span>
+                </label>
               </div>
             </div>
 
@@ -298,6 +327,8 @@ export default function PredictionsApp({
               onTipUpdate={handleTipUpdate}
               allGroups={allGroups}
               shareToken={shareToken}
+              untippedOnly={untippedOnly}
+              untippedSnapshot={untippedSnapshot}
             />
           </>
         )}

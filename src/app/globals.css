@@ -4590,15 +4590,7 @@ a.ranking-team-name:hover {
   border-bottom-color: var(--wc-accent);
 }
 
-/* Group filter buttons + untipped toggle row */
-.tipovacka-filters-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 1rem;
-}
-
+/* Group filter buttons */
 .tipovacka-group-filters {
   display: flex;
   flex-wrap: wrap;
@@ -5040,6 +5032,21 @@ a.ranking-team-name:hover {
 
 .tipovacka-toggle input:checked + .tipovacka-toggle-slider::before {
   transform: translateX(22px);
+}
+
+/* Compact variant — used inside the Predicted widget */
+.tipovacka-toggle.tipovacka-toggle-sm {
+  width: 32px;
+  height: 18px;
+}
+.tipovacka-toggle.tipovacka-toggle-sm .tipovacka-toggle-slider::before {
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  top: 2px;
+}
+.tipovacka-toggle.tipovacka-toggle-sm input:checked + .tipovacka-toggle-slider::before {
+  transform: translateX(14px);
 }
 
 /* Share URL */

@@ -17,6 +17,8 @@ interface Props {
   onTipUpdate: (matchId: number, homeGoals: number, awayGoals: number) => void;
   allGroups: string[];
   shareToken: string;
+  untippedOnly: boolean;
+  untippedSnapshot: Set<number> | null;
 }
 
 interface StandingRow {
@@ -136,11 +138,16 @@ function formatTime(kickOff: string): string {
   } catch { return ''; }
 }
 
-export default function TipEditor({ matches, tips, onTipUpdate, allGroups, shareToken }: Props) {
+export default function TipEditor({
+  matches,
+  tips,
+  onTipUpdate,
+  allGroups,
+  shareToken,
+  untippedOnly,
+  untippedSnapshot,
+}: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
-  const [untippedOnly, setUntippedOnly] = useState(false);
-  // Snapshot of untipped match IDs — frozen when filter is toggled on
-  const [untippedSnapshot, setUntippedSnapshot] = useState<Set<number> | null>(null);
   const [copied, setCopied] = useState(false);
 
   // Read initial group from URL hash, listen for hashchange (back/forward)
@@ -174,20 +181,6 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups, share
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [groupFilter, shareToken]);
-
-  const handleUntippedToggle = useCallback(() => {
-    setUntippedOnly((prev) => {
-      const next = !prev;
-      if (next) {
-        // Snapshot current untipped IDs
-        const ids = new Set(matches.filter((m) => !tips[m.id]).map((m) => m.id));
-        setUntippedSnapshot(ids);
-      } else {
-        setUntippedSnapshot(null);
-      }
-      return next;
-    });
-  }, [matches, tips]);
 
   const filteredMatches = useMemo(() => {
     let result = matches;
@@ -239,36 +232,23 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups, share
 
   return (
     <div>
-      {/* Group filters + untipped toggle (one row on wide displays) */}
-      <div className="tipovacka-filters-row mb-3">
-        <div className="tipovacka-group-filters">
+      {/* Group filters */}
+      <div className="tipovacka-group-filters mb-3">
+        <button
+          className={`tipovacka-filter-btn ${groupFilter === 'ALL' ? 'active' : ''}`}
+          onClick={() => handleGroupChange('ALL')}
+        >
+          All
+        </button>
+        {allGroups.map((g) => (
           <button
-            className={`tipovacka-filter-btn ${groupFilter === 'ALL' ? 'active' : ''}`}
-            onClick={() => handleGroupChange('ALL')}
+            key={g}
+            className={`tipovacka-filter-btn ${groupFilter === g ? 'active' : ''}`}
+            onClick={() => handleGroupChange(g)}
           >
-            All
+            {g}
           </button>
-          {allGroups.map((g) => (
-            <button
-              key={g}
-              className={`tipovacka-filter-btn ${groupFilter === g ? 'active' : ''}`}
-              onClick={() => handleGroupChange(g)}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-        <label className="tipovacka-untipped-toggle">
-          <span className="tipovacka-toggle">
-            <input
-              type="checkbox"
-              checked={untippedOnly}
-              onChange={handleUntippedToggle}
-            />
-            <span className="tipovacka-toggle-slider" />
-          </span>
-          <span className="tipovacka-untipped-label">Show matches without prediction only</span>
-        </label>
+        ))}
       </div>
 
       {/* Group header + standings (only when a specific group is selected) */}
