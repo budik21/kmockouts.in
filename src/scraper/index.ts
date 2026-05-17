@@ -12,6 +12,7 @@ import { parseFifaResults } from './parser';
 import { writeMatchUpdates } from './writer';
 import { scrapeFlashscoreNews, writeNewsArticles } from './flashscore-news';
 import { scrapeFifaRankings } from './fifa-ranking';
+import { sendDailySummaryEmail } from './daily-summary';
 
 // ============================================================
 // Scraper job definitions
@@ -21,6 +22,7 @@ interface ScraperJob {
   name: string;
   schedule: string; // cron expression
   run: () => Promise<void>;
+  skipOnStartup?: boolean; // jobs that would re-fire side effects (e.g. e-mail) on every restart
 }
 
 async function scrapeFifa(): Promise<void> {
@@ -81,6 +83,12 @@ const jobs: ScraperJob[] = [
     schedule: '0 23 * * *',    // once daily at 23:00 UTC
     run: scrapeFifaRankings,
   },
+  {
+    name: 'Daily Summary Email',
+    schedule: '0 7 * * *',     // once daily at 07:00 UTC
+    run: sendDailySummaryEmail,
+    skipOnStartup: true,       // don't re-send on every process restart
+  },
   // Add more scrapers here:
   // {
   //   name: 'My New Scraper',
@@ -110,8 +118,12 @@ async function main() {
   }
   console.log('');
 
-  // Run all jobs once on startup
+  // Run all jobs once on startup (except those flagged to skip)
   for (const job of jobs) {
+    if (job.skipOnStartup) {
+      console.log(`[${new Date().toISOString()}] ⏭  ${job.name} (skipping startup run)\n`);
+      continue;
+    }
     await runJob(job);
   }
 
