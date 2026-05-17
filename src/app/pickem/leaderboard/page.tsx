@@ -20,12 +20,12 @@ export const dynamic = 'force-dynamic';
 // triggered from /api/tips/recalculate and admin match/scenarios endpoints.
 
 export const metadata: Metadata = {
-  title: 'Predictions Leaderboard — FIFA World Cup 2026',
+  title: 'Global Leaderboard — FIFA World Cup 2026',
   description:
     'See how all public predictors rank for the FIFA World Cup 2026. Compare points, exact scores and correct outcomes.',
   alternates: { canonical: '/pickem/leaderboard' },
   openGraph: {
-    title: 'Predictions Leaderboard — FIFA World Cup 2026',
+    title: 'Global Leaderboard — FIFA World Cup 2026',
     description:
       'Ranking of all public predictors for the FIFA World Cup 2026.',
     url: `${SITE_URL}/pickem/leaderboard`,
@@ -171,7 +171,7 @@ export default async function LeaderboardPage() {
 
   return (
     <main className="container py-4">
-      <h1 className="mb-1">Predictions Leaderboard</h1>
+      <h1 className="mb-1">Global Leaderboard</h1>
       <LeaderboardSubheader
         description="Ranking of all public predictors for the FIFA World Cup 2026."
         lastScored={lastScored}
