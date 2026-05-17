@@ -55,7 +55,7 @@ export default function NavbarClient({ user }: Props) {
     (e: React.MouseEvent) => {
       e.preventDefault();
       closeOffcanvas();
-      signIn('google', { callbackUrl: '/me' });
+      signIn('google', { callbackUrl: '/pickem/tips' });
     },
     [closeOffcanvas],
   );
