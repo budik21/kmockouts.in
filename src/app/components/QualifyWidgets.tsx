@@ -14,6 +14,13 @@ interface QualifyWidgetsProps {
   teamName: string;
   bestThirdRank: number | null;
   bestThirdQualifies: boolean;
+  /**
+   * True when every group-stage match across all groups has finished.
+   * Until then, a team locked in 3rd cannot be declared QUALIFIED or
+   * ELIMINATED — its fate depends on the best-third-placed table, which
+   * is not final while any group still has matches to play.
+   */
+  allGroupMatchesFinished: boolean;
 }
 
 function ordinal(n: number): string {
@@ -34,11 +41,25 @@ export default function QualifyWidgets({
   teamName,
   bestThirdRank,
   bestThirdQualifies,
+  allGroupMatchesFinished,
 }: QualifyWidgetsProps) {
   const fmt = (v: number) => v.toFixed(1);
 
-  if (matchesRemaining === 0) {
-    const qualified = qualifyProb >= 50;
+  // A team locked in 3rd cannot be called QUALIFIED/ELIMINATED until every
+  // group-stage match across all groups has been played — qualification
+  // depends on the best 3rd-placed teams table, which is only final once
+  // all 3rd-place positions are settled. While other groups are still
+  // playing, fall through to the 3rd-place widget below.
+  const lockedThirdAwaitingOthers =
+    matchesRemaining === 0 && prob3rd === 100 && !allGroupMatchesFinished;
+
+  if (matchesRemaining === 0 && !lockedThirdAwaitingOthers) {
+    // For a team locked in 3rd, qualifyProb is always 100 (since 3rd counts
+    // as a play-off spot in the scenario engine), but real qualification
+    // depends on whether they make the top 8 best 3rd-placed teams. Use the
+    // best-third rank as the authoritative signal in that case.
+    const lockedInThird = prob3rd === 100;
+    const qualified = lockedInThird ? bestThirdQualifies : qualifyProb >= 50;
     return (
       <div className="row g-3 mb-4">
         <div className="col-12">
@@ -138,7 +159,16 @@ export default function QualifyWidgets({
   const has3rdChance = prob3rd > 0;
   // 3-widget layout when team can finish 1st/2nd AND has 3rd chance
   const threeWidgets = hasDirectQualify && has3rdChance;
-  const colClass = threeWidgets ? 'col-sm-4' : 'col-sm-6';
+  // When the team is locked in 3rd and waiting for other groups to finish,
+  // the eliminate widget would always read 0% and "matches remaining" is 0
+  // for this group — suppress both and let the 3rd-place widget stand alone.
+  const showEliminateWidget = !lockedThirdAwaitingOthers;
+  const showScenarioFooter = !lockedThirdAwaitingOthers;
+  const colClass = threeWidgets
+    ? 'col-sm-4'
+    : lockedThirdAwaitingOthers
+      ? 'col-12'
+      : 'col-sm-6';
 
   return (
     <div className="row g-3 mb-4">
@@ -147,7 +177,15 @@ export default function QualifyWidgets({
         <div className="col-12">
           <div className={`best-third-infobox ${bestThirdQualifies ? 'best-third-infobox--in' : 'best-third-infobox--out'}`}>
             <div className="best-third-infobox-content">
-              {onlyViaThird ? (
+              {lockedThirdAwaitingOthers ? (
+                <>
+                  <strong>{teamName}</strong> has finished 3rd in their group. Qualification now depends on the{' '}
+                  <Link href="/worldcup2026/best-third-placed" className="best-third-infobox-link">
+                    best 3rd-placed teams table
+                  </Link>{' '}
+                  &mdash; other groups still have matches to play.
+                </>
+              ) : onlyViaThird ? (
                 <>
                   <strong>{teamName}</strong> won&apos;t clinch play-off directly &mdash; the only way is through the{' '}
                   <Link href="/worldcup2026/best-third-placed" className="best-third-infobox-link">
@@ -198,7 +236,9 @@ export default function QualifyWidgets({
       {has3rdChance && (
         <div className={colClass}>
           <div className="qualify-widget qualify-widget--outlined-green">
-            <div className="qualify-widget-header">CLINCHES 3RD POSITION</div>
+            <div className="qualify-widget-header">
+              {lockedThirdAwaitingOthers ? 'FINISHED 3RD' : 'CLINCHES 3RD POSITION'}
+            </div>
             <div className="qualify-widget-body">
               <span className="qualify-widget-pct">{fmt(prob3rd)}%</span>
             </div>
@@ -213,28 +253,32 @@ export default function QualifyWidgets({
       )}
 
       {/* Eliminate widget (red) */}
-      <div className={colClass}>
-        <div
-          className="qualify-widget"
-          style={{ background: 'linear-gradient(135deg, #CC0000, #e57373)' }}
-        >
-          <div className="qualify-widget-header">WILL BE ELIMINATED</div>
-          <div className="qualify-widget-body">
-            <span className="qualify-widget-pct">{fmt(eliminateProb)}%</span>
-          </div>
-          <div className="qualify-widget-footer">
-            <span>4th: {fmt(prob4th)}%</span>
+      {showEliminateWidget && (
+        <div className={colClass}>
+          <div
+            className="qualify-widget"
+            style={{ background: 'linear-gradient(135deg, #CC0000, #e57373)' }}
+          >
+            <div className="qualify-widget-header">WILL BE ELIMINATED</div>
+            <div className="qualify-widget-body">
+              <span className="qualify-widget-pct">{fmt(eliminateProb)}%</span>
+            </div>
+            <div className="qualify-widget-footer">
+              <span>4th: {fmt(prob4th)}%</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Scenario count info */}
-      <div className="col-12">
-        <div className="text-muted text-center" style={{ fontSize: '0.8rem' }}>
-          Based on {totalScenarios.toLocaleString()} evaluated scenarios
-          ({matchesRemaining} match{matchesRemaining !== 1 ? 'es' : ''} remaining)
+      {showScenarioFooter && (
+        <div className="col-12">
+          <div className="text-muted text-center" style={{ fontSize: '0.8rem' }}>
+            Based on {totalScenarios.toLocaleString()} evaluated scenarios
+            ({matchesRemaining} match{matchesRemaining !== 1 ? 'es' : ''} remaining)
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

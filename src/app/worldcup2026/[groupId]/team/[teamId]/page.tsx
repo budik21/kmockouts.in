@@ -128,6 +128,14 @@ export default async function TeamDetailPage({ params }: PageProps) {
 
   const teamRows = await cachedQuery<TeamRow>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
   const matchRows = await cachedQuery<MatchRow>('SELECT * FROM match WHERE group_id = $1 ORDER BY round, kick_off', [groupId]);
+  // Whether every group-stage match across all groups has finished. A team
+  // locked in 3rd cannot be declared QUALIFIED/ELIMINATED until this is
+  // true — the best 3rd-placed table only finalises once every group has
+  // played out its third place.
+  const unfinishedRows = await cachedQuery<{ exists: number }>(
+    "SELECT 1 AS exists FROM match WHERE status <> 'FINISHED' LIMIT 1",
+  );
+  const allGroupMatchesFinished = unfinishedRows.length === 0;
 
   const teams = teamRows.map(rowToTeam);
   const allMatches = matchRows.map(rowToMatch);
@@ -459,6 +467,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
           teamName={team.name}
           bestThirdRank={bestThirdRank}
           bestThirdQualifies={bestThirdQualifies}
+          allGroupMatchesFinished={allGroupMatchesFinished}
         />
       )}
 
