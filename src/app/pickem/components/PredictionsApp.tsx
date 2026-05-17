@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import type { TipMatch } from '../tips/page';
 import TipEditor from './TipEditor';
 import LeaguesView, { type LeagueListItem } from '../leagues/LeaguesView';
@@ -44,10 +44,22 @@ export default function PredictionsApp({
   initialTab,
   initialNotify,
 }: Props) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>(initialTab ?? 'predictions');
   const [tips, setTips] = useState<Record<number, TipData>>({});
   const [loading, setLoading] = useState(true);
   const [tipsPublic, setTipsPublic] = useState(initialPublic);
+
+  const hasLeagues = myLeagues.length > 0 || participatingLeagues.length > 0;
+  const leaderboardLabel = !tipsPublic && hasLeagues ? 'Show Leaderboards' : 'Show Leaderboard';
+  const showLeaderboardCaption = tipsPublic && hasLeagues;
+  const handleShowLeaderboard = useCallback(() => {
+    if (!tipsPublic && hasLeagues) {
+      setTab('leagues');
+    } else {
+      router.push('/pickem/leaderboard');
+    }
+  }, [tipsPublic, hasLeagues, router]);
 
   // Load user tips
   useEffect(() => {
@@ -180,12 +192,28 @@ export default function PredictionsApp({
               <span className="tipovacka-points-badge">
                 {stats.totalPoints} pts
               </span>
-              <button
-                className="btn btn-sm btn-outline-light"
-                onClick={() => signOut({ callbackUrl: '/pickem' })}
-              >
-                Sign out
-              </button>
+              {(tipsPublic || hasLeagues) && (
+                <div className="d-flex flex-column align-items-end">
+                  <button
+                    className="btn btn-sm btn-outline-light"
+                    onClick={handleShowLeaderboard}
+                  >
+                    {leaderboardLabel}
+                  </button>
+                  {showLeaderboardCaption && (
+                    <small
+                      style={{
+                        fontSize: '0.7rem',
+                        color: 'var(--wc-text-muted)',
+                        marginTop: '0.2rem',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      For other leaderboards see League tab
+                    </small>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
