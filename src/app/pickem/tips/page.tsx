@@ -64,8 +64,8 @@ interface NotifyPrefsRow {
   notify_wrong_tip: boolean;
 }
 
-type Tab = 'predictions' | 'groups' | 'leagues' | 'settings';
-const VALID_TABS: Tab[] = ['predictions', 'groups', 'leagues', 'settings'];
+type Tab = 'predictions' | 'leagues' | 'settings';
+const VALID_TABS: Tab[] = ['predictions', 'leagues', 'settings'];
 
 export default async function TipsPage({
   searchParams,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { TipMatch } from '../tips/page';
 import ArrowStepper from '@/app/components/ArrowStepper';
 import { teamLabel } from '@/lib/team-label';
@@ -16,6 +16,97 @@ interface Props {
   tips: Record<number, TipData>;
   onTipUpdate: (matchId: number, homeGoals: number, awayGoals: number) => void;
   allGroups: string[];
+  shareToken: string;
+}
+
+interface StandingRow {
+  teamName: string;
+  shortName: string;
+  countryCode: string;
+  fifaRanking: number | null;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  pts: number;
+}
+
+function buildStandings(
+  groupMatches: TipMatch[],
+  getGoals: (m: TipMatch) => { home: number | null; away: number | null },
+): StandingRow[] {
+  const teams = new Map<string, StandingRow>();
+  for (const m of groupMatches) {
+    for (const t of [m.homeTeam, m.awayTeam]) {
+      if (!teams.has(t.shortName)) {
+        teams.set(t.shortName, {
+          teamName: t.name, shortName: t.shortName, countryCode: t.countryCode,
+          fifaRanking: t.fifaRanking,
+          played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, pts: 0,
+        });
+      }
+    }
+  }
+  for (const m of groupMatches) {
+    const { home: hg, away: ag } = getGoals(m);
+    if (hg === null || ag === null) continue;
+    const h = teams.get(m.homeTeam.shortName)!;
+    const a = teams.get(m.awayTeam.shortName)!;
+    h.played++; a.played++;
+    h.gf += hg; h.ga += ag; a.gf += ag; a.ga += hg;
+    if (hg > ag) { h.wins++; h.pts += 3; a.losses++; }
+    else if (hg < ag) { a.wins++; a.pts += 3; h.losses++; }
+    else { h.draws++; a.draws++; h.pts++; a.pts++; }
+  }
+  const rows = Array.from(teams.values());
+  for (const r of rows) r.gd = r.gf - r.ga;
+  rows.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  return rows;
+}
+
+function StandingsTable({ rows, label }: { rows: StandingRow[]; label: string }) {
+  return (
+    <div>
+      <h6 className="tipovacka-table-label">{label}</h6>
+      <div className="table-responsive">
+        <table className="table table-sm tipovacka-standings-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Team</th>
+              <th className="text-center">MP</th>
+              <th className="text-center">W</th>
+              <th className="text-center">D</th>
+              <th className="text-center">L</th>
+              <th className="text-center">G</th>
+              <th className="text-center">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.shortName} className={i < 2 ? 'tipovacka-qualified' : ''}>
+                <td>{i + 1}</td>
+                <td>
+                  <FlagIcon code={r.countryCode} />{' '}
+                  <span className="d-none d-sm-inline">{teamLabel(r.teamName, r.fifaRanking)}</span>
+                  <span className="d-inline d-sm-none">{teamLabel(r.shortName, r.fifaRanking)}</span>
+                </td>
+                <td className="text-center">{r.played}</td>
+                <td className="text-center">{r.wins}</td>
+                <td className="text-center">{r.draws}</td>
+                <td className="text-center">{r.losses}</td>
+                <td className="text-center">{r.gf}:{r.ga}</td>
+                <td className="text-center fw-bold">{r.pts}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function FlagIcon({ code }: { code: string }) {
@@ -45,11 +136,44 @@ function formatTime(kickOff: string): string {
   } catch { return ''; }
 }
 
-export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Props) {
+export default function TipEditor({ matches, tips, onTipUpdate, allGroups, shareToken }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
   const [untippedOnly, setUntippedOnly] = useState(false);
   // Snapshot of untipped match IDs — frozen when filter is toggled on
   const [untippedSnapshot, setUntippedSnapshot] = useState<Set<number> | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Read initial group from URL hash, listen for hashchange (back/forward)
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && allGroups.includes(hash)) {
+        setGroupFilter(hash);
+      } else {
+        setGroupFilter('ALL');
+      }
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, [allGroups]);
+
+  const handleGroupChange = useCallback((group: string) => {
+    setGroupFilter(group);
+    if (group === 'ALL') {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    } else {
+      window.location.hash = group;
+    }
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    if (groupFilter === 'ALL') return;
+    const url = `${window.location.origin}/pickem/share/${shareToken}#${groupFilter}`;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [groupFilter, shareToken]);
 
   const handleUntippedToggle = useCallback(() => {
     setUntippedOnly((prev) => {
@@ -76,6 +200,28 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
     return result;
   }, [matches, groupFilter, untippedOnly, untippedSnapshot]);
 
+  // Standings for the selected group (actual results + predictions)
+  const groupMatches = useMemo(
+    () => (groupFilter === 'ALL' ? [] : matches.filter((m) => m.groupId === groupFilter)),
+    [matches, groupFilter],
+  );
+
+  const realStandings = useMemo(
+    () => buildStandings(groupMatches, (m) => ({
+      home: m.status === 'FINISHED' ? m.homeGoals : null,
+      away: m.status === 'FINISHED' ? m.awayGoals : null,
+    })),
+    [groupMatches],
+  );
+
+  const tipStandings = useMemo(
+    () => buildStandings(groupMatches, (m) => {
+      const tip = tips[m.id];
+      return tip ? { home: tip.homeGoals, away: tip.awayGoals } : { home: null, away: null };
+    }),
+    [groupMatches, tips],
+  );
+
   // Group by date
   const matchesByDate = useMemo(() => {
     const map = new Map<string, TipMatch[]>();
@@ -97,7 +243,7 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
       <div className="tipovacka-group-filters mb-3">
         <button
           className={`tipovacka-filter-btn ${groupFilter === 'ALL' ? 'active' : ''}`}
-          onClick={() => setGroupFilter('ALL')}
+          onClick={() => handleGroupChange('ALL')}
         >
           All
         </button>
@@ -105,12 +251,51 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups }: Pro
           <button
             key={g}
             className={`tipovacka-filter-btn ${groupFilter === g ? 'active' : ''}`}
-            onClick={() => setGroupFilter(g)}
+            onClick={() => handleGroupChange(g)}
           >
             {g}
           </button>
         ))}
       </div>
+
+      {/* Group header + standings (only when a specific group is selected) */}
+      {groupFilter !== 'ALL' && (
+        <>
+          <div className="tipovacka-group-header mb-3">
+            <h5 className="mb-0">Group {groupFilter}</h5>
+            <button
+              className="tipovacka-share-btn"
+              onClick={handleShare}
+              title="Copy link to share this group"
+            >
+              {copied ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 3v13" />
+                    <path d="M7 8l5-5 5 5" />
+                    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+                  </svg>
+                  Share
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-md-6">
+              <StandingsTable rows={realStandings} label="Actual Standings" />
+            </div>
+            <div className="col-md-6">
+              <StandingsTable rows={tipStandings} label="Your Predictions" />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Untipped-only toggle */}
       <div className="tipovacka-untipped-toggle mb-3">

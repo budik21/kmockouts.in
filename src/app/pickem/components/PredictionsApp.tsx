@@ -4,11 +4,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { signOut } from 'next-auth/react';
 import type { TipMatch } from '../tips/page';
 import TipEditor from './TipEditor';
-import GroupComparison from './GroupComparison';
 import LeaguesView, { type LeagueListItem } from '../leagues/LeaguesView';
 import SettingsTab from './SettingsTab';
 
-type Tab = 'predictions' | 'groups' | 'leagues' | 'settings';
+type Tab = 'predictions' | 'leagues' | 'settings';
 
 interface NotifyPrefs {
   exactScore: boolean;
@@ -203,12 +202,6 @@ export default function PredictionsApp({
               Your tips
             </button>
             <button
-              className={`tipovacka-tab ${tab === 'groups' ? 'active' : ''}`}
-              onClick={() => setTab('groups')}
-            >
-              Groups
-            </button>
-            <button
               className={`tipovacka-tab ${tab === 'leagues' ? 'active' : ''}`}
               onClick={() => setTab('leagues')}
             >
@@ -276,16 +269,9 @@ export default function PredictionsApp({
               tips={tips}
               onTipUpdate={handleTipUpdate}
               allGroups={allGroups}
+              shareToken={shareToken}
             />
           </>
-        )}
-
-        {tab === 'groups' && (
-          <GroupComparison
-            matches={matches}
-            tips={tips}
-            allGroups={allGroups}
-          />
         )}
 
         {tab === 'leagues' && (
