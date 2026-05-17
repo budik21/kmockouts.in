@@ -206,33 +206,28 @@ export default function PredictionsApp({
                 {userName}
               </p>
             </div>
-            <div className="d-flex align-items-center gap-2">
-              <span className="tipovacka-points-badge">
-                {stats.totalPoints} pts
-              </span>
-              {(tipsPublic || hasLeagues) && (
-                <div className="d-flex flex-column align-items-end">
-                  <button
-                    className="btn btn-sm btn-outline-light"
-                    onClick={handleShowLeaderboard}
+            {(tipsPublic || hasLeagues) && (
+              <div className="d-flex flex-column align-items-end">
+                <button
+                  className="tipovacka-leaderboard-btn"
+                  onClick={handleShowLeaderboard}
+                >
+                  {leaderboardLabel}
+                </button>
+                {showLeaderboardCaption && (
+                  <small
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--wc-text-muted)',
+                      marginTop: '0.2rem',
+                      lineHeight: 1.2,
+                    }}
                   >
-                    {leaderboardLabel}
-                  </button>
-                  {showLeaderboardCaption && (
-                    <small
-                      style={{
-                        fontSize: '0.7rem',
-                        color: 'var(--wc-text-muted)',
-                        marginTop: '0.2rem',
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      For other leaderboards see League tab
-                    </small>
-                  )}
-                </div>
-              )}
-            </div>
+                    For other leaderboards see League tab
+                  </small>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

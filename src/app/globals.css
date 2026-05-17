@@ -4553,13 +4553,23 @@ a.ranking-team-name:hover {
   opacity: 0.85;
 }
 
-.tipovacka-points-badge {
+/* Inline yellow button — yellow text on transparent bg, fills on hover */
+.tipovacka-leaderboard-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--wc-accent);
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.tipovacka-leaderboard-btn:hover,
+.tipovacka-leaderboard-btn:focus-visible {
   background: var(--wc-accent);
   color: #2a1a00;
-  padding: 0.35rem 0.8rem;
-  border-radius: 1rem;
-  font-weight: 700;
-  font-size: 1.1rem;
+  outline: none;
 }
 
 /* Tabs */
@@ -4984,10 +4994,17 @@ a.ranking-team-name:hover {
 .tipovacka-score-wrong .tipovacka-score-card-value { color: var(--prob-out); }
 
 .tipovacka-score-points {
-  border: 2px solid var(--wc-accent);
-  box-shadow: 0 0 8px rgba(var(--wc-accent-rgb, 212, 175, 55), 0.3);
+  background: var(--wc-accent);
+  border-color: var(--wc-accent);
 }
-.tipovacka-score-points .tipovacka-score-card-value { color: var(--wc-accent); }
+.tipovacka-score-points .tipovacka-score-card-value { color: #2a1a00; }
+.tipovacka-score-points .tipovacka-score-card-label {
+  color: #2a1a00;
+  background: rgba(0, 0, 0, 0.12);
+}
+[data-bs-theme="dark"] .tipovacka-score-points .tipovacka-score-card-label {
+  background: rgba(0, 0, 0, 0.12);
+}
 
 /* Toggle switch — dimensions match .ios-toggle so user-facing toggles look uniform */
 .tipovacka-toggle {
