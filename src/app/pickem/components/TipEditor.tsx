@@ -239,23 +239,36 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups, share
 
   return (
     <div>
-      {/* Group filters */}
-      <div className="tipovacka-group-filters mb-3">
-        <button
-          className={`tipovacka-filter-btn ${groupFilter === 'ALL' ? 'active' : ''}`}
-          onClick={() => handleGroupChange('ALL')}
-        >
-          All
-        </button>
-        {allGroups.map((g) => (
+      {/* Group filters + untipped toggle (one row on wide displays) */}
+      <div className="tipovacka-filters-row mb-3">
+        <div className="tipovacka-group-filters">
           <button
-            key={g}
-            className={`tipovacka-filter-btn ${groupFilter === g ? 'active' : ''}`}
-            onClick={() => handleGroupChange(g)}
+            className={`tipovacka-filter-btn ${groupFilter === 'ALL' ? 'active' : ''}`}
+            onClick={() => handleGroupChange('ALL')}
           >
-            {g}
+            All
           </button>
-        ))}
+          {allGroups.map((g) => (
+            <button
+              key={g}
+              className={`tipovacka-filter-btn ${groupFilter === g ? 'active' : ''}`}
+              onClick={() => handleGroupChange(g)}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+        <label className="tipovacka-untipped-toggle">
+          <span className="tipovacka-toggle">
+            <input
+              type="checkbox"
+              checked={untippedOnly}
+              onChange={handleUntippedToggle}
+            />
+            <span className="tipovacka-toggle-slider" />
+          </span>
+          <span className="tipovacka-untipped-label">Show matches without prediction only</span>
+        </label>
       </div>
 
       {/* Group header + standings (only when a specific group is selected) */}
@@ -296,19 +309,6 @@ export default function TipEditor({ matches, tips, onTipUpdate, allGroups, share
           </div>
         </>
       )}
-
-      {/* Untipped-only toggle */}
-      <div className="tipovacka-untipped-toggle mb-3">
-        <label className="tipovacka-toggle">
-          <input
-            type="checkbox"
-            checked={untippedOnly}
-            onChange={handleUntippedToggle}
-          />
-          <span className="tipovacka-toggle-slider" />
-        </label>
-        <span className="tipovacka-untipped-label">Show matches without prediction only</span>
-      </div>
 
       {/* Matches */}
       {Array.from(matchesByDate.entries()).map(([date, dateMatches]) => (

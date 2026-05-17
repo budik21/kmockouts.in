@@ -4590,7 +4590,15 @@ a.ranking-team-name:hover {
   border-bottom-color: var(--wc-accent);
 }
 
-/* Group filter buttons */
+/* Group filter buttons + untipped toggle row */
+.tipovacka-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
 .tipovacka-group-filters {
   display: flex;
   flex-wrap: wrap;
@@ -4601,6 +4609,8 @@ a.ranking-team-name:hover {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  cursor: pointer;
+  margin-bottom: 0;
 }
 .tipovacka-untipped-label {
   font-size: 0.85rem;
