@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import type { TipMatch } from '../tips/page';
 import { teamLabel } from '@/lib/team-label';
+import { slugify } from '@/lib/slugify';
 
 interface TipData {
   homeGoals: number;
@@ -211,9 +213,14 @@ export default function PublicTipsView({ matches, tips, userName, shareToken }: 
               <tr key={r.shortName} className={i < 2 ? 'tipovacka-qualified' : ''}>
                 <td>{i + 1}</td>
                 <td>
-                  <FlagIcon code={r.countryCode} />{' '}
-                  <span className="d-none d-sm-inline">{teamLabel(r.teamName, r.fifaRanking)}</span>
-                  <span className="d-inline d-sm-none">{teamLabel(r.shortName, r.fifaRanking)}</span>
+                  <Link
+                    href={`/worldcup2026/group-${selectedGroup.toLowerCase()}/team/${slugify(r.teamName)}`}
+                    className="tipovacka-team-link"
+                  >
+                    <FlagIcon code={r.countryCode} />{' '}
+                    <span className="d-none d-sm-inline">{teamLabel(r.teamName, r.fifaRanking)}</span>
+                    <span className="d-inline d-sm-none">{teamLabel(r.shortName, r.fifaRanking)}</span>
+                  </Link>
                 </td>
                 <td className="text-center">{r.played}</td>
                 <td className="text-center">{r.wins}</td>

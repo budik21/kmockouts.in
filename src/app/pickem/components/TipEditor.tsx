@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import type { TipMatch } from '../tips/page';
 import ArrowStepper from '@/app/components/ArrowStepper';
 import { teamLabel } from '@/lib/team-label';
+import { slugify } from '@/lib/slugify';
 
 interface TipData {
   homeGoals: number;
@@ -69,7 +71,9 @@ function buildStandings(
   return rows;
 }
 
-function StandingsTable({ rows, label }: { rows: StandingRow[]; label: string }) {
+function StandingsTable({ rows, label, groupId }: { rows: StandingRow[]; label: string; groupId: string }) {
+  const teamHref = (teamName: string) =>
+    `/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(teamName)}`;
   return (
     <div>
       <h6 className="tipovacka-table-label">{label}</h6>
@@ -92,9 +96,11 @@ function StandingsTable({ rows, label }: { rows: StandingRow[]; label: string })
               <tr key={r.shortName} className={i < 2 ? 'tipovacka-qualified' : ''}>
                 <td>{i + 1}</td>
                 <td>
-                  <FlagIcon code={r.countryCode} />{' '}
-                  <span className="d-none d-sm-inline">{teamLabel(r.teamName, r.fifaRanking)}</span>
-                  <span className="d-inline d-sm-none">{teamLabel(r.shortName, r.fifaRanking)}</span>
+                  <Link href={teamHref(r.teamName)} className="tipovacka-team-link">
+                    <FlagIcon code={r.countryCode} />{' '}
+                    <span className="d-none d-sm-inline">{teamLabel(r.teamName, r.fifaRanking)}</span>
+                    <span className="d-inline d-sm-none">{teamLabel(r.shortName, r.fifaRanking)}</span>
+                  </Link>
                 </td>
                 <td className="text-center">{r.played}</td>
                 <td className="text-center">{r.wins}</td>
@@ -207,13 +213,13 @@ export default function TipEditor({
     [groupMatches],
   );
 
-  const tipStandings = useMemo(
-    () => buildStandings(groupMatches, (m) => {
-      const tip = tips[m.id];
-      return tip ? { home: tip.homeGoals, away: tip.awayGoals } : { home: null, away: null };
-    }),
-    [groupMatches, tips],
-  );
+  // Compute inline (no useMemo) so the predicted standings always reflect the
+  // latest `tips` state immediately after a tip is entered. With useMemo the
+  // table could stay stale until something else re-rendered.
+  const tipStandings = buildStandings(groupMatches, (m) => {
+    const tip = tips[m.id];
+    return tip ? { home: tip.homeGoals, away: tip.awayGoals } : { home: null, away: null };
+  });
 
   // Group by date
   const matchesByDate = useMemo(() => {
@@ -281,10 +287,10 @@ export default function TipEditor({
 
           <div className="row g-3 mb-4">
             <div className="col-md-6">
-              <StandingsTable rows={realStandings} label="Actual Standings" />
+              <StandingsTable rows={realStandings} label="Actual Standings" groupId={groupFilter} />
             </div>
             <div className="col-md-6">
-              <StandingsTable rows={tipStandings} label="Your Predictions" />
+              <StandingsTable rows={tipStandings} label="Your Predictions" groupId={groupFilter} />
             </div>
           </div>
         </>
