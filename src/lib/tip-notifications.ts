@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { buildTipResultEmail, type TipResultEmailData } from './email-templates/tip-result';
 import { query } from './db';
 import type { TipTransition } from './tip-recalc';
+import { getCachedTeamArticle } from '@/engine/team-article-ai';
 
 export interface NotifyUser {
   email: string;
@@ -123,10 +124,27 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
     [tipIds],
   );
 
+  // Load the AI-generated team articles once per unique team so the e-mail
+  // can include the headline + lede for both teams. Missing articles (AI
+  // disabled, pregeneration failed, first match before any cache) simply
+  // result in the section being omitted.
+  const uniqueTeamIds = Array.from(
+    new Set(rows.flatMap((r) => [r.home_team_id, r.away_team_id])),
+  );
+  const articleEntries = await Promise.all(
+    uniqueTeamIds.map(async (id) => {
+      const article = await getCachedTeamArticle(id);
+      return [id, article] as const;
+    }),
+  );
+  const articleByTeamId = new Map(articleEntries);
+
   await Promise.allSettled(
     rows.map(async (r) => {
       if (r.new_points !== 0 && r.new_points !== 1 && r.new_points !== 4) return;
       try {
+        const homeArticle = articleByTeamId.get(r.home_team_id) ?? undefined;
+        const awayArticle = articleByTeamId.get(r.away_team_id) ?? undefined;
         await sendTipResultEmail({
           user: {
             email: r.email,
@@ -149,6 +167,12 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
             },
             homeTeam: { id: r.home_team_id, name: r.home_team_name, countryCode: r.home_country_code },
             awayTeam: { id: r.away_team_id, name: r.away_team_name, countryCode: r.away_country_code },
+            homeArticle: homeArticle
+              ? { headline: homeArticle.headline, lede: homeArticle.lede }
+              : undefined,
+            awayArticle: awayArticle
+              ? { headline: awayArticle.headline, lede: awayArticle.lede }
+              : undefined,
           },
         });
       } catch (err) {

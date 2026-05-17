@@ -127,10 +127,12 @@ export async function POST(request: NextRequest) {
       }
     })();
 
-    // Independent chain: tip scoring. Runs in parallel with probabilities + AI so the
-    // "New data approaching" banner can clear as soon as probs + AI finish, while the
-    // leaderboard shows its own indicator until tip scoring completes.
+    // Tip scoring waits for the high-priority chain (probabilities + AI team
+    // articles) to finish so the result e-mail can include the freshly
+    // generated headline + lede for both teams. AI failure is tolerated —
+    // the e-mail simply omits the AI section in that case.
     const tipScoring = (async () => {
+      await highPriority;
       await query(
         `UPDATE tip_recalc_status SET is_recalculating = true, started_at = NOW() WHERE id = 1`,
       ).catch(() => {});

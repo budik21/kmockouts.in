@@ -18,6 +18,8 @@ export interface TipResultEmailData {
   };
   homeTeam: { id: number; name: string; countryCode: string };
   awayTeam: { id: number; name: string; countryCode: string };
+  homeArticle?: { headline: string; lede: string };
+  awayArticle?: { headline: string; lede: string };
 }
 
 interface TemplateOutput {
@@ -71,6 +73,31 @@ const VARIANTS: Record<TipResultKind, { emoji: string; subject: string; headline
     badgeColor: '#64748b',
   },
 };
+
+function renderArticleBlock(
+  team: { name: string; countryCode: string },
+  article: { headline: string; lede: string } | undefined,
+  readMoreUrl: string,
+): string {
+  if (!article) return '';
+  return `
+          <tr>
+            <td style="padding:16px 28px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                  <td style="padding:16px 18px;">
+                    <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">
+                      ${flagImg(team.countryCode, team.name)}<span style="vertical-align:middle;">${esc(team.name)}</span>
+                    </div>
+                    <h2 style="margin:0 0 8px;font-size:17px;color:#111827;font-weight:700;line-height:1.3;">${esc(article.headline)}</h2>
+                    <p style="margin:0 0 10px;color:#374151;font-size:14px;line-height:1.5;">${esc(article.lede)}</p>
+                    <a href="${readMoreUrl}" style="color:#6f003c;text-decoration:none;font-weight:600;font-size:13px;">Read more &rarr;</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
+}
 
 export function buildTipResultEmail(data: TipResultEmailData): TemplateOutput {
   const kind = kindFromPoints(data.points);
@@ -140,6 +167,9 @@ export function buildTipResultEmail(data: TipResultEmailData): TemplateOutput {
               </table>
             </td>
           </tr>
+
+          ${renderArticleBlock(data.homeTeam, data.homeArticle, teamUrl(data.homeTeam.name))}
+          ${renderArticleBlock(data.awayTeam, data.awayArticle, teamUrl(data.awayTeam.name))}
 
           <tr>
             <td style="padding:16px 28px 4px;">
