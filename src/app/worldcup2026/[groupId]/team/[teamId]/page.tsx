@@ -10,6 +10,7 @@ import { getCachedAiScenarioSummaries } from '@/engine/scenario-summary-ai';
 import { getCachedTeamArticle } from '@/engine/team-article-ai';
 import { isFeatureEnabled } from '@/lib/feature-flags';
 import CollapsibleArticleBody from '@/app/components/CollapsibleArticleBody';
+import ArticleTimestamp from '@/app/components/ArticleTimestamp';
 import { autoLinkTeams } from '@/lib/auto-link-teams';
 import Link from 'next/link';
 import type { Metadata } from 'next';
@@ -532,6 +533,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
                 <CollapsibleArticleBody
                   html={autoLinkTeams(teamArticle.body_html, teams, groupId, team.name)}
                 />
+                {teamArticle.generatedAt && <ArticleTimestamp generatedAt={teamArticle.generatedAt} />}
               </article>
             ) : undefined}
             belowStandingsSlot={matchesWidget}

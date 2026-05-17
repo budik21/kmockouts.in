@@ -90,84 +90,79 @@ export async function POST(request: NextRequest) {
       [groupId],
     );
 
-    // Purge cache immediately so match results and standings reflect the DB update right away.
-    // revalidateTag only works within an active Next.js request context (AsyncLocalStorage).
-    // Background .then() callbacks run after the response is sent and the context is closed,
-    // so any revalidateTag calls there are silently ignored. We therefore invalidate here
-    // (within the request scope) and again after recalculation via the internal endpoint.
+    const origin = new URL(request.url).origin;
+
+    // Synchronous recalculation chain. We hold the request open until
+    // probabilities + AI summaries + AI articles are all rewritten against the
+    // freshly-saved match, so that by the time the admin UI gets a `success`
+    // response every cached artefact on the site is consistent with the new
+    // state.
+    //
+    // The previous version fired this as a background Promise and returned
+    // immediately; the user (and any visitor reloading a team page in the
+    // 30–60 s window) would see fresh standings but a STALE AI article — e.g.
+    // an "X must beat Y in the final group match" lede for a team whose match
+    // against Y had just been entered as finished. Waiting here is the
+    // explicit user-stated preference: better to make the admin save take
+    // longer than to publish predictions that contradict the standings.
+    //
+    // Tip e-mail dispatch is the only piece kept fire-and-forget — sending
+    // dozens of e-mails should not block the admin response, and a failure
+    // in the e-mail provider must not roll back the recalculation.
+    try {
+      await recalculateAffectedProbabilities(groupId as GroupId);
+      console.log(`[admin] Recalculated probabilities for group ${groupId} + best-third`);
+
+      await Promise.allSettled([
+        pregenerateTeamScenarioSummaries(groupId as GroupId).catch(err => {
+          console.error(`[admin] Team scenario AI pregeneration failed for group ${groupId}:`, err);
+        }),
+        pregenerateBestThirdSummaries().catch(err => {
+          console.error('[admin] Best-third AI pregeneration failed:', err);
+        }),
+      ]);
+    } catch (err) {
+      console.error(`[admin] Probability recalculation failed for group ${groupId}:`, err);
+    } finally {
+      await query(
+        'UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1',
+        [groupId],
+      ).catch(() => {});
+    }
+
+    await query(
+      `UPDATE tip_recalc_status SET is_recalculating = true, started_at = NOW() WHERE id = 1`,
+    ).catch(() => {});
+    try {
+      const transitions = await recalculateAllTipPoints();
+      console.log(`[admin] Recalculated tip points: ${transitions.length} tips updated`);
+      // Tip-result e-mails are fire-and-forget so the admin response is not
+      // gated on the e-mail provider. The transitions list is already
+      // captured, so a slow Resend call cannot lose data.
+      dispatchTipResultEmails(transitions).catch((err) =>
+        console.error('[admin/match/update] email dispatch failed:', err),
+      );
+    } catch (err) {
+      console.error('[admin] Tip recalculation failed:', err);
+    } finally {
+      await query(
+        `UPDATE tip_recalc_status
+         SET is_recalculating = false, last_completed_at = NOW()
+         WHERE id = 1`,
+      ).catch(() => {});
+    }
+
+    // Purge caches now that every artefact (probability_cache,
+    // ai_summary_cache, ai_team_article_cache, ai_group_article_cache,
+    // pickem_league_standings, …) reflects the new match. revalidateTag
+    // works because we are still inside the original request scope.
     revalidateTag(WC_TAG, 'max');
     revalidateTag(LEADERBOARD_TAG, 'max');
     await purgeCloudflareCache();
 
-    const origin = new URL(request.url).origin;
-
-    // High-priority chain: probabilities (only affected group + best-third) then AI summaries.
-    // AI must run after probabilities because summaries read cached probability data.
-    // Per-team scenario AI runs in parallel with best-third AI — both write to
-    // ai_summary_cache and share the global Claude concurrency semaphore.
-    const highPriority = (async () => {
-      try {
-        await recalculateAffectedProbabilities(groupId as GroupId);
-        console.log(`[admin] Recalculated probabilities for group ${groupId} + best-third`);
-        await Promise.allSettled([
-          pregenerateTeamScenarioSummaries(groupId as GroupId).catch(err => {
-            console.error(`[admin] Team scenario AI pregeneration failed for group ${groupId}:`, err);
-          }),
-          pregenerateBestThirdSummaries().catch(err => {
-            console.error('[admin] Best-third AI pregeneration failed:', err);
-          }),
-        ]);
-      } catch (err) {
-        console.error(`[admin] Probability recalculation failed for group ${groupId}:`, err);
-      } finally {
-        await query(
-          'UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1',
-          [groupId],
-        ).catch(() => {});
-      }
-    })();
-
-    // Tip scoring waits for the high-priority chain (probabilities + AI team
-    // articles) to finish so the result e-mail can include the freshly
-    // generated headline + lede for both teams. AI failure is tolerated —
-    // the e-mail simply omits the AI section in that case.
-    const tipScoring = (async () => {
-      await highPriority;
-      await query(
-        `UPDATE tip_recalc_status SET is_recalculating = true, started_at = NOW() WHERE id = 1`,
-      ).catch(() => {});
-      try {
-        const transitions = await recalculateAllTipPoints();
-        console.log(`[admin] Recalculated tip points: ${transitions.length} tips updated`);
-        dispatchTipResultEmails(transitions).catch((err) =>
-          console.error('[admin/match/update] email dispatch failed:', err),
-        );
-      } catch (err) {
-        console.error('[admin] Tip recalculation failed:', err);
-      } finally {
-        await query(
-          `UPDATE tip_recalc_status
-           SET is_recalculating = false, last_completed_at = NOW()
-           WHERE id = 1`,
-        ).catch(() => {});
-      }
-    })();
-
-    // After both chains settle, purge caches via a fresh request context so the
-    // updated probability + leaderboard data is reflected. revalidateTag() called
-    // directly here would be a no-op because the original request context is closed.
-    // Then warm the most-hit URLs for the affected group so the very next visitor
-    // gets a cache hit instead of paying for a cold SSR + Cloudflare miss.
-    Promise.allSettled([highPriority, tipScoring]).then(async () => {
-      try {
-        await fetch(`${origin}/api/internal/revalidate`, {
-          method: 'POST',
-          headers: { 'x-internal-secret': process.env.AUTH_SECRET ?? '' },
-        });
-      } catch (err) {
-        console.error('[admin] Post-recalculation cache purge failed:', err);
-      }
-
+    // Warm-up runs after the response so the admin user does not pay for it.
+    // No await — fetches against our own origin can outlive this handler.
+    (async () => {
       try {
         const groupSlug = `group-${String(groupId).toLowerCase()}`;
         const teamNames = await query<{ name: string }>(
@@ -191,9 +186,9 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         console.error('[admin] Cache warm-up failed:', err);
       }
-    });
+    })();
 
-    return NextResponse.json({ success: true, recalculating: groupId });
+    return NextResponse.json({ success: true, recalculating: null });
   } catch (error) {
     console.error('POST /api/admin/match/update error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });

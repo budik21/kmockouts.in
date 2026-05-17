@@ -168,6 +168,10 @@ export interface GeneratedTeamArticle {
   headline: string;
   lede: string;
   body_html: string;
+  /** ISO timestamp of when this article was last (re)generated. Populated
+   * by cache readers from `ai_team_article_cache.created_at` so pages can
+   * show "AI prediction generated on <date>" to the visitor. */
+  generatedAt?: string;
 }
 
 interface GenerateResult extends GeneratedTeamArticle {
@@ -362,7 +366,7 @@ export async function getCachedTeamArticle(teamId: number): Promise<GeneratedTea
     );
     if (rows.length === 0) return null;
     const row = rows[0];
-    return { headline: row.headline, lede: row.lede, body_html: row.body_html };
+    return { headline: row.headline, lede: row.lede, body_html: row.body_html, generatedAt: row.created_at };
   } catch {
     return null;
   }

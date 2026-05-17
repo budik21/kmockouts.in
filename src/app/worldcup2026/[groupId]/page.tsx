@@ -8,6 +8,7 @@ import GroupDetailClient from './GroupDetailClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import CollapsibleArticleBody from '@/app/components/CollapsibleArticleBody';
+import ArticleTimestamp from '@/app/components/ArticleTimestamp';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
 import { autoLinkTeams } from '@/lib/auto-link-teams';
@@ -255,6 +256,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
             <CollapsibleArticleBody
               html={autoLinkTeams(article.body_html, teams, groupId)}
             />
+            {article.generatedAt && <ArticleTimestamp generatedAt={article.generatedAt} />}
           </article>
 
           <div className="group-detail-side">

@@ -294,45 +294,50 @@ export async function pregenerateTeamScenarioSummaries(
   // gated by the process-wide semaphore in lib/claude-concurrency.ts, so
   // the real concurrency stays bounded regardless of how many teams or
   // groups are in flight at once.
+  //
+  // Capture the fresh in-memory results here. The article cascade below must
+  // use these directly rather than re-reading `ai_summary_cache`, because the
+  // cache can hold STALE entries from a previous group state: when a team
+  // moves to 0% or 100% at a position, `generateAiScenarioSummaries` returns
+  // a hardcoded "Guaranteed" (or skips the position) without overwriting the
+  // old row, so a query of the table mixes fresh patterns with leftover ones
+  // that contradict the new probabilities. Feeding those leftovers to the
+  // article AI under "use these as the source of truth" produces articles
+  // that talk about matches the team has already played.
+  const freshGranularByTeam = new Map<number, { [pos: number]: string }>();
   await Promise.allSettled(
-    targetTeams.map(team => {
+    targetTeams.map(async team => {
       const teamSummary = summaries.find(s => s.teamId === team.id);
-      if (!teamSummary) return Promise.resolve();
-      return generateAiScenarioSummaries({
-        teamId: team.id,
-        teamName: team.name,
-        groupId: groupId,
-        outcomePatternsByPosition: teamSummary.outcomePatternsByPosition,
-        probabilities: teamSummary.positionProbabilities,
-        remainingMatches: remainingMatchesInfo,
-        currentStandings,
-      }, {
-        force: options.force,
-        ignoreFlags: options.ignoreFlags,
-        usage: options.usage,
-      }).catch(err => {
+      if (!teamSummary) return;
+      try {
+        const result = await generateAiScenarioSummaries({
+          teamId: team.id,
+          teamName: team.name,
+          groupId: groupId,
+          outcomePatternsByPosition: teamSummary.outcomePatternsByPosition,
+          probabilities: teamSummary.positionProbabilities,
+          remainingMatches: remainingMatchesInfo,
+          currentStandings,
+        }, {
+          force: options.force,
+          ignoreFlags: options.ignoreFlags,
+          usage: options.usage,
+        });
+        freshGranularByTeam.set(team.id, result);
+      } catch (err) {
         console.error(`[pregenerate] Team scenario AI failed for ${team.name}:`, err);
-      });
+      }
     }),
   );
 
   console.log(`[pregenerate] Team scenario AI summaries done for group ${groupId}`);
 
-  // Cascade: now that the granular per-team summaries are fresh in the
-  // ai_summary_cache table, synthesize them into:
+  // Cascade: synthesize the in-memory per-team summaries into:
   //   1. A whole-group article (skipped on partial single-team regen).
   //   2. Per-team articles, one per team, written from that team's POV.
+  // Both consume `freshGranularByTeam` — never read `ai_summary_cache` here
+  // (see comment above on why that table can hold stale rows).
   try {
-    const granularRows = await query<{ team_id: number; position: number; summary_html: string }>(
-      'SELECT team_id, position, summary_html FROM ai_summary_cache WHERE group_id = $1',
-      [groupId],
-    );
-    const granularByTeam = new Map<number, { [pos: number]: string }>();
-    for (const r of granularRows) {
-      if (!granularByTeam.has(r.team_id)) granularByTeam.set(r.team_id, {});
-      granularByTeam.get(r.team_id)![r.position] = r.summary_html;
-    }
-
     // Played matches with actual scorelines — fed into both article prompts
     // so the model never has to guess past results from goal difference.
     const playedMatchesForArticles = played.map(m => ({
@@ -352,7 +357,7 @@ export async function pregenerateTeamScenarioSummaries(
           return {
             teamName: t.name,
             probabilities: teamSummary?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
-            granularSummariesByPosition: granularByTeam.get(t.id) ?? {},
+            granularSummariesByPosition: freshGranularByTeam.get(t.id) ?? {},
           };
         });
 
@@ -424,7 +429,7 @@ export async function pregenerateTeamScenarioSummaries(
               remainingMatches: remainingForCtx(t.id),
               probabilities: teamSummary?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
               bestThirdQualProb: bestThirdProbByTeam.get(t.id) ?? 0,
-              granularSummariesByPosition: granularByTeam.get(t.id) ?? {},
+              granularSummariesByPosition: freshGranularByTeam.get(t.id) ?? {},
             },
             {
               force: options.force,

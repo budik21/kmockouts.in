@@ -37,11 +37,17 @@ function esc(str: string): string {
 
 function flagImg(code: string, alt: string): string {
   if (!code) return '';
+  // Use the same `flag-icons` SVG asset the website renders (via the `fi-*`
+  // CSS classes) so emails match the on-site look exactly — flat rectangular
+  // flags, never the waved/3D style that flagcdn's PNG endpoint can return
+  // depending on the country and that reads poorly in dark-mode mail clients.
+  // jsdelivr serves the same files straight from the npm package; the version
+  // is pinned to match `package.json` so a future bump won't silently change
+  // the rendered flag set. Subdivision codes like "gb-sct" pass through as-is
+  // because flag-icons supports them natively.
   const lower = code.toLowerCase();
-  const cc = lower.length > 2 ? lower.slice(0, 2) : lower;
-  // Use FlagCDN for email-compatible static SVG/PNG of the country flag.
-  const url = `https://flagcdn.com/48x36/${cc}.png`;
-  return `<img src="${url}" width="36" height="27" alt="${esc(alt)}" style="display:inline-block;vertical-align:middle;border-radius:3px;margin:0 6px;" />`;
+  const url = `https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/${lower}.svg`;
+  return `<img src="${url}" width="36" height="27" alt="${esc(alt)}" style="display:inline-block;vertical-align:middle;border:1px solid rgba(0,0,0,0.08);border-radius:2px;margin:0 6px;background:#ffffff;" />`;
 }
 
 function kindFromPoints(points: 0 | 1 | 4): TipResultKind {
