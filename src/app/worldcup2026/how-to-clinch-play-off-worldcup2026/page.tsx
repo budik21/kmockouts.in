@@ -191,7 +191,7 @@ export default function HowToQualifyPage() {
             </div>
             <div className="htw-criteria-item">
               <span className="htw-criteria-num">5</span>
-              <div><strong><Link href="/worldcup2026/fifa-ranking">FIFA World Ranking</Link></strong><br /><small className="text-muted">Final tiebreaker</small></div>
+              <div><strong><Link href="/worldcup2026/fifa-ranking" className="htw-link">FIFA World Ranking</Link></strong><br /><small className="text-muted">Final tiebreaker</small></div>
             </div>
           </div>
           <p className="mt-3 mb-0" style={{ fontSize: '0.9rem' }}>
@@ -292,7 +292,7 @@ export default function HowToQualifyPage() {
             </div>
             <div className="htw-tiebreak-step">
               <div className="htw-tiebreak-label">Step 3 &mdash; FIFA Ranking</div>
-              <p className="mb-0">If still tied, teams are ranked by the latest <Link href="/worldcup2026/fifa-ranking">FIFA/Coca-Cola Men&apos;s World Ranking</Link>.</p>
+              <p className="mb-0">If still tied, teams are ranked by the latest <Link href="/worldcup2026/fifa-ranking" className="htw-link">FIFA/Coca-Cola Men&apos;s World Ranking</Link>.</p>
             </div>
           </div>
         </div>
