@@ -9,6 +9,9 @@ import { dispatchTipResultEmails } from '@/lib/tip-notifications';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
 import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 import { slugify } from '@/lib/slugify';
+import { newMatchUpdateTrace, type MatchUpdateTrace } from '@/lib/match-update-trace';
+import { sendAdminMatchSummary } from '@/lib/admin-summary-notification';
+import { calculateStandings } from '@/engine/standings';
 
 interface UpdateBody {
   matchId: number;
@@ -63,13 +66,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get group_id for the match
-    const match = await queryOne<{ group_id: string }>('SELECT group_id FROM match WHERE id = $1', [matchId]);
+    // Get group_id + team names for the match (names feed the diagnostic e-mail).
+    const match = await queryOne<{ group_id: string; home_team_name: string; away_team_name: string }>(
+      `SELECT m.group_id, ht.name AS home_team_name, at.name AS away_team_name
+       FROM match m
+       JOIN team ht ON ht.id = m.home_team_id
+       JOIN team at ON at.id = m.away_team_id
+       WHERE m.id = $1`,
+      [matchId],
+    );
     if (!match) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
 
     const groupId = match.group_id;
+    const cascadeStartedAt = Date.now();
+    const trace: MatchUpdateTrace = newMatchUpdateTrace({
+      matchId,
+      groupId,
+      homeTeam: match.home_team_name,
+      awayTeam: match.away_team_name,
+      homeGoals,
+      awayGoals,
+      status,
+    });
 
     // Update the match
     await query(
@@ -113,16 +133,83 @@ export async function POST(request: NextRequest) {
       await recalculateAffectedProbabilities(groupId as GroupId);
       console.log(`[admin] Recalculated probabilities for group ${groupId} + best-third`);
 
+      // Snapshot the standings + probability cache so the diagnostic e-mail
+      // shows what state the AI generators saw as their input.
+      try {
+        const teamsForStandings = await query<{
+          id: number; name: string; short_name: string; country_code: string; group_id: string;
+          is_placeholder: boolean; external_id: string | null; fifa_ranking: number | null;
+        }>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [groupId]);
+        const matchesForStandings = await query<{
+          id: number; group_id: string; round: number;
+          home_team_id: number; away_team_id: number;
+          home_goals: number | null; away_goals: number | null;
+          home_yc: number; home_yc2: number; home_rc_direct: number; home_yc_rc: number;
+          away_yc: number; away_yc2: number; away_rc_direct: number; away_yc_rc: number;
+          venue: string; kick_off: string; status: string;
+        }>(`SELECT * FROM match WHERE group_id = $1 AND status = 'FINISHED' ORDER BY round, kick_off`, [groupId]);
+
+        const standings = calculateStandings({
+          teams: teamsForStandings.map(r => ({
+            id: r.id, name: r.name, shortName: r.short_name, countryCode: r.country_code,
+            groupId: r.group_id as GroupId, isPlaceholder: r.is_placeholder,
+            externalId: r.external_id ?? undefined, fifaRanking: r.fifa_ranking ?? undefined,
+          })),
+          matches: matchesForStandings.map(r => ({
+            id: r.id, groupId: r.group_id as GroupId, round: r.round,
+            homeTeamId: r.home_team_id, awayTeamId: r.away_team_id,
+            homeGoals: r.home_goals, awayGoals: r.away_goals,
+            homeYc: r.home_yc, homeYc2: r.home_yc2, homeRcDirect: r.home_rc_direct, homeYcRc: r.home_yc_rc,
+            awayYc: r.away_yc, awayYc2: r.away_yc2, awayRcDirect: r.away_rc_direct, awayYcRc: r.away_yc_rc,
+            venue: r.venue, kickOff: r.kick_off, status: r.status as 'FINISHED' | 'LIVE' | 'SCHEDULED',
+          })),
+        });
+        trace.standingsAfter = standings.map(s => ({
+          position: s.position,
+          teamName: s.team.name,
+          played: s.matchesPlayed,
+          won: s.wins,
+          drawn: s.draws,
+          lost: s.losses,
+          gf: s.goalsFor,
+          ga: s.goalsAgainst,
+          gd: s.goalDifference,
+          points: s.points,
+        }));
+
+        const probRows = await query<{
+          team_id: number; prob_first: number; prob_second: number; prob_third: number; prob_out: number; prob_third_qual: number;
+        }>(
+          'SELECT team_id, prob_first, prob_second, prob_third, prob_out, prob_third_qual FROM probability_cache WHERE group_id = $1',
+          [groupId],
+        );
+        const teamNameById = new Map(teamsForStandings.map(t => [t.id, t.name]));
+        trace.probabilities = probRows.map(r => ({
+          teamName: teamNameById.get(r.team_id) ?? `team ${r.team_id}`,
+          pPos1: r.prob_first,
+          pPos2: r.prob_second,
+          pPos3: r.prob_third,
+          pPos4: r.prob_out,
+          pThirdQual: r.prob_third_qual,
+        }));
+      } catch (err) {
+        console.error('[admin] Standings snapshot for trace failed:', err);
+        trace.errors.push({ step: 'snapshot-standings', message: String(err) });
+      }
+
       await Promise.allSettled([
-        pregenerateTeamScenarioSummaries(groupId as GroupId).catch(err => {
+        pregenerateTeamScenarioSummaries(groupId as GroupId, { trace }).catch(err => {
           console.error(`[admin] Team scenario AI pregeneration failed for group ${groupId}:`, err);
+          trace.errors.push({ step: 'pregenerate-team-scenario-summaries', message: String(err) });
         }),
         pregenerateBestThirdSummaries().catch(err => {
           console.error('[admin] Best-third AI pregeneration failed:', err);
+          trace.errors.push({ step: 'pregenerate-best-third-summaries', message: String(err) });
         }),
       ]);
     } catch (err) {
       console.error(`[admin] Probability recalculation failed for group ${groupId}:`, err);
+      trace.errors.push({ step: 'recalculate-probabilities', message: String(err) });
     } finally {
       await query(
         'UPDATE recalc_status SET is_recalculating = false WHERE group_id = $1',
@@ -136,6 +223,53 @@ export async function POST(request: NextRequest) {
     try {
       const transitions = await recalculateAllTipPoints();
       console.log(`[admin] Recalculated tip points: ${transitions.length} tips updated`);
+
+      // Enrich transitions with user/match info for the diagnostic e-mail.
+      // Only the "first scored" subset (oldPoints null → newPoints set) is
+      // what dispatch actually mails out, but the trace shows every change.
+      try {
+        const tipIds = transitions.map(t => t.tipId);
+        if (tipIds.length > 0) {
+          const enrichRows = await query<{
+            tip_id: number; user_name: string; email: string;
+            tip_home_goals: number; tip_away_goals: number;
+            home_team_name: string; away_team_name: string;
+            home_goals: number | null; away_goals: number | null;
+          }>(
+            `SELECT t.id AS tip_id, u.name AS user_name, u.email,
+                    t.home_goals AS tip_home_goals, t.away_goals AS tip_away_goals,
+                    ht.name AS home_team_name, at.name AS away_team_name,
+                    m.home_goals, m.away_goals
+             FROM tip t
+             JOIN tipster_user u ON u.id = t.user_id
+             JOIN match m ON m.id = t.match_id
+             JOIN team ht ON ht.id = m.home_team_id
+             JOIN team at ON at.id = m.away_team_id
+             WHERE t.id = ANY($1::int[])`,
+            [tipIds],
+          );
+          const byId = new Map(enrichRows.map(r => [r.tip_id, r]));
+          trace.tipTransitions = transitions.map(t => {
+            const r = byId.get(t.tipId);
+            const matchLabel = r ? `${r.home_team_name} ${r.home_goals ?? '?'}:${r.away_goals ?? '?'} ${r.away_team_name}` : `tip ${t.tipId}`;
+            const tipScore = r ? `${r.tip_home_goals}:${r.tip_away_goals}` : '?';
+            return {
+              tipId: t.tipId,
+              userName: r?.user_name ?? '(unknown)',
+              userEmail: r?.email ?? '',
+              matchLabel,
+              tipScore,
+              oldPoints: t.oldPoints,
+              newPoints: t.newPoints,
+            };
+          });
+        }
+      } catch (err) {
+        console.error('[admin] Tip transitions enrichment failed:', err);
+        trace.errors.push({ step: 'enrich-tip-transitions', message: String(err) });
+      }
+      trace.tipEmailsQueued = transitions.filter(t => t.oldPoints === null && t.newPoints !== null).length;
+
       // Tip-result e-mails are fire-and-forget so the admin response is not
       // gated on the e-mail provider. The transitions list is already
       // captured, so a slow Resend call cannot lose data.
@@ -144,6 +278,7 @@ export async function POST(request: NextRequest) {
       );
     } catch (err) {
       console.error('[admin] Tip recalculation failed:', err);
+      trace.errors.push({ step: 'recalculate-tip-points', message: String(err) });
     } finally {
       await query(
         `UPDATE tip_recalc_status
@@ -158,7 +293,29 @@ export async function POST(request: NextRequest) {
     // works because we are still inside the original request scope.
     revalidateTag(WC_TAG, 'max');
     revalidateTag(LEADERBOARD_TAG, 'max');
-    await purgeCloudflareCache();
+    let cloudflarePurged = true;
+    let cloudflareError: string | undefined;
+    try {
+      await purgeCloudflareCache();
+    } catch (err) {
+      cloudflarePurged = false;
+      cloudflareError = String(err);
+      console.error('[admin] Cloudflare cache purge failed:', err);
+      trace.errors.push({ step: 'cloudflare-purge', message: String(err) });
+    }
+    trace.cacheInvalidation = {
+      revalidatedTags: [WC_TAG, LEADERBOARD_TAG],
+      cloudflarePurged,
+      cloudflareError,
+    };
+
+    // Send the superadmin diagnostic e-mail synchronously as the final step
+    // of the cascade — see comment at top of the try-block. The sender
+    // swallows its own errors so a Resend outage cannot break the admin
+    // response, but we still want it inside the request scope so the trace
+    // captures the cache-invalidation result before being mailed off.
+    trace.totalDurationMs = Date.now() - cascadeStartedAt;
+    await sendAdminMatchSummary(trace);
 
     // Warm-up runs after the response so the admin user does not pay for it.
     // No await — fetches against our own origin can outlive this handler.

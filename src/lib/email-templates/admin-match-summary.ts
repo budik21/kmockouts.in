@@ -1,0 +1,288 @@
+/**
+ * Diagnostic e-mail sent to SUPERADMIN_EMAIL after every match-result update.
+ *
+ * Purpose: when an AI prediction looks stale on the live site, this e-mail
+ * gives a frozen record of EXACTLY what was sent to Claude and what came
+ * back, plus the standings/probabilities used. Without it, the only way
+ * to debug a "Brazil should be celebrating, why is the article still
+ * generic" complaint is to re-run the cascade and hope it repros.
+ */
+
+import type { MatchUpdateTrace } from '../match-update-trace';
+
+interface TemplateOutput {
+  subject: string;
+  html: string;
+}
+
+function esc(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function fmtMs(ms: number | undefined): string {
+  if (ms === undefined) return '–';
+  if (ms < 1000) return `${ms} ms`;
+  return `${(ms / 1000).toFixed(2)} s`;
+}
+
+function pre(text: string): string {
+  return `<pre style="background:#f5f5f7;border:1px solid #e3e3e8;padding:10px;font:11px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;border-radius:4px;margin:6px 0 16px;overflow-x:auto;">${esc(text)}</pre>`;
+}
+
+function code(text: string): string {
+  return `<code style="background:#f5f5f7;padding:1px 5px;border-radius:3px;font:11px/1.4 ui-monospace,Menlo,Consolas,monospace;">${esc(text)}</code>`;
+}
+
+function row(label: string, value: string): string {
+  return `<tr><td style="padding:4px 12px 4px 0;color:#6b6b73;white-space:nowrap;vertical-align:top;">${esc(label)}</td><td style="padding:4px 0;vertical-align:top;">${value}</td></tr>`;
+}
+
+function section(title: string, body: string): string {
+  return `<section style="margin:24px 0;">
+  <h2 style="font:600 16px/1.3 -apple-system,Segoe UI,sans-serif;margin:0 0 12px;color:#1a1a1f;border-bottom:1px solid #e3e3e8;padding-bottom:6px;">${esc(title)}</h2>
+  ${body}
+</section>`;
+}
+
+function renderStandings(trace: MatchUpdateTrace): string {
+  if (!trace.standingsAfter || trace.standingsAfter.length === 0) {
+    return '<p style="color:#9a9aa3;font-style:italic;">(no standings captured)</p>';
+  }
+  const rows = trace.standingsAfter.map(s => `
+    <tr>
+      <td style="padding:4px 10px;text-align:center;">${s.position}</td>
+      <td style="padding:4px 10px;">${esc(s.teamName)}</td>
+      <td style="padding:4px 10px;text-align:center;">${s.played}</td>
+      <td style="padding:4px 10px;text-align:center;">${s.won}</td>
+      <td style="padding:4px 10px;text-align:center;">${s.drawn}</td>
+      <td style="padding:4px 10px;text-align:center;">${s.lost}</td>
+      <td style="padding:4px 10px;text-align:center;">${s.gf}:${s.ga}</td>
+      <td style="padding:4px 10px;text-align:center;">${s.gd >= 0 ? '+' : ''}${s.gd}</td>
+      <td style="padding:4px 10px;text-align:center;font-weight:600;">${s.points}</td>
+    </tr>`).join('');
+  return `<table style="border-collapse:collapse;font:13px/1.4 -apple-system,Segoe UI,sans-serif;width:100%;">
+    <thead>
+      <tr style="background:#f5f5f7;">
+        <th style="padding:6px 10px;text-align:center;">#</th>
+        <th style="padding:6px 10px;text-align:left;">Team</th>
+        <th style="padding:6px 10px;">P</th>
+        <th style="padding:6px 10px;">W</th>
+        <th style="padding:6px 10px;">D</th>
+        <th style="padding:6px 10px;">L</th>
+        <th style="padding:6px 10px;">GF:GA</th>
+        <th style="padding:6px 10px;">GD</th>
+        <th style="padding:6px 10px;">Pts</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderProbabilities(trace: MatchUpdateTrace): string {
+  if (!trace.probabilities || trace.probabilities.length === 0) return '';
+  const rows = trace.probabilities.map(p => `
+    <tr>
+      <td style="padding:4px 10px;">${esc(p.teamName)}</td>
+      <td style="padding:4px 10px;text-align:right;">${p.pPos1.toFixed(1)}%</td>
+      <td style="padding:4px 10px;text-align:right;">${p.pPos2.toFixed(1)}%</td>
+      <td style="padding:4px 10px;text-align:right;">${p.pPos3.toFixed(1)}%</td>
+      <td style="padding:4px 10px;text-align:right;">${p.pPos4.toFixed(1)}%</td>
+      <td style="padding:4px 10px;text-align:right;color:#6b6b73;">${p.pThirdQual.toFixed(1)}%</td>
+    </tr>`).join('');
+  return `<table style="border-collapse:collapse;font:13px/1.4 -apple-system,Segoe UI,sans-serif;width:100%;margin-top:8px;">
+    <thead>
+      <tr style="background:#f5f5f7;">
+        <th style="padding:6px 10px;text-align:left;">Team</th>
+        <th style="padding:6px 10px;text-align:right;">P(1st)</th>
+        <th style="padding:6px 10px;text-align:right;">P(2nd)</th>
+        <th style="padding:6px 10px;text-align:right;">P(3rd)</th>
+        <th style="padding:6px 10px;text-align:right;">P(4th)</th>
+        <th style="padding:6px 10px;text-align:right;color:#6b6b73;">best-3rd</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderScenarioSummaries(trace: MatchUpdateTrace): string {
+  if (trace.scenarioSummaries.length === 0) {
+    return '<p style="color:#9a9aa3;font-style:italic;">(no scenario summaries captured — group may be fully decided or below the all-teams-played threshold)</p>';
+  }
+  const byTeam = new Map<string, typeof trace.scenarioSummaries>();
+  for (const s of trace.scenarioSummaries) {
+    const arr = byTeam.get(s.teamName) ?? [];
+    arr.push(s);
+    byTeam.set(s.teamName, arr);
+  }
+  const blocks: string[] = [];
+  for (const [teamName, entries] of byTeam) {
+    entries.sort((a, b) => a.position - b.position);
+    const rows = entries.map(e => `
+      <tr>
+        <td style="padding:4px 10px;font-weight:600;white-space:nowrap;">${e.position}${posSuffix(e.position)}</td>
+        <td style="padding:4px 10px;color:#6b6b73;">${e.probability.toFixed(1)}%</td>
+        <td style="padding:4px 10px;color:#6b6b73;">${e.cacheHit ? '<span style="color:#0a7e3b;">cached/100%</span>' : '<span style="color:#0066cc;">AI</span>'}</td>
+        <td style="padding:4px 10px;">${e.output}</td>
+      </tr>`).join('');
+    blocks.push(`
+      <div style="margin:12px 0 18px;">
+        <h3 style="font:600 14px/1.3 -apple-system,Segoe UI,sans-serif;margin:0 0 6px;color:#1a1a1f;">${esc(teamName)}</h3>
+        <table style="border-collapse:collapse;font:13px/1.4 -apple-system,Segoe UI,sans-serif;width:100%;">
+          <thead>
+            <tr style="background:#f5f5f7;">
+              <th style="padding:6px 10px;text-align:left;">Pos</th>
+              <th style="padding:6px 10px;text-align:left;">Prob</th>
+              <th style="padding:6px 10px;text-align:left;">Source</th>
+              <th style="padding:6px 10px;text-align:left;">Summary</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`);
+  }
+  return blocks.join('');
+}
+
+function posSuffix(pos: number): string {
+  return pos === 1 ? 'st' : pos === 2 ? 'nd' : pos === 3 ? 'rd' : 'th';
+}
+
+function renderArticleCall(
+  label: string,
+  call: { cacheHit: boolean; userPrompt?: string; inputData?: unknown; output?: { headline: string; lede: string; body_html: string } | null; error?: string; inputTokens?: number; outputTokens?: number; durationMs?: number; contentHash?: string },
+): string {
+  const meta: string[] = [];
+  meta.push(call.cacheHit ? '<span style="color:#0a7e3b;font-weight:600;">CACHE HIT</span>' : '<span style="color:#0066cc;font-weight:600;">AI GENERATED</span>');
+  if (call.durationMs !== undefined) meta.push(fmtMs(call.durationMs));
+  if (call.inputTokens !== undefined) meta.push(`${call.inputTokens} in`);
+  if (call.outputTokens !== undefined) meta.push(`${call.outputTokens} out`);
+  if (call.contentHash) meta.push(`hash=${call.contentHash}`);
+
+  const out = call.output;
+  const outHtml = out
+    ? `<table style="font:13px/1.5 -apple-system,Segoe UI,sans-serif;width:100%;margin:6px 0;">
+        ${row('Headline', `<strong>${esc(out.headline)}</strong>`)}
+        ${row('Lede', esc(out.lede))}
+        ${row('Body (HTML)', `<div style="background:#fcfcfd;border:1px solid #e3e3e8;padding:10px;border-radius:4px;">${out.body_html}</div>`)}
+      </table>`
+    : '<p style="color:#c62828;font-style:italic;">(no output — generation failed; old cached article remained on the site)</p>';
+
+  const errHtml = call.error ? `<p style="color:#c62828;"><strong>Error:</strong> ${esc(call.error)}</p>` : '';
+
+  const promptHtml = call.userPrompt
+    ? `<details style="margin-top:8px;"><summary style="cursor:pointer;color:#6b6b73;">User prompt sent to Claude (${call.userPrompt.length} chars)</summary>${pre(call.userPrompt)}</details>`
+    : '';
+
+  const inputHtml = call.inputData
+    ? `<details style="margin-top:8px;"><summary style="cursor:pointer;color:#6b6b73;">Structured input data (JSON)</summary>${pre(JSON.stringify(call.inputData, null, 2))}</details>`
+    : '';
+
+  return `<div style="margin:8px 0 20px;">
+    <h3 style="font:600 14px/1.3 -apple-system,Segoe UI,sans-serif;margin:0 0 6px;color:#1a1a1f;">${esc(label)} <span style="font-weight:400;color:#6b6b73;font-size:12px;">${meta.join(' · ')}</span></h3>
+    ${errHtml}
+    ${outHtml}
+    ${promptHtml}
+    ${inputHtml}
+  </div>`;
+}
+
+function renderTipTransitions(trace: MatchUpdateTrace): string {
+  if (!trace.tipTransitions || trace.tipTransitions.length === 0) {
+    return '<p style="color:#9a9aa3;font-style:italic;">(no tips changed — no e-mails queued)</p>';
+  }
+  const rows = trace.tipTransitions.map(t => {
+    const points = t.newPoints === 4 ? '4 (exact)' : t.newPoints === 1 ? '1 (winner)' : t.newPoints === 0 ? '0 (miss)' : `${t.newPoints}`;
+    return `<tr>
+      <td style="padding:4px 10px;">${esc(t.userName)}</td>
+      <td style="padding:4px 10px;color:#6b6b73;">${esc(t.userEmail)}</td>
+      <td style="padding:4px 10px;">${esc(t.matchLabel)}</td>
+      <td style="padding:4px 10px;text-align:center;">${esc(t.tipScore)}</td>
+      <td style="padding:4px 10px;text-align:center;color:#6b6b73;">${t.oldPoints ?? '–'}</td>
+      <td style="padding:4px 10px;text-align:center;font-weight:600;">${points}</td>
+    </tr>`;
+  }).join('');
+  return `
+    <p style="color:#6b6b73;margin:0 0 8px;">${trace.tipEmailsQueued ?? 0} e-mails queued for delivery (fire-and-forget).</p>
+    <table style="border-collapse:collapse;font:13px/1.4 -apple-system,Segoe UI,sans-serif;width:100%;">
+      <thead>
+        <tr style="background:#f5f5f7;">
+          <th style="padding:6px 10px;text-align:left;">User</th>
+          <th style="padding:6px 10px;text-align:left;">E-mail</th>
+          <th style="padding:6px 10px;text-align:left;">Match</th>
+          <th style="padding:6px 10px;">Tip</th>
+          <th style="padding:6px 10px;">Old pts</th>
+          <th style="padding:6px 10px;">New pts</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderCacheInvalidation(trace: MatchUpdateTrace): string {
+  if (!trace.cacheInvalidation) return '<p style="color:#9a9aa3;font-style:italic;">(cache invalidation step not reached)</p>';
+  const ci = trace.cacheInvalidation;
+  return `<table style="font:13px/1.5 -apple-system,Segoe UI,sans-serif;width:100%;">
+    ${row('revalidateTag', ci.revalidatedTags.map(t => code(t)).join(' '))}
+    ${row('Cloudflare purge', ci.cloudflarePurged ? '<span style="color:#0a7e3b;">OK</span>' : `<span style="color:#c62828;">FAILED: ${esc(ci.cloudflareError ?? 'unknown')}</span>`)}
+  </table>`;
+}
+
+function renderErrors(trace: MatchUpdateTrace): string {
+  if (trace.errors.length === 0) return '<p style="color:#0a7e3b;">No errors swallowed during the cascade.</p>';
+  const rows = trace.errors.map(e => `<li style="margin:4px 0;"><strong>${esc(e.step)}:</strong> ${esc(e.message)}</li>`).join('');
+  return `<ul style="margin:0;padding-left:20px;color:#c62828;font:13px/1.5 -apple-system,Segoe UI,sans-serif;">${rows}</ul>`;
+}
+
+export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOutput {
+  const m = trace.match;
+  const scoreStr = `${m.homeGoals ?? '?'}:${m.awayGoals ?? '?'}`;
+  const subject = `[admin] ${m.homeTeam} ${scoreStr} ${m.awayTeam} — Group ${m.groupId} (${trace.errors.length} errors)`;
+
+  const headerHtml = section('Match result entered', `
+    <table style="font:13px/1.5 -apple-system,Segoe UI,sans-serif;width:100%;">
+      ${row('Match', `<strong>${esc(m.homeTeam)} ${scoreStr} ${esc(m.awayTeam)}</strong>`)}
+      ${row('Group', esc(m.groupId))}
+      ${row('Match ID', String(m.matchId))}
+      ${row('Status', esc(m.status))}
+      ${row('Started at', esc(trace.startedAt))}
+      ${row('Total cascade duration', fmtMs(trace.totalDurationMs))}
+    </table>`);
+
+  const standingsHtml = section('Group standings after recalculation', renderStandings(trace) + renderProbabilities(trace));
+  const scenariosHtml = section('Per-team scenario summaries (input to article generation)', renderScenarioSummaries(trace));
+
+  const groupArticleHtml = section('Group article', trace.groupArticle
+    ? renderArticleCall(`Group ${m.groupId}`, trace.groupArticle)
+    : '<p style="color:#9a9aa3;font-style:italic;">(group article generation not reached)</p>');
+
+  const teamArticlesHtml = section('Team articles', trace.teamArticles.length > 0
+    ? trace.teamArticles.map(t => renderArticleCall(`${t.teamName} (team ${t.teamId})`, t)).join('')
+    : '<p style="color:#9a9aa3;font-style:italic;">(no team articles generated)</p>');
+
+  const tipsHtml = section('Tip points & user e-mails', renderTipTransitions(trace));
+  const cacheHtml = section('Cache invalidation', renderCacheInvalidation(trace));
+  const errorsHtml = section('Swallowed errors', renderErrors(trace));
+
+  const html = `<!doctype html>
+<html><body style="margin:0;padding:24px;background:#ffffff;color:#1a1a1f;font:13px/1.5 -apple-system,Segoe UI,sans-serif;">
+  <div style="max-width:900px;margin:0 auto;">
+    <h1 style="font:600 20px/1.3 -apple-system,Segoe UI,sans-serif;margin:0 0 8px;">${esc(m.homeTeam)} <span style="font-variant:tabular-nums;">${scoreStr}</span> ${esc(m.awayTeam)} — Group ${esc(m.groupId)}</h1>
+    <p style="color:#6b6b73;margin:0 0 24px;">Diagnostic trace of the synchronous match-update cascade. Generated ${esc(trace.startedAt)}.</p>
+    ${headerHtml}
+    ${standingsHtml}
+    ${scenariosHtml}
+    ${groupArticleHtml}
+    ${teamArticlesHtml}
+    ${tipsHtml}
+    ${cacheHtml}
+    ${errorsHtml}
+    <p style="color:#9a9aa3;font-size:11px;margin-top:32px;border-top:1px solid #e3e3e8;padding-top:12px;">knockouts.in admin trace — automatic notification</p>
+  </div>
+</body></html>`;
+
+  return { subject, html };
+}

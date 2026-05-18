@@ -449,6 +449,9 @@ export interface PregenerateTeamArticleOptions {
   force?: boolean;
   ignoreFlags?: boolean;
   usage?: TeamArticleUsageStats;
+  /** When provided, the call appends a per-team entry describing what was sent
+   * to Claude and what came back. Drives the superadmin diagnostic e-mail. */
+  trace?: import('../lib/match-update-trace').MatchUpdateTrace;
 }
 
 export async function pregenerateTeamArticle(
@@ -472,15 +475,41 @@ export async function pregenerateTeamArticle(
 
   if (!options.force) {
     const cached = await getCachedTeamArticleByHash(ctx.teamId, contentHash);
-    if (cached) return cached;
+    if (cached) {
+      options.trace?.teamArticles.push({
+        teamId: ctx.teamId,
+        teamName: ctx.teamName,
+        cacheHit: true,
+        output: { headline: cached.headline, lede: cached.lede, body_html: cached.body_html },
+        contentHash,
+      });
+      return cached;
+    }
   }
 
   console.log(`[pregenerate] Generating team article for ${ctx.teamName} (group ${ctx.groupId})${options.force ? ' [FORCE]' : ''}`);
 
+  const userPrompt = buildUserPrompt(ctx);
+  const startedAt = Date.now();
   try {
     const result = await withTimeout(generateTeamArticle(ctx), AI_CALL_TIMEOUT_MS);
     if (!result) {
       console.error(`[pregenerate] Team article parse failed for ${ctx.teamName}`);
+      options.trace?.teamArticles.push({
+        teamId: ctx.teamId,
+        teamName: ctx.teamName,
+        cacheHit: false,
+        userPrompt,
+        inputData: ctx,
+        output: null,
+        error: 'Parse failed (Claude returned malformed JSON)',
+        durationMs: Date.now() - startedAt,
+        contentHash,
+      });
+      options.trace?.errors.push({
+        step: `team-article:${ctx.teamName}`,
+        message: 'Parse failed (Claude returned malformed JSON)',
+      });
       return null;
     }
 
@@ -500,11 +529,43 @@ export async function pregenerateTeamArticle(
       await saveTeamArticle(ctx.teamId, ctx.groupId, article, contentHash);
     } catch (err) {
       console.error(`[pregenerate] Team article cache write failed for ${ctx.teamName}:`, err);
+      options.trace?.errors.push({
+        step: `team-article:${ctx.teamName}:cache-write`,
+        message: String(err),
+      });
     }
+
+    options.trace?.teamArticles.push({
+      teamId: ctx.teamId,
+      teamName: ctx.teamName,
+      cacheHit: false,
+      userPrompt,
+      inputData: ctx,
+      output: article,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      durationMs: Date.now() - startedAt,
+      contentHash,
+    });
 
     return article;
   } catch (err) {
     console.error(`[pregenerate] Team article generation failed for ${ctx.teamName}:`, err);
+    options.trace?.teamArticles.push({
+      teamId: ctx.teamId,
+      teamName: ctx.teamName,
+      cacheHit: false,
+      userPrompt,
+      inputData: ctx,
+      output: null,
+      error: String(err),
+      durationMs: Date.now() - startedAt,
+      contentHash,
+    });
+    options.trace?.errors.push({
+      step: `team-article:${ctx.teamName}`,
+      message: String(err),
+    });
     return null;
   }
 }

@@ -377,6 +377,9 @@ export interface PregenerateGroupArticleOptions {
   ignoreFlags?: boolean;
   /** Usage accumulator. */
   usage?: GroupArticleUsageStats;
+  /** When provided, the call writes its prompt + result into trace.groupArticle.
+   * Drives the superadmin diagnostic e-mail. */
+  trace?: import('../lib/match-update-trace').MatchUpdateTrace;
 }
 
 /**
@@ -409,15 +412,43 @@ export async function pregenerateGroupArticle(
 
   if (!options.force) {
     const cached = await getCachedGroupArticleByHash(ctx.groupId, contentHash);
-    if (cached) return cached;
+    if (cached) {
+      if (options.trace) {
+        options.trace.groupArticle = {
+          groupId: ctx.groupId,
+          cacheHit: true,
+          output: { headline: cached.headline, lede: cached.lede, body_html: cached.body_html },
+          contentHash,
+        };
+      }
+      return cached;
+    }
   }
 
   console.log(`[pregenerate] Generating group article for ${ctx.groupId}${options.force ? ' [FORCE]' : ''}`);
 
+  const userPrompt = buildUserPrompt(ctx);
+  const startedAt = Date.now();
   try {
     const result = await withTimeout(generateGroupArticle(ctx), AI_CALL_TIMEOUT_MS);
     if (!result) {
       console.error(`[pregenerate] Group article parse failed for ${ctx.groupId}`);
+      if (options.trace) {
+        options.trace.groupArticle = {
+          groupId: ctx.groupId,
+          cacheHit: false,
+          userPrompt,
+          inputData: ctx,
+          output: null,
+          error: 'Parse failed (Claude returned malformed JSON)',
+          durationMs: Date.now() - startedAt,
+          contentHash,
+        };
+        options.trace.errors.push({
+          step: `group-article:${ctx.groupId}`,
+          message: 'Parse failed (Claude returned malformed JSON)',
+        });
+      }
       return null;
     }
 
@@ -437,11 +468,45 @@ export async function pregenerateGroupArticle(
       await saveGroupArticle(ctx.groupId, article, contentHash);
     } catch (err) {
       console.error(`[pregenerate] Group article cache write failed for ${ctx.groupId}:`, err);
+      options.trace?.errors.push({
+        step: `group-article:${ctx.groupId}:cache-write`,
+        message: String(err),
+      });
+    }
+
+    if (options.trace) {
+      options.trace.groupArticle = {
+        groupId: ctx.groupId,
+        cacheHit: false,
+        userPrompt,
+        inputData: ctx,
+        output: article,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        durationMs: Date.now() - startedAt,
+        contentHash,
+      };
     }
 
     return article;
   } catch (err) {
     console.error(`[pregenerate] Group article generation failed for ${ctx.groupId}:`, err);
+    if (options.trace) {
+      options.trace.groupArticle = {
+        groupId: ctx.groupId,
+        cacheHit: false,
+        userPrompt,
+        inputData: ctx,
+        output: null,
+        error: String(err),
+        durationMs: Date.now() - startedAt,
+        contentHash,
+      };
+      options.trace.errors.push({
+        step: `group-article:${ctx.groupId}`,
+        message: String(err),
+      });
+    }
     return null;
   }
 }

@@ -203,6 +203,8 @@ export interface PregenerateOptions {
   ignoreFlags?: boolean;
   /** Usage accumulator filled during generation. */
   usage?: import('../engine/scenario-summary-ai').AiUsageStats;
+  /** Diagnostic trace — when provided, every AI call writes its inputs/outputs here. */
+  trace?: import('./match-update-trace').MatchUpdateTrace;
 }
 
 export async function pregenerateTeamScenarioSummaries(
@@ -324,8 +326,29 @@ export async function pregenerateTeamScenarioSummaries(
           usage: options.usage,
         });
         freshGranularByTeam.set(team.id, result);
+
+        // Capture the granular scenario summaries into the diagnostic trace
+        // so the admin e-mail shows what each team was told for each position.
+        if (options.trace) {
+          for (const [posStr, html] of Object.entries(result)) {
+            const pos = Number(posStr);
+            options.trace.scenarioSummaries.push({
+              teamId: team.id,
+              teamName: team.name,
+              position: pos,
+              probability: teamSummary.positionProbabilities[pos] ?? 0,
+              output: html,
+              // 100% positions return a hardcoded "Guaranteed." without an API call.
+              cacheHit: (teamSummary.positionProbabilities[pos] ?? 0) === 100,
+            });
+          }
+        }
       } catch (err) {
         console.error(`[pregenerate] Team scenario AI failed for ${team.name}:`, err);
+        options.trace?.errors.push({
+          step: `scenario-summaries:${team.name}`,
+          message: String(err),
+        });
       }
     }),
   );
@@ -379,6 +402,7 @@ export async function pregenerateTeamScenarioSummaries(
             // so the granular accumulator doubles as the article one — admin
             // dashboard ends up reporting combined token spend + call count.
             usage: options.usage,
+            trace: options.trace,
           },
         );
 
@@ -435,9 +459,14 @@ export async function pregenerateTeamScenarioSummaries(
               force: options.force,
               ignoreFlags: options.ignoreFlags,
               usage: options.usage,
+              trace: options.trace,
             },
           ).catch(err => {
             console.error(`[pregenerate] Team article failed for ${t.name}:`, err);
+            options.trace?.errors.push({
+              step: `team-article-cascade:${t.name}`,
+              message: String(err),
+            });
             return null;
           });
         }),
