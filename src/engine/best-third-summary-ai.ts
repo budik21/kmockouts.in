@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
 import { withClaudeSlot } from '../lib/claude-concurrency';
 import { isFeatureEnabled } from '../lib/feature-flags';
+import { getAiPredictionModelId } from '../lib/ai-model';
 import type { QualificationThreshold } from './best-third';
 
 // Lazy singleton — instantiating Anthropic() at module load throws when
@@ -110,10 +111,14 @@ ${matchInfo}
 
 Write a short summary (2-4 sentences) of what this team needs to qualify as best third-placed.`;
 
+  const modelId = await getAiPredictionModelId();
+
   const response = await withClaudeSlot(() => getClient().messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: modelId,
     max_tokens: 256,
-    system: SYSTEM_PROMPT,
+    system: [
+      { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+    ],
     messages: [{ role: 'user', content: userPrompt }],
   }));
 

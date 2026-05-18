@@ -2,6 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import Spinner from './Spinner';
+import {
+  AI_PREDICTION_MODELS,
+  AI_PREDICTION_MODEL_KEYS,
+  type AiPredictionModelKey,
+} from '@/lib/ai-model';
 
 export interface AiTeamOption {
   id: number;
@@ -15,6 +20,7 @@ interface AiPredictionsActionsProps {
   envEnabled: boolean;
   generationFlagEnabled: boolean;
   displayFlagEnabled: boolean;
+  initialModel: AiPredictionModelKey;
 }
 
 interface RegenerateResponse {
@@ -169,7 +175,39 @@ export default function AiPredictionsActions({
   envEnabled,
   generationFlagEnabled,
   displayFlagEnabled,
+  initialModel,
 }: AiPredictionsActionsProps) {
+  const [model, setModel] = useState<AiPredictionModelKey>(initialModel);
+  const [modelPending, setModelPending] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
+  const [modelSavedAt, setModelSavedAt] = useState<number | null>(null);
+
+  async function changeModel(next: AiPredictionModelKey) {
+    if (next === model) return;
+    const previous = model;
+    setModel(next);
+    setModelPending(true);
+    setModelError(null);
+    setModelSavedAt(null);
+    try {
+      const res = await fetch('/api/admin/ai-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error || `Request failed: ${res.status}`);
+      }
+      setModelSavedAt(Date.now());
+    } catch (err) {
+      setModel(previous);
+      setModelError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setModelPending(false);
+    }
+  }
+
   const teamsByGroup = useMemo(() => {
     const map = new Map<string, AiTeamOption[]>();
     for (const t of teams) {
@@ -215,8 +253,88 @@ export default function AiPredictionsActions({
     ? teams.find(t => t.id === teamSelected)?.groupId
     : undefined;
 
+  const modelInfo = AI_PREDICTION_MODELS[model];
+
   return (
     <>
+      {/* Model selector — applies to every AI prediction call (team articles,
+          group articles, scenario summaries, best-third summaries). */}
+      <div style={cardStyle}>
+        <div style={titleStyle}>Generation model</div>
+        <div style={descStyle}>
+          Which Claude model to call for every AI prediction (team articles,
+          group articles, per-position scenario summaries, best-third summaries).
+          Twitter drafts have their own per-call selector and are not affected
+          by this setting. Changes take effect within ~30 seconds across the
+          app and apply to the NEXT regeneration — existing cached predictions
+          are not invalidated.
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+          <label
+            htmlFor="ai-model-select"
+            style={{ color: 'var(--wc-text-muted)', fontSize: '0.9rem' }}
+          >
+            Model:
+          </label>
+          <select
+            id="ai-model-select"
+            value={model}
+            onChange={(e) => changeModel(e.target.value as AiPredictionModelKey)}
+            disabled={modelPending}
+            style={selectStyle}
+          >
+            {AI_PREDICTION_MODEL_KEYS.map(key => (
+              <option key={key} value={key}>
+                {AI_PREDICTION_MODELS[key].label} — ${AI_PREDICTION_MODELS[key].inputUsdPerMtok}/MTok in, ${AI_PREDICTION_MODELS[key].outputUsdPerMtok}/MTok out
+              </option>
+            ))}
+          </select>
+          {modelPending && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                color: 'var(--wc-text)',
+                fontSize: '0.9rem',
+              }}
+            >
+              <Spinner size="sm" />
+              Saving…
+            </span>
+          )}
+          {!modelPending && modelSavedAt && (
+            <span style={{ color: '#4caf50', fontSize: '0.85rem' }}>✓ Saved</span>
+          )}
+        </div>
+        <div
+          style={{
+            marginTop: '0.75rem',
+            color: 'var(--wc-text-muted)',
+            fontSize: '0.85rem',
+          }}
+        >
+          Selected: <code style={{ color: 'var(--wc-text)' }}>{modelInfo.id}</code>
+          {' · '}cache-read ${modelInfo.cacheReadUsdPerMtok}/MTok
+          {' · '}cache-write ${modelInfo.cacheWriteUsdPerMtok}/MTok
+        </div>
+        {modelError && (
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.6rem 0.85rem',
+              backgroundColor: 'rgba(244, 67, 54, 0.1)',
+              border: '1px solid rgba(244, 67, 54, 0.4)',
+              borderRadius: '0.25rem',
+              color: '#f44336',
+              fontSize: '0.9rem',
+            }}
+          >
+            ✗ {modelError}
+          </div>
+        )}
+      </div>
+
       {/* Status banner */}
       <div style={cardStyle}>
         <div style={titleStyle}>Current state (info only)</div>

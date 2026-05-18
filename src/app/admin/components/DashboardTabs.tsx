@@ -13,6 +13,7 @@ import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions'
 import TwitterTab from './TwitterTab';
 import ScenarioPicker from '@/app/components/ScenarioPicker';
 import type { FeatureFlag } from '@/lib/feature-flags';
+import type { AiPredictionModelKey } from '@/lib/ai-model';
 
 interface DashboardTabsProps {
   initialMatches: AdminMatch[];
@@ -30,6 +31,7 @@ interface DashboardTabsProps {
   aiEnvEnabled: boolean;
   aiGenerationFlagEnabled: boolean;
   aiDisplayFlagEnabled: boolean;
+  aiModel: AiPredictionModelKey;
   initialTab?: TabKey;
 }
 
@@ -51,6 +53,7 @@ export default function DashboardTabs({
   aiEnvEnabled,
   aiGenerationFlagEnabled,
   aiDisplayFlagEnabled,
+  aiModel,
   initialTab,
 }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? 'matches');
@@ -264,6 +267,7 @@ export default function DashboardTabs({
               envEnabled={aiEnvEnabled}
               generationFlagEnabled={aiGenerationFlagEnabled}
               displayFlagEnabled={aiDisplayFlagEnabled}
+              initialModel={aiModel}
             />
           </div>
         )}

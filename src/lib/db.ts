@@ -199,6 +199,19 @@ export async function initializeSchema(): Promise<void> {
       ('ai_predictions_display', true, 'DISPLAY: render cached AI-written summaries on team pages and best-third-placed standings. Disabling hides all AI commentary (deterministic fallback on team pages; best-third AI box is omitted). Generation is unaffected.')
     ON CONFLICT (key) DO NOTHING;
 
+    -- Generic key/value app settings (string values). Used for admin-tunable
+    -- knobs that don't fit the boolean feature_flag shape — e.g. which
+    -- Claude model the AI predictions pipeline should call.
+    CREATE TABLE IF NOT EXISTS app_setting (
+      key         TEXT PRIMARY KEY,
+      value       TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    INSERT INTO app_setting (key, value, description) VALUES
+      ('ai_prediction_model', 'haiku', 'Which Claude model the AI predictions pipeline (team articles, group articles, scenario summaries, best-third summaries) calls. Allowed values: haiku, sonnet, opus.')
+    ON CONFLICT (key) DO NOTHING;
+
     -- AI-generated scenario summaries cache
     CREATE TABLE IF NOT EXISTS ai_summary_cache (
       group_id      TEXT NOT NULL,

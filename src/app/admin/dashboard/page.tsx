@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
 import { listFeatureFlags, isAiGenerationEnabledByEnv } from '@/lib/feature-flags';
+import { getAiPredictionModelKey } from '@/lib/ai-model';
 import { ALL_GROUPS } from '@/lib/constants';
 import DashboardTabs from '../components/DashboardTabs';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
@@ -165,6 +166,7 @@ export default async function AdminDashboardPage({
   const aiDisplayFlagEnabled = isSuperadmin
     ? (featureFlags.find(f => f.key === 'ai_predictions_display')?.enabled ?? false)
     : false;
+  const aiModel = isSuperadmin ? await getAiPredictionModelKey() : 'haiku';
 
   const [matchRows, statsRows, adminUserRows] = await Promise.all([
     query<AdminMatchRow>(`
@@ -256,6 +258,7 @@ export default async function AdminDashboardPage({
         aiEnvEnabled={aiEnvEnabled}
         aiGenerationFlagEnabled={aiGenerationFlagEnabled}
         aiDisplayFlagEnabled={aiDisplayFlagEnabled}
+        aiModel={aiModel}
         initialTab={initialTab}
       />
     </div>

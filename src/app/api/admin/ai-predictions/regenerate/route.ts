@@ -8,11 +8,7 @@ import { warmWcPages } from '@/lib/cache-warmup';
 import { ALL_GROUPS } from '@/lib/constants';
 import type { GroupId } from '@/lib/types';
 import type { AiUsageStats } from '@/engine/scenario-summary-ai';
-
-// Hardcoded Haiku 4.5 list pricing — kept here intentionally so the admin
-// dashboard always shows a cost estimate even without external rate config.
-const HAIKU_INPUT_USD_PER_MTOK = 1;
-const HAIKU_OUTPUT_USD_PER_MTOK = 5;
+import { AI_PREDICTION_MODELS, getAiPredictionModelKey } from '@/lib/ai-model';
 
 interface Body {
   scope?: 'team' | 'group';
@@ -77,9 +73,15 @@ export async function POST(request: NextRequest) {
     // Fire-and-forget — completion isn't required for the admin response.
     warmWcPages().catch(err => console.error('[ai-predictions/regenerate] warmup error:', err));
 
+    // Use the currently selected model's list price. This is a rough estimate
+    // because we don't track cache-write vs cache-read tokens separately in
+    // AiUsageStats — every input token is billed at the fresh rate, which
+    // slightly overstates the real cost on cached calls.
+    const modelKey = await getAiPredictionModelKey();
+    const modelInfo = AI_PREDICTION_MODELS[modelKey];
     const costUsd =
-      (usage.inputTokens / 1_000_000) * HAIKU_INPUT_USD_PER_MTOK +
-      (usage.outputTokens / 1_000_000) * HAIKU_OUTPUT_USD_PER_MTOK;
+      (usage.inputTokens / 1_000_000) * modelInfo.inputUsdPerMtok +
+      (usage.outputTokens / 1_000_000) * modelInfo.outputUsdPerMtok;
 
     const scopeLabel = scope === 'team' ? `team ${teamId} in group ${groupId}` : `group ${groupId}`;
     // For group scope the call count includes 1 group-article synthesis + 4

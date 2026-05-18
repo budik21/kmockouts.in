@@ -12,6 +12,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
 import { withClaudeSlot } from '../lib/claude-concurrency';
 import { isFeatureEnabled, isAiGenerationEnabledByEnv } from '../lib/feature-flags';
+import { getAiPredictionModelId } from '../lib/ai-model';
 
 const client = new Anthropic();
 
@@ -242,11 +243,14 @@ function parseArticleResponse(raw: string): GeneratedGroupArticle | null {
 
 async function generateGroupArticle(ctx: GroupArticleContext): Promise<GenerateResult | null> {
   const userPrompt = buildUserPrompt(ctx);
+  const modelId = await getAiPredictionModelId();
 
   const response = await withClaudeSlot(() => client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: modelId,
     max_tokens: 1500,
-    system: SYSTEM_PROMPT,
+    system: [
+      { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+    ],
     messages: [{ role: 'user', content: userPrompt }],
   }));
 

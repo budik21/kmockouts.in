@@ -10,6 +10,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
 import { withClaudeSlot } from '../lib/claude-concurrency';
 import { isFeatureEnabled, isAiGenerationEnabledByEnv } from '../lib/feature-flags';
+import { getAiPredictionModelId } from '../lib/ai-model';
 import { RemainingMatchInfo } from './scenario-summary';
 
 const client = new Anthropic();
@@ -195,10 +196,14 @@ ${preComputedPaths}
 
 Write the scenario summary for this position. Start with a probability assessment — is this likely, possible, or a long shot? How does it compare to the other positions?`;
 
+  const modelId = await getAiPredictionModelId();
+
   const response = await withClaudeSlot(() => client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: modelId,
     max_tokens: 512,
-    system: SYSTEM_PROMPT,
+    system: [
+      { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+    ],
     messages: [{ role: 'user', content: userPrompt }],
   }));
 
