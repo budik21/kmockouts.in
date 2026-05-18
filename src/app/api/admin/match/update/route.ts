@@ -12,6 +12,7 @@ import { slugify } from '@/lib/slugify';
 import { newMatchUpdateTrace, type MatchUpdateTrace } from '@/lib/match-update-trace';
 import { sendAdminMatchSummary } from '@/lib/admin-summary-notification';
 import { calculateStandings } from '@/engine/standings';
+import { SITE_URL } from '@/lib/seo';
 
 interface UpdateBody {
   matchId: number;
@@ -110,7 +111,15 @@ export async function POST(request: NextRequest) {
       [groupId],
     );
 
-    const origin = new URL(request.url).origin;
+    // Warmup needs to hit the externally-reachable URL — in production
+    // `new URL(request.url).origin` can pick up an internal proxy host like
+    // `https://localhost:8080` when the load balancer doesn't rewrite the
+    // Host header, and every warmup fetch then fails with TLS errors. Use
+    // the canonical SITE_URL in production; in dev fall back to the request
+    // origin so localhost still warms its own cache.
+    const origin = process.env.NODE_ENV === 'production'
+      ? SITE_URL
+      : new URL(request.url).origin;
 
     // Synchronous recalculation chain. We hold the request open until
     // probabilities + AI summaries + AI articles are all rewritten against the
