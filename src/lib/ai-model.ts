@@ -1,17 +1,13 @@
 /**
- * Admin-controlled Claude model selection for AI predictions
- * (team articles, group articles, scenario summaries, best-third summaries).
+ * Shared types and constants for the admin-controlled Claude model
+ * selection used by the AI predictions pipeline (team articles, group
+ * articles, scenario summaries, best-third summaries).
  *
- * The selected model is stored in the `app_setting` table under key
- * `ai_prediction_model` and changeable from the admin UI. Reads are
- * cached in-process for a short TTL so hot paths don't hit Postgres.
- *
- * Twitter generation has its own per-call selector (`twitter-ai.ts`)
- * and is intentionally NOT covered by this setting — tweets are a
- * one-shot, human-supervised flow.
+ * This module is intentionally free of DB / Node-only imports so it can
+ * be imported safely from client components (the admin model picker
+ * needs the labels and pricing for its dropdown). Server-side reads/
+ * writes of the actual setting live in `ai-model-server.ts`.
  */
-
-import { query } from './db';
 
 export type AiPredictionModelKey = 'haiku' | 'sonnet' | 'opus';
 
@@ -59,52 +55,8 @@ export const AI_PREDICTION_MODEL_KEYS: AiPredictionModelKey[] = ['haiku', 'sonne
 
 export const DEFAULT_AI_PREDICTION_MODEL: AiPredictionModelKey = 'haiku';
 
+export const AI_PREDICTION_MODEL_SETTING_KEY = 'ai_prediction_model';
+
 export function normalizeAiPredictionModel(value: unknown): AiPredictionModelKey {
   return value === 'sonnet' || value === 'opus' ? value : 'haiku';
-}
-
-const SETTING_KEY = 'ai_prediction_model';
-const TTL_MS = 30_000;
-
-interface CacheEntry {
-  key: AiPredictionModelKey;
-  expiresAt: number;
-}
-
-let cached: CacheEntry | null = null;
-
-export async function getAiPredictionModelKey(): Promise<AiPredictionModelKey> {
-  const now = Date.now();
-  if (cached && cached.expiresAt > now) return cached.key;
-
-  try {
-    const rows = await query<{ value: string }>(
-      'SELECT value FROM app_setting WHERE key = $1',
-      [SETTING_KEY],
-    );
-    const key = normalizeAiPredictionModel(rows[0]?.value ?? DEFAULT_AI_PREDICTION_MODEL);
-    cached = { key, expiresAt: now + TTL_MS };
-    return key;
-  } catch {
-    return DEFAULT_AI_PREDICTION_MODEL;
-  }
-}
-
-export async function getAiPredictionModelId(): Promise<string> {
-  const key = await getAiPredictionModelKey();
-  return AI_PREDICTION_MODELS[key].id;
-}
-
-export async function setAiPredictionModel(key: AiPredictionModelKey): Promise<void> {
-  await query(
-    `INSERT INTO app_setting (key, value, updated_at)
-     VALUES ($1, $2, NOW())
-     ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
-    [SETTING_KEY, key],
-  );
-  cached = null;
-}
-
-export function clearAiPredictionModelCache(): void {
-  cached = null;
 }

@@ -9,7 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
 import { withClaudeSlot } from '../lib/claude-concurrency';
 import { isFeatureEnabled } from '../lib/feature-flags';
-import { getAiPredictionModelId } from '../lib/ai-model';
+import { getAiPredictionModelId } from '../lib/ai-model-server';
 import type { QualificationThreshold } from './best-third';
 
 // Lazy singleton — instantiating Anthropic() at module load throws when

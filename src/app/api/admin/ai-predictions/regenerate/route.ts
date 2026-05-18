@@ -8,7 +8,8 @@ import { warmWcPages } from '@/lib/cache-warmup';
 import { ALL_GROUPS } from '@/lib/constants';
 import type { GroupId } from '@/lib/types';
 import type { AiUsageStats } from '@/engine/scenario-summary-ai';
-import { AI_PREDICTION_MODELS, getAiPredictionModelKey } from '@/lib/ai-model';
+import { AI_PREDICTION_MODELS } from '@/lib/ai-model';
+import { getAiPredictionModelKey } from '@/lib/ai-model-server';
 
 interface Body {
   scope?: 'team' | 'group';

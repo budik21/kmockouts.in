@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { requireSuperadminApi } from '@/lib/admin-auth';
-import {
-  AI_PREDICTION_MODEL_KEYS,
-  getAiPredictionModelKey,
-  normalizeAiPredictionModel,
-  setAiPredictionModel,
-} from '@/lib/ai-model';
+import { AI_PREDICTION_MODEL_KEYS, normalizeAiPredictionModel } from '@/lib/ai-model';
+import { getAiPredictionModelKey, setAiPredictionModel } from '@/lib/ai-model-server';
 import { WC_TAG } from '@/lib/cache-tags';
 
 export async function GET() {

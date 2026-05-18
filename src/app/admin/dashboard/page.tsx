@@ -7,7 +7,7 @@ import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
 import { listFeatureFlags, isAiGenerationEnabledByEnv } from '@/lib/feature-flags';
-import { getAiPredictionModelKey } from '@/lib/ai-model';
+import { getAiPredictionModelKey } from '@/lib/ai-model-server';
 import { ALL_GROUPS } from '@/lib/constants';
 import DashboardTabs from '../components/DashboardTabs';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';

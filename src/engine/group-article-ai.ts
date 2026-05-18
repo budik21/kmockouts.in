@@ -12,7 +12,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { query } from '../lib/db';
 import { withClaudeSlot } from '../lib/claude-concurrency';
 import { isFeatureEnabled, isAiGenerationEnabledByEnv } from '../lib/feature-flags';
-import { getAiPredictionModelId } from '../lib/ai-model';
+import { getAiPredictionModelId } from '../lib/ai-model-server';
 
 const client = new Anthropic();
 
