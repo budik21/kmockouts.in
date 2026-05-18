@@ -148,9 +148,14 @@ function fullEnumerationScenarios(
       const edgeSet = data.edgeSets[s.position];
       if (edgeSet.size < MAX_EDGES && !edgeSet.has(dedupKey)) {
         edgeSet.add(dedupKey);
-        data.edgeScenarios[s.position].push(
-          normalizeOtherMatchScores(matchCombo, remainingMatches, s.team.id),
-        );
+        // Store the actual scores from the first encountered combo for this
+        // W/D/L pattern. Because indices increment from 0 (smallest GD bucket)
+        // upward, the first combo that lands at this position is the one with
+        // the minimum GDs that actually achieve it. Normalising "other" match
+        // scores to 1:0 would lie when the other match's GD is what decides
+        // the focus team's position (e.g. Bosnia finishes 2nd only if
+        // Switzerland beats Canada by 3+).
+        data.edgeScenarios[s.position].push(matchCombo);
       }
     }
 
@@ -238,9 +243,12 @@ function monteCarloGroupScenarios(
       const edgeSet = data.edgeSets[s.position];
       if (edgeSet.size < MAX_EDGES && !edgeSet.has(dedupKey)) {
         edgeSet.add(dedupKey);
-        data.edgeScenarios[s.position].push(
-          normalizeOtherMatchScores(matchCombo, remainingMatches, s.team.id),
-        );
+        // Store the actual simulated scores. Normalising "other" match scores
+        // to 1:0 would lie when the other match's GD is what decides the
+        // focus team's position. With random MC iteration the displayed GD
+        // may be larger than the true minimum, but it is always a real
+        // scenario that actually yields this position.
+        data.edgeScenarios[s.position].push(matchCombo);
       }
     }
   }
@@ -268,30 +276,6 @@ function monteCarloGroupScenarios(
 // ============================================================
 // Helpers
 // ============================================================
-
-/**
- * Return a copy of a MatchCombination where every match the team is NOT
- * involved in is normalised to the minimal score for its outcome:
- *   home win → 1:0,  draw → 0:0,  away win → 0:1
- *
- * This prevents the scenario list from showing "X 1:0 Y, XX 2:0 YY" and
- * "X 1:0 Y, XX 3:0 YY" as separate entries — only one entry per distinct
- * (own-match outcome+GD) × (other-match W/D/L) combination is kept.
- */
-function normalizeOtherMatchScores(
-  combo: MatchCombination,
-  remainingMatches: Match[],
-  teamId: number,
-): MatchCombination {
-  const matchResults = combo.matchResults.map((r, i) => {
-    const m = remainingMatches[i];
-    if (m.homeTeamId === teamId || m.awayTeamId === teamId) return r;
-    if (r.shortResult === 'H') return { ...r, homeGoals: 1, awayGoals: 0, label: 'Home win by 1' };
-    if (r.shortResult === 'A') return { ...r, homeGoals: 0, awayGoals: 1, label: 'Away win by 1' };
-    return { ...r, homeGoals: 0, awayGoals: 0, label: 'Draw' };
-  });
-  return { matchResults, shortKey: combo.shortKey };
-}
 
 function buildSimulatedMatches(
   remainingMatches: Match[],
