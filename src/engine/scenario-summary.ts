@@ -121,7 +121,13 @@ function summarizePosition(
   // "loses by 1 AND other team wins by 3+").
   const branches: Branch[] = [];
   for (const [ownKey, groupEntries] of groups) {
-    const ownOutcomes = ownKey.split('|') as TeamOutcome[];
+    // When the team has no own remaining matches, ownKey === '' and
+    // `''.split('|')` returns `['']` — a phantom 1-element array that would
+    // produce a ghost ownCondition with matchIdx === undefined and crash
+    // buildSentence on `remainingMatches[undefined].homeTeamId`. Treat the
+    // empty case as truly empty: no own conditions, just other-match
+    // constraints.
+    const ownOutcomes = ownKey === '' ? [] : ownKey.split('|') as TeamOutcome[];
 
     if (otherMatchIndices.length === 0) {
       // No other matches — just compute own conditions as before
