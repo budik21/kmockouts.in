@@ -1151,7 +1151,6 @@ a { color: inherit; text-decoration: none; }
 .scenario-tiebreaker-note {
   font-size: 0.7rem;
   font-weight: 400;
-  font-style: italic;
   opacity: 0.85;
 }
 

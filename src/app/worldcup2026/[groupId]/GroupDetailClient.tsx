@@ -6,6 +6,7 @@ import MatchList from '@/app/components/MatchList';
 import ArrowStepper from '@/app/components/ArrowStepper';
 import TeamFlag from '@/app/components/TeamFlag';
 import { calculateStandings } from '@/engine/standings';
+import { explainTiebreakers } from '@/engine/tiebreaker-explain';
 import type { Team, Match, GroupId } from '@/lib/types';
 
 /* ============================================================
@@ -280,7 +281,7 @@ export default function GroupDetailClient({
   }, [groupId]);
 
   // Compute simulated standings client-side
-  const simulatedStandings = (() => {
+  const simResult = (() => {
     if (!simActive) return null;
 
     // Merge real matches with simulated scores
@@ -300,16 +301,19 @@ export default function GroupDetailClient({
 
     const finishedMerged = mergedMatches.filter((m) => m.status === 'FINISHED');
     const standings = calculateStandings({ teams, matches: finishedMerged });
+    const tiebreakerNotes = explainTiebreakers(standings, finishedMerged);
 
-    return standings.map((s) => ({
+    const mapped = standings.map((s) => ({
       ...s,
       team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder, fifaRanking: s.team.fifaRanking },
     }));
+    return { standings: mapped, tiebreakerNotes };
   })();
 
   // Determine which data to display
-  const displayStandings = simActive && simulatedStandings ? simulatedStandings : realStandings;
+  const displayStandings = simActive && simResult ? simResult.standings : realStandings;
   const displayProbabilities = simActive ? undefined : realProbabilities;
+  const tiebreakerNotes = simResult?.tiebreakerNotes ?? [];
 
   const simMatchCount = Object.keys(simScores).length;
 
@@ -335,10 +339,17 @@ export default function GroupDetailClient({
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0 }}>
                 <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a1 1 0 110 2 1 1 0 010-2zm1.5 9h-3v-1h1V7.5h-1v-1h2V11h1v1z"/>
               </svg>
-              <span>
-                You are viewing simulated results.
-                {simMatchCount > 0 && ` ${simMatchCount} match${simMatchCount > 1 ? 'es' : ''} simulated.`}
-              </span>
+              <div className="scenario-banner-content">
+                <span>
+                  You are viewing simulated results.
+                  {simMatchCount > 0 && ` ${simMatchCount} match${simMatchCount > 1 ? 'es' : ''} simulated.`}
+                </span>
+                {tiebreakerNotes.length > 0 && (
+                  <span className="scenario-tiebreaker-note">
+                    Tiebreaker: {tiebreakerNotes.join(' | ')}
+                  </span>
+                )}
+              </div>
             </div>
           )}
           <GroupStandings
