@@ -27,19 +27,29 @@ The team's qualification status drives the angle:
 
   CASE A — Already through (top-2 guaranteed, i.e. P(1st)+P(2nd) = 100%):
     Recap how they got there. What clicked. Who delivered. What this means
-    for the knockout phase.
+    for the knockout phase. Past tense for the matches already played.
 
   CASE B — Mathematically eliminated (P(4th) = 100% OR no remaining match
-  can lift them above the qualification line):
+  can lift them above the qualification line OR 0 remaining matches AND
+  bestThirdQualProb = 0%):
     Recap WHY they are out. What went wrong. Which result(s) buried them.
     No false hope.
 
-  CASE C — Still alive (the typical case):
+  CASE C — Still alive WITH remaining matches (the typical mid-group case):
     Spell out the path. What must happen in the team's own remaining match,
     and — if relevant — what must also happen in the OTHER match in the
     group. Use the per-position scenario summaries as the source of truth.
     If they can also sneak through as one of the eight best third-placed
     teams, mention that as a secondary route.
+
+  CASE D — Group ended in 3rd, fate now hangs on cross-group best-third
+  comparison (0 remaining matches AND bestThirdQualProb is strictly
+  between 0% and 100%):
+    Past tense for the group campaign. Then explain the best-third route —
+    quote the bestThirdQualProb percentage and describe what would still
+    need to happen in OTHER groups for the team to qualify. Do NOT invent
+    scorelines for those still-scheduled matches. Reflect the confidence
+    level — a 90%+ probability reads very differently from a 20% one.
 
 CRITICAL CONTENT RULE:
 The first two paragraphs MUST tell the reader, in plain words, the answer
@@ -382,10 +392,11 @@ function hashContext(ctx: TeamArticleContext): string {
     .map(p => ctx.granularSummariesByPosition[p] ?? '')
     .join('§');
 
-  // v3: prompt now enforces match-count arithmetic (played+remaining=3) and
-  // adds an explicit per-team tally line. Bump to invalidate stale articles
-  // that may have hallucinated a "remaining match" when the team is done.
-  const str = `v3:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>`;
+  // v4: prompt now has an explicit CASE D for 3rd place in a concluded
+  // group with best-third still TBD, plus expanded CASE B/C wording for the
+  // 0-remaining-matches branch. Bump invalidates older articles so the
+  // next admin save regenerates against the new structure.
+  const str = `v4:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

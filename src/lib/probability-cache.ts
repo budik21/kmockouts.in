@@ -264,9 +264,15 @@ export async function pregenerateTeamScenarioSummaries(
 
   // AI summaries are only rendered once every team has played at least once.
   const allTeamsPlayed = teams.every(t => played.some(m => m.homeTeamId === t.id || m.awayTeamId === t.id));
-  if (remaining.length === 0 || !allTeamsPlayed) {
+  if (!allTeamsPlayed) {
     return;
   }
+  // remaining.length === 0 ⇒ group is fully decided. Skip granular
+  // per-position scenario AI (no scenarios to predict — every team is at
+  // 100% / 0% on its final position) but still cascade into the group +
+  // team articles so the on-site commentary updates from "X must beat Y"
+  // to a past-tense wrap-up instead of disappearing.
+  const isWrapUp = remaining.length === 0;
 
   const standings = calculateStandings({ teams, matches: played });
   const currentStandings = standings.map(s => ({
@@ -307,53 +313,57 @@ export async function pregenerateTeamScenarioSummaries(
   // article AI under "use these as the source of truth" produces articles
   // that talk about matches the team has already played.
   const freshGranularByTeam = new Map<number, { [pos: number]: string }>();
-  await Promise.allSettled(
-    targetTeams.map(async team => {
-      const teamSummary = summaries.find(s => s.teamId === team.id);
-      if (!teamSummary) return;
-      try {
-        const result = await generateAiScenarioSummaries({
-          teamId: team.id,
-          teamName: team.name,
-          groupId: groupId,
-          outcomePatternsByPosition: teamSummary.outcomePatternsByPosition,
-          probabilities: teamSummary.positionProbabilities,
-          remainingMatches: remainingMatchesInfo,
-          currentStandings,
-        }, {
-          force: options.force,
-          ignoreFlags: options.ignoreFlags,
-          usage: options.usage,
-        });
-        freshGranularByTeam.set(team.id, result);
+  if (!isWrapUp) {
+    await Promise.allSettled(
+      targetTeams.map(async team => {
+        const teamSummary = summaries.find(s => s.teamId === team.id);
+        if (!teamSummary) return;
+        try {
+          const result = await generateAiScenarioSummaries({
+            teamId: team.id,
+            teamName: team.name,
+            groupId: groupId,
+            outcomePatternsByPosition: teamSummary.outcomePatternsByPosition,
+            probabilities: teamSummary.positionProbabilities,
+            remainingMatches: remainingMatchesInfo,
+            currentStandings,
+          }, {
+            force: options.force,
+            ignoreFlags: options.ignoreFlags,
+            usage: options.usage,
+          });
+          freshGranularByTeam.set(team.id, result);
 
-        // Capture the granular scenario summaries into the diagnostic trace
-        // so the admin e-mail shows what each team was told for each position.
-        if (options.trace) {
-          for (const [posStr, html] of Object.entries(result)) {
-            const pos = Number(posStr);
-            options.trace.scenarioSummaries.push({
-              teamId: team.id,
-              teamName: team.name,
-              position: pos,
-              probability: teamSummary.positionProbabilities[pos] ?? 0,
-              output: html,
-              // 100% positions return a hardcoded "Guaranteed." without an API call.
-              cacheHit: (teamSummary.positionProbabilities[pos] ?? 0) === 100,
-            });
+          // Capture the granular scenario summaries into the diagnostic trace
+          // so the admin e-mail shows what each team was told for each position.
+          if (options.trace) {
+            for (const [posStr, html] of Object.entries(result)) {
+              const pos = Number(posStr);
+              options.trace.scenarioSummaries.push({
+                teamId: team.id,
+                teamName: team.name,
+                position: pos,
+                probability: teamSummary.positionProbabilities[pos] ?? 0,
+                output: html,
+                // 100% positions return a hardcoded "Guaranteed." without an API call.
+                cacheHit: (teamSummary.positionProbabilities[pos] ?? 0) === 100,
+              });
+            }
           }
+        } catch (err) {
+          console.error(`[pregenerate] Team scenario AI failed for ${team.name}:`, err);
+          options.trace?.errors.push({
+            step: `scenario-summaries:${team.name}`,
+            message: String(err),
+          });
         }
-      } catch (err) {
-        console.error(`[pregenerate] Team scenario AI failed for ${team.name}:`, err);
-        options.trace?.errors.push({
-          step: `scenario-summaries:${team.name}`,
-          message: String(err),
-        });
-      }
-    }),
-  );
+      }),
+    );
 
-  console.log(`[pregenerate] Team scenario AI summaries done for group ${groupId}`);
+    console.log(`[pregenerate] Team scenario AI summaries done for group ${groupId}`);
+  } else {
+    console.log(`[pregenerate] Group ${groupId} fully decided — skipping per-position scenario AI, jumping to wrap-up articles`);
+  }
 
   // Cascade: synthesize the in-memory per-team summaries into:
   //   1. A whole-group article (skipped on partial single-team regen).

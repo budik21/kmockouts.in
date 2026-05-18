@@ -21,11 +21,25 @@ const SYSTEM_PROMPT = `You are a sports journalist writing for a World Cup predi
 YOUR JOB:
 Given a group's current standings, remaining matches, qualification probabilities, and the per-team scenario summaries that have already been generated, write a short, readable article about the group.
 
-CRITICAL CONTENT RULE:
-The reader MUST come away knowing two things:
-1. Which team is most likely to advance (and why).
-2. Where the real tension is — who is fighting for second, who is on the brink.
-If the article does not deliver these two facts clearly in the first two paragraphs, it has failed.
+ARTICLE ANGLE — driven by the state of the group:
+
+  STATE A — Group still in progress (remaining matches > 0):
+    Forward-looking analysis. The reader MUST come away knowing:
+      1. Which team is most likely to advance (and why).
+      2. Where the real tension is — who is fighting for second, who is on
+         the brink.
+    Deliver those two facts clearly in the first two paragraphs or the
+    article has failed.
+
+  STATE B — Group fully decided (remaining matches = 0):
+    Past-tense wrap-up. The reader MUST come away knowing:
+      1. Who topped the group and how it was decided.
+      2. Who advanced (top 2 by default; if a 3rd-place team still has a
+         best-third chance, mention that as an open thread).
+      3. Who is out.
+    No "must beat", "needs to", or "would advance if" wording — the group
+    is over. Probabilities are now 100% or 0% — speak with the
+    corresponding certainty.
 
 OUTPUT FORMAT — VERY IMPORTANT:
 Return ONLY a single valid JSON object, nothing else. No markdown fences, no commentary. Shape:
@@ -51,10 +65,18 @@ LEDE (perex):
 BODY_HTML:
 - 3 to 4 paragraphs. 350 to 500 words total.
 - Wrap each paragraph in <p>...</p>. No other tags except <strong> for team names on first mention in the body.
-- Paragraph 1: Lead team — who tops the group and what they need. Be specific about the path.
-- Paragraph 2: The race for the remaining qualifying spots. Who is in contention, who is in trouble.
-- Paragraph 3: Edge cases, key remaining match(es), best-third implications if relevant.
-- Optional Paragraph 4: What to watch — the single result that would shake up the group most.
+
+  STATE A paragraph plan (group in progress):
+  - Paragraph 1: Lead team — who tops the group and what they need. Be specific about the path.
+  - Paragraph 2: The race for the remaining qualifying spots. Who is in contention, who is in trouble.
+  - Paragraph 3: Edge cases, key remaining match(es), best-third implications if relevant.
+  - Optional Paragraph 4: What to watch — the single result that would shake up the group most.
+
+  STATE B paragraph plan (group concluded):
+  - Paragraph 1: Champion of the group — who topped it and the result(s) that decided it.
+  - Paragraph 2: Who else advanced (runner-up; 3rd if their best-third chances are real). Anchor each name to specific played matches.
+  - Paragraph 3: Stand-out moments — biggest win, surprise team, decisive turnaround, defensive record. Use only scorelines from the played-matches block.
+  - Optional Paragraph 4: Glance ahead to the knockout phase if natural (who they could face / what the next round means).
 
 LANGUAGE & STYLE:
 - Short sentences. Simple, common words. No idioms, no slang, no clichés like "must-win clash".
@@ -307,9 +329,10 @@ function hashContext(ctx: GroupArticleContext): string {
     })
     .join('||');
 
-  // v2: prompt now includes played match scores; bump to invalidate stale
-  // articles that may have hallucinated scorelines.
-  const str = `v2:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}`;
+  // v3: prompt now branches into STATE A (group in progress) vs STATE B
+  // (group concluded, past-tense wrap-up). Bump invalidates older articles
+  // so the next admin save regenerates against the new structure.
+  const str = `v3:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}`;
 
   // djb2-ish 32-bit hash
   let hash = 0;
