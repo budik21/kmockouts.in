@@ -124,7 +124,26 @@ MATCH SCORES — NON-NEGOTIABLE RULE:
   qualitative language ("opening defeat", "comfortable win", "heavy loss")
   — never numbers.
 - The same rule applies to remaining matches: they have not been played,
-  so you must NEVER predict a specific scoreline for them.`;
+  so you must NEVER predict a specific scoreline for them.
+
+MATCH COUNT — NON-NEGOTIABLE RULE:
+- A World Cup group has exactly 4 teams, and every team plays EXACTLY 3
+  group-stage matches in total. Always. No exceptions.
+- The user prompt tells you the team's exact played-vs-remaining split.
+  Count those entries yourself before you start writing:
+    played count + remaining count = 3 (always).
+- If the team has 3 played + 0 remaining → the team has FINISHED their
+  group. NEVER write "one match left", "remaining match", "their next
+  match", "still to play", or any wording that implies they have a
+  fixture ahead. The group is over for this team.
+- If 0 remaining matches → speak only in past tense about the team's
+  own matches, and present/future tense only about OTHER groups' best-
+  third comparisons.
+- If 1 or 2 remaining → only refer to the matches actually listed in
+  the Remaining matches block. Do NOT invent extra fixtures.
+- If you contradict the played/remaining counts (e.g. saying "one match
+  left" when there are 0 remaining), the article is broken and will be
+  rejected.`;
 
 interface RemainingMatchSummary {
   homeTeam: string;
@@ -219,6 +238,9 @@ function buildUserPrompt(ctx: TeamArticleContext): string {
     })
     .join('\n');
 
+  const teamPlayedCount = ctx.playedMatches.filter(m => m.isTeamMatch).length;
+  const teamRemainingCount = ctx.remainingMatches.filter(m => m.isTeamMatch).length;
+
   const played = ctx.playedMatches.length
     ? ctx.playedMatches
         .map((m, i) => `  Match ${i + 1}: ${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam}${m.isTeamMatch ? '  ← team\'s own match' : ''}`)
@@ -230,6 +252,10 @@ function buildUserPrompt(ctx: TeamArticleContext): string {
         .map((m, i) => `  Match ${i + 1}: ${m.homeTeam} vs ${m.awayTeam}${m.isTeamMatch ? '  ← team\'s own match' : ''}`)
         .join('\n')
     : '  (no remaining matches)';
+
+  const teamMatchTally = teamRemainingCount === 0
+    ? `${ctx.teamName} has played ALL ${teamPlayedCount} of their 3 group-stage matches — 0 remaining. The group is OVER for this team.`
+    : `${ctx.teamName} has played ${teamPlayedCount} of their 3 group-stage matches — ${teamRemainingCount} remaining (listed above).`;
 
   const probLines = [1, 2, 3, 4]
     .map(p => `  ${p}${posLabel(p)}: ${(ctx.probabilities[p] ?? 0).toFixed(1)}%`)
@@ -254,6 +280,9 @@ ${played}
 
 Remaining matches in the group (no scoreline yet — do NOT predict one):
 ${remaining}
+
+MATCH TALLY FOR ${ctx.teamName.toUpperCase()} — verify before writing:
+  ${teamMatchTally}
 
 Position probabilities for ${ctx.teamName}:
 ${probLines}${bestThirdLine}
@@ -345,10 +374,10 @@ function hashContext(ctx: TeamArticleContext): string {
     .map(p => ctx.granularSummariesByPosition[p] ?? '')
     .join('§');
 
-  // v2: prompt now includes played match scores; bump to invalidate stale
-  // articles that were written without that data (and may have hallucinated
-  // scorelines).
-  const str = `v2:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>`;
+  // v3: prompt now enforces match-count arithmetic (played+remaining=3) and
+  // adds an explicit per-team tally line. Bump to invalidate stale articles
+  // that may have hallucinated a "remaining match" when the team is done.
+  const str = `v3:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
