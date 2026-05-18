@@ -15,6 +15,14 @@ import { SUPERADMIN_EMAIL } from './superadmin';
 import { buildAdminMatchSummaryEmail } from './email-templates/admin-match-summary';
 import type { MatchUpdateTrace } from './match-update-trace';
 
+/**
+ * Cap on how long we wait for Resend to acknowledge the send. The admin
+ * request is already at the tail end of its budget by the time we get here;
+ * a stuck Resend connection must not be the thing that lets the platform
+ * SIGTERM us before we reply.
+ */
+const SEND_TIMEOUT_MS = 15_000;
+
 export async function sendAdminMatchSummary(trace: MatchUpdateTrace): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -26,7 +34,15 @@ export async function sendAdminMatchSummary(trace: MatchUpdateTrace): Promise<vo
     const from = process.env.RESEND_FROM_EMAIL ?? 'Knockouts.in <onboarding@resend.dev>';
     const { subject, html } = buildAdminMatchSummaryEmail(trace);
     const resend = new Resend(apiKey);
-    await resend.emails.send({ from, to: SUPERADMIN_EMAIL, subject, html });
+    await Promise.race([
+      resend.emails.send({ from, to: SUPERADMIN_EMAIL, subject, html }),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Resend send timed out after ${SEND_TIMEOUT_MS}ms`)),
+          SEND_TIMEOUT_MS,
+        ),
+      ),
+    ]);
     console.log(`[admin-summary] Sent diagnostic e-mail to ${SUPERADMIN_EMAIL}`);
   } catch (err) {
     console.error('[admin-summary] Failed to send diagnostic e-mail:', err);

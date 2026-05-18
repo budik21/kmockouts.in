@@ -240,7 +240,15 @@ function renderErrors(trace: MatchUpdateTrace): string {
 export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOutput {
   const m = trace.match;
   const scoreStr = `${m.homeGoals ?? '?'}:${m.awayGoals ?? '?'}`;
-  const subject = `[admin] ${m.homeTeam} ${scoreStr} ${m.awayTeam} — Group ${m.groupId} (${trace.errors.length} errors)`;
+  const timeoutPrefix = trace.timedOut ? '[TIMEOUT] ' : '';
+  const subject = `${timeoutPrefix}[admin] ${m.homeTeam} ${scoreStr} ${m.awayTeam} — Group ${m.groupId} (${trace.errors.length} errors)`;
+
+  const timeoutBanner = trace.timedOut
+    ? `<div style="margin:0 0 20px;padding:14px 18px;background:#fff3cd;border:1px solid #ffc107;border-left:4px solid #c47f00;border-radius:4px;color:#5a4500;font:600 14px/1.5 -apple-system,Segoe UI,sans-serif;">
+        ⚠ Cascade timed out during <strong>${esc(trace.timedOut.stage)}</strong> after ${fmtMs(trace.timedOut.afterMs)} (budget ${fmtMs(trace.timedOut.budgetMs)}).
+        <div style="margin-top:6px;font-weight:400;color:#6b5500;">In-flight Claude calls were abandoned so this e-mail could still go out before the platform recycled the container. The trace below is partial — any team/group articles that didn't finish before the deadline are missing.</div>
+      </div>`
+    : '';
 
   const headerHtml = section('Match result entered', `
     <table style="font:13px/1.5 -apple-system,Segoe UI,sans-serif;width:100%;">
@@ -250,6 +258,7 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
       ${row('Status', esc(m.status))}
       ${row('Started at', esc(trace.startedAt))}
       ${row('Total cascade duration', fmtMs(trace.totalDurationMs))}
+      ${trace.timedOut ? row('Timeout', `<span style="color:#c47f00;font-weight:600;">${esc(trace.timedOut.stage)} after ${fmtMs(trace.timedOut.afterMs)} (budget ${fmtMs(trace.timedOut.budgetMs)})</span>`) : ''}
     </table>`);
 
   const standingsHtml = section('Group standings after recalculation', renderStandings(trace) + renderProbabilities(trace));
@@ -272,6 +281,7 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
   <div style="max-width:900px;margin:0 auto;">
     <h1 style="font:600 20px/1.3 -apple-system,Segoe UI,sans-serif;margin:0 0 8px;">${esc(m.homeTeam)} <span style="font-variant:tabular-nums;">${scoreStr}</span> ${esc(m.awayTeam)} — Group ${esc(m.groupId)}</h1>
     <p style="color:#6b6b73;margin:0 0 24px;">Diagnostic trace of the synchronous match-update cascade. Generated ${esc(trace.startedAt)}.</p>
+    ${timeoutBanner}
     ${headerHtml}
     ${standingsHtml}
     ${scenariosHtml}

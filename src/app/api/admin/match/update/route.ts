@@ -32,6 +32,21 @@ interface UpdateBody {
 const MAX_GOALS = 19;
 const MAX_CARDS = 11;
 
+/**
+ * Hard upper bound on the slow AI-generation stage (scenario summaries,
+ * best-third summaries, group article, team articles). The hosting platform
+ * has been observed to recycle the container before our cascade finishes when
+ * the AI block runs long, which kills the request mid-flight and means the
+ * superadmin diagnostic e-mail never goes out. We bound the AI block at 60s
+ * and on timeout abandon the in-flight Claude work (each call has its own 30s
+ * per-call timeout, so the abandoned promises will resolve on their own),
+ * then proceed straight to tip recalc + cache invalidation + e-mail so the
+ * admin still gets a partial trace explaining what happened. Total budget
+ * (probability recalc + AI ≤ 60s + tip recalc + cache + e-mail) fits well
+ * inside the platform's request lifetime.
+ */
+const AI_PHASE_BUDGET_MS = 60_000;
+
 function isValidGoalCount(v: unknown): v is number | null {
   return v === null || (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= MAX_GOALS);
 }
@@ -206,7 +221,14 @@ export async function POST(request: NextRequest) {
         trace.errors.push({ step: 'snapshot-standings', message: String(err) });
       }
 
-      await Promise.allSettled([
+      // Race the AI block against a hard budget. On timeout the abandoned
+      // pregenerate promises continue in the background — they cannot block
+      // the response, but any team/group articles that DO manage to finish
+      // before sendAdminMatchSummary builds the e-mail will still appear in
+      // the trace. Each Claude call inside has its own 30s per-call timeout,
+      // so no orphan request will live forever.
+      const aiPhaseStartedAt = Date.now();
+      const aiWork = Promise.allSettled([
         pregenerateTeamScenarioSummaries(groupId as GroupId, { trace }).catch(err => {
           console.error(`[admin] Team scenario AI pregeneration failed for group ${groupId}:`, err);
           trace.errors.push({ step: 'pregenerate-team-scenario-summaries', message: String(err) });
@@ -216,6 +238,28 @@ export async function POST(request: NextRequest) {
           trace.errors.push({ step: 'pregenerate-best-third-summaries', message: String(err) });
         }),
       ]);
+      let aiBudgetTimer: ReturnType<typeof setTimeout> | undefined;
+      const aiTimeout = new Promise<'TIMEOUT'>((resolve) => {
+        aiBudgetTimer = setTimeout(() => resolve('TIMEOUT'), AI_PHASE_BUDGET_MS);
+      });
+      const aiOutcome = await Promise.race([
+        aiWork.then(() => 'DONE' as const),
+        aiTimeout,
+      ]);
+      if (aiBudgetTimer) clearTimeout(aiBudgetTimer);
+      if (aiOutcome === 'TIMEOUT') {
+        const elapsed = Date.now() - aiPhaseStartedAt;
+        trace.timedOut = {
+          stage: 'ai-generation',
+          afterMs: elapsed,
+          budgetMs: AI_PHASE_BUDGET_MS,
+        };
+        trace.errors.push({
+          step: 'cascade-timeout',
+          message: `AI generation exceeded the ${(AI_PHASE_BUDGET_MS / 1000).toFixed(0)}s budget (ran for ${(elapsed / 1000).toFixed(1)}s). In-flight Claude calls were abandoned so the admin response and diagnostic e-mail still go out before the platform recycles the container. Partial trace below — anything missing is what didn't finish in time.`,
+        });
+        console.error(`[admin] AI phase exceeded ${AI_PHASE_BUDGET_MS}ms — abandoning, proceeding to tip recalc + e-mail`);
+      }
     } catch (err) {
       console.error(`[admin] Probability recalculation failed for group ${groupId}:`, err);
       trace.errors.push({ step: 'recalculate-probabilities', message: String(err) });

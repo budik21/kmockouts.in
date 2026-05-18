@@ -96,6 +96,20 @@ export interface MatchUpdateTrace {
   errors: Array<{ step: string; message: string }>;
   /** Total cascade duration in milliseconds. Set just before the e-mail is sent. */
   totalDurationMs?: number;
+  /**
+   * Set when the cascade hit its hard time budget and bailed out of a stage so
+   * the diagnostic e-mail could still go out before the platform recycles the
+   * container. `afterMs` is wall-clock since the stage started; `budgetMs` is
+   * the budget that was exceeded. When set, the e-mail subject and body
+   * surface this prominently — the partial trace is still useful (everything
+   * that DID complete is captured), but the reader needs to know it is
+   * incomplete and that some Claude calls were abandoned in flight.
+   */
+  timedOut?: {
+    stage: string;
+    afterMs: number;
+    budgetMs: number;
+  };
 }
 
 export function newMatchUpdateTrace(match: MatchUpdateTrace['match']): MatchUpdateTrace {
