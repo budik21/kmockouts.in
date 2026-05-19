@@ -93,6 +93,36 @@ ACCURACY:
 - "Already qualified" / "guaranteed top" / "eliminated" claims must match the probability data exactly (100% or 0%).
 - If two teams have very similar probabilities, treat the race as open. Do not pick a favourite when the data says it is a coin flip.
 
+STANDINGS TABLE — NON-NEGOTIABLE RULE:
+- The "Current standings" block lists every team's EXACT points, goal
+  difference, goals scored (GF), and goals conceded (GA). Those numbers are
+  the source of truth for the article. Quote them verbatim.
+- NEVER state a points total that differs from the table. If a team is
+  listed with 4 points, the article MUST say 4 points — not 5, not 3.
+- NEVER state a goal difference, goals-for, or goals-against value that
+  differs from the table.
+- Do NOT recompute totals from the played matches. If your arithmetic
+  disagrees with the table, the TABLE is correct; trust it.
+- Before writing each team's paragraph, look up that team's exact row in
+  the standings block and use those numbers.
+
+TIEBREAKER — NON-NEGOTIABLE RULE:
+- The "Tiebreaker resolution" block (when present) tells you exactly WHY
+  two or more teams ended up in the order shown, when natural sorting
+  (points → goal difference → goals scored) does NOT explain it.
+- When the block is present, the article MUST mention the tiebreaker rule
+  cited there (e.g. "edged ahead on head-to-head", "decided on head-to-head
+  goal difference", "decided by FIFA ranking") when describing the order.
+- NEVER attribute the order to "goal difference" or "more goals scored"
+  when the standings table shows those values are equal. If two teams have
+  the same points, same goal difference, and same goals-for/against, and
+  the article still has to explain why one finished above the other, the
+  ONLY acceptable explanation is the one given in the Tiebreaker resolution
+  block.
+- If the Tiebreaker resolution block is missing or empty, the natural
+  sort (points → goal difference → goals scored) already explains the
+  order — no tiebreaker mention is required.
+
 MATCH SCORES — NON-NEGOTIABLE RULE:
 - The "Played matches" block lists every already-played match in the
   group with its EXACT final score. That is the ONLY source of truth
@@ -131,12 +161,18 @@ interface TeamGranularSummary {
 export interface GroupArticleContext {
   groupId: string;
   /** Current standings, ordered 1..4 */
-  currentStandings: { teamName: string; points: number; gd: number; position: number }[];
+  currentStandings: { teamName: string; points: number; gd: number; goalsFor: number; goalsAgainst: number; position: number }[];
   /** Already-played matches in the group with actual final scores. */
   playedMatches: PlayedMatchSummary[];
   remainingMatches: RemainingMatchSummary[];
   /** One entry per team in the group */
   teams: TeamGranularSummary[];
+  /** Human-readable tiebreaker explanations for the final order between
+   * equal-points teams. Populated by the caller only once every group-stage
+   * match has finished (otherwise the order is not yet final and the notes
+   * would mislead). Empty array when the natural order (points → GD → goals)
+   * already explains every position. */
+  tiebreakerNotes?: string[];
 }
 
 export interface GeneratedGroupArticle {
@@ -178,7 +214,7 @@ function stripHtml(html: string): string {
 
 function buildUserPrompt(ctx: GroupArticleContext): string {
   const standings = ctx.currentStandings
-    .map(s => `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}`)
+    .map(s => `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}, GF ${s.goalsFor}, GA ${s.goalsAgainst}`)
     .join('\n');
 
   const played = ctx.playedMatches.length
@@ -188,6 +224,17 @@ function buildUserPrompt(ctx: GroupArticleContext): string {
   const remaining = ctx.remainingMatches.length
     ? ctx.remainingMatches.map((m, i) => `  Match ${i + 1}: ${m.homeTeam} vs ${m.awayTeam}`).join('\n')
     : '  (no remaining matches)';
+
+  // Tiebreaker block — only included once the group is fully decided and
+  // there is something non-obvious to explain. When present, the article
+  // MUST quote the exact criterion (e.g. head-to-head) rather than invent
+  // its own reason like "goal difference" when GD is equal.
+  const tiebreakerBlock = ctx.tiebreakerNotes && ctx.tiebreakerNotes.length > 0
+    ? `
+
+Tiebreaker resolution (use this to explain the final order — do NOT invent your own reason):
+${ctx.tiebreakerNotes.map(n => `  - ${n}`).join('\n')}`
+    : '';
 
   const perTeam = ctx.teams.map(t => {
     const probLines = [1, 2, 3, 4]
@@ -204,8 +251,8 @@ function buildUserPrompt(ctx: GroupArticleContext): string {
 
   return `Group: ${ctx.groupId}
 
-Current standings:
-${standings}
+Current standings (THESE NUMBERS ARE THE SOURCE OF TRUTH — quote them verbatim, never round, alter, or recompute):
+${standings}${tiebreakerBlock}
 
 Played matches in the group (these are the ONLY scorelines you may quote):
 ${played}
@@ -306,9 +353,9 @@ interface GroupArticleRow {
  * when the prompt changes to invalidate every cached article.
  */
 function hashContext(ctx: GroupArticleContext): string {
-  // Standings as compact "pos:name:pts:gd"
+  // Standings as compact "pos:name:pts:gd:gf:ga"
   const standings = ctx.currentStandings
-    .map(s => `${s.position}:${s.teamName}:${s.points}:${s.gd}`)
+    .map(s => `${s.position}:${s.teamName}:${s.points}:${s.gd}:${s.goalsFor}:${s.goalsAgainst}`)
     .join('|');
 
   const played = ctx.playedMatches
@@ -329,10 +376,13 @@ function hashContext(ctx: GroupArticleContext): string {
     })
     .join('||');
 
-  // v3: prompt now branches into STATE A (group in progress) vs STATE B
-  // (group concluded, past-tense wrap-up). Bump invalidates older articles
-  // so the next admin save regenerates against the new structure.
-  const str = `v3:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}`;
+  const tiebreaker = (ctx.tiebreakerNotes ?? []).join('§');
+
+  // v4: prompt now (1) carries GF/GA in standings, (2) injects an explicit
+  // tiebreaker block, and (3) the system prompt strengthens table adherence.
+  // Bump invalidates older articles so the next admin save regenerates against
+  // the new structure.
+  const str = `v4:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}|tb:${tiebreaker}`;
 
   // djb2-ish 32-bit hash
   let hash = 0;

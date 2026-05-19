@@ -3333,6 +3333,27 @@ a { color: inherit; text-decoration: none; }
   border-bottom-color: #78350f;
 }
 
+/* Neutral tiebreaker info banner — shown on real (non-simulated) standings
+   once the group is fully decided and the order between equal-points teams
+   was settled by a tiebreaker rule. Same layout as .sim-banner but with a
+   quieter info-blue palette so visitors do not mistake it for simulation. */
+.tiebreaker-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #bfdbfe;
+}
+
+[data-bs-theme="dark"] .tiebreaker-info-banner {
+  background: #1e3a8a;
+  color: #bfdbfe;
+  border-bottom-color: #1e40af;
+}
+
 /* Simulated table indicator */
 .sim-table {
   border-top: 3px solid #f59e0b;

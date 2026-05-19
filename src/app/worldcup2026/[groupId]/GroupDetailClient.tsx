@@ -61,6 +61,11 @@ export interface GroupDetailClientProps {
   fullMatches: Match[];
   finishedCount: number;
   totalCount: number;
+  /** Tiebreaker explanations for the REAL (non-simulated) standings. Server
+   * computes these once the group is fully decided; empty array otherwise.
+   * Shown in a neutral info banner inside the standings card whenever the
+   * simulation is OFF and the array is non-empty. */
+  realTiebreakerNotes?: string[];
   /** When true, render the standings in narrow mode (drops MP/GF/GA columns) */
   narrowStandings?: boolean;
 }
@@ -248,6 +253,7 @@ export default function GroupDetailClient({
   fullMatches,
   finishedCount,
   totalCount,
+  realTiebreakerNotes = [],
   narrowStandings = false,
 }: GroupDetailClientProps) {
   const [simActive, setSimActive] = useState(false);
@@ -349,6 +355,18 @@ export default function GroupDetailClient({
                     Tiebreaker: {tiebreakerNotes.join(' | ')}
                   </span>
                 )}
+              </div>
+            </div>
+          )}
+          {!simActive && realTiebreakerNotes.length > 0 && (
+            <div className="tiebreaker-info-banner">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0 }}>
+                <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a1 1 0 110 2 1 1 0 010-2zm1.5 9h-3v-1h1V7.5h-1v-1h2V11h1v1z"/>
+              </svg>
+              <div className="scenario-banner-content">
+                <span className="scenario-tiebreaker-note">
+                  Tiebreaker: {realTiebreakerNotes.join(' | ')}
+                </span>
               </div>
             </div>
           )}

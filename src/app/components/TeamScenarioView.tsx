@@ -99,6 +99,11 @@ export interface TeamScenarioViewProps {
   teams: Team[];
   /** Finished matches (base data) for recalculation */
   playedMatches: Match[];
+  /** Tiebreaker explanations for the REAL (no scenario applied) standings.
+   * Server computes these once the group is fully decided; empty array
+   * otherwise. Shown in a neutral info banner inside the standings card
+   * whenever no scenario is applied and the array is non-empty. */
+  realTiebreakerNotes?: string[];
   /** When provided, the standings card is placed on the right of a two-column
    *  layout with this article slot on the left (desktop). On mobile/tablet the
    *  layout collapses so the article appears first, then the table. */
@@ -120,6 +125,7 @@ export default function TeamScenarioView({
   summaries,
   teams,
   playedMatches,
+  realTiebreakerNotes = [],
   articleSlot,
   belowStandingsSlot,
 }: TeamScenarioViewProps) {
@@ -207,6 +213,18 @@ export default function TeamScenarioView({
           >
             Reset
           </button>
+        </div>
+      )}
+      {!applied && realTiebreakerNotes.length > 0 && (
+        <div className="tiebreaker-info-banner">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0 }}>
+            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a1 1 0 110 2 1 1 0 010-2zm1.5 9h-3v-1h1V7.5h-1v-1h2V11h1v1z"/>
+          </svg>
+          <div className="scenario-banner-content">
+            <span className="scenario-tiebreaker-note">
+              Tiebreaker: {realTiebreakerNotes.join(' | ')}
+            </span>
+          </div>
         </div>
       )}
       <div className="group-card-body">

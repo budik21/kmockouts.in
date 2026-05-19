@@ -2,6 +2,7 @@ import { cachedQuery } from '@/lib/cached-db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
+import { explainTiebreakers } from '@/engine/tiebreaker-explain';
 import { enumerateGroupScenarios } from '@/engine/scenarios';
 import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probability-cache';
 import { compareThirdPlaced } from '@/engine/best-third';
@@ -158,6 +159,14 @@ export default async function TeamDetailPage({ params }: PageProps) {
     ...s,
     team: { id: s.team.id, name: s.team.name, shortName: s.team.shortName, countryCode: s.team.countryCode, isPlaceholder: s.team.isPlaceholder, fifaRanking: s.team.fifaRanking },
   }));
+
+  // Tiebreaker notes for the REAL (non-simulated, no scenario applied) view.
+  // Only meaningful once every group-stage match in this group is finished;
+  // otherwise the order between equal-points teams is not yet final.
+  const groupFullyPlayed = remaining.length === 0 && allMatches.length > 0;
+  const realTiebreakerNotes = groupFullyPlayed
+    ? explainTiebreakers(standings, played)
+    : [];
 
   // Calculate scenarios
   const summaries = enumerateGroupScenarios(teams, played, remaining);
@@ -535,6 +544,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
             summaries={remaining.length > 0 && teamHasPlayed ? scenarioSummaries : undefined}
             teams={teams}
             playedMatches={played}
+            realTiebreakerNotes={realTiebreakerNotes}
             articleSlot={teamArticle ? (
               <article className="group-article mb-4">
                 <h1 className="group-article-headline">{teamArticle.headline}</h1>

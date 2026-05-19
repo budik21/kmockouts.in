@@ -230,6 +230,7 @@ export async function pregenerateTeamScenarioSummaries(
   const { calculateStandings } = await import('../engine/standings');
   const { enumerateGroupScenarios } = await import('../engine/scenarios');
   const { generateAiScenarioSummaries } = await import('../engine/scenario-summary-ai');
+  const { explainTiebreakers } = await import('../engine/tiebreaker-explain');
 
   const teamRows = await query<{
     id: number; name: string; short_name: string; country_code: string; group_id: string;
@@ -279,8 +280,19 @@ export async function pregenerateTeamScenarioSummaries(
     teamName: s.team.name,
     points: s.points,
     gd: s.goalsFor - s.goalsAgainst,
+    goalsFor: s.goalsFor,
+    goalsAgainst: s.goalsAgainst,
     position: s.position,
   }));
+
+  // Tiebreaker explanations — only meaningful once every match in the group
+  // is finished (i.e. the order between equal-points teams is final). For
+  // in-progress groups the natural sort (pts → GD → goals) plus the
+  // per-position scenarios already explains everything; injecting partial
+  // tiebreaker reasoning would mislead the article.
+  const tiebreakerNotes = isWrapUp
+    ? explainTiebreakers(standings, played)
+    : [];
 
   const summaries = enumerateGroupScenarios(teams, played, remaining);
   const remainingMatchesInfo = remaining.map((m, i) => ({
@@ -404,6 +416,7 @@ export async function pregenerateTeamScenarioSummaries(
               awayTeam: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
             })),
             teams: articleTeams,
+            tiebreakerNotes,
           },
           {
             force: options.force,
@@ -464,6 +477,7 @@ export async function pregenerateTeamScenarioSummaries(
               probabilities: teamSummary?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
               bestThirdQualProb: bestThirdProbByTeam.get(t.id) ?? 0,
               granularSummariesByPosition: freshGranularByTeam.get(t.id) ?? {},
+              tiebreakerNotes,
             },
             {
               force: options.force,

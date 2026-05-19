@@ -122,6 +122,35 @@ ACCURACY:
 - Do not pick a favourite finishing place when two probabilities are
   similar — present the race as open.
 
+STANDINGS TABLE — NON-NEGOTIABLE RULE:
+- The "Current standings" block lists every team's EXACT points, goal
+  difference, goals scored (GF), and goals conceded (GA). Those numbers
+  are the source of truth. Quote them verbatim.
+- NEVER state a points total that differs from the table. If a team is
+  listed with 4 points, the article MUST say 4 points — not 5, not 3.
+- NEVER state a goal difference, goals-for, or goals-against value that
+  differs from the table.
+- Do NOT recompute totals from the played matches. If your arithmetic
+  disagrees with the table, the TABLE is correct; trust it.
+- Before writing the lede or any paragraph that names a points total,
+  look up the exact row in the standings block and use those numbers.
+
+TIEBREAKER — NON-NEGOTIABLE RULE:
+- The "Tiebreaker resolution" block (when present) tells you exactly WHY
+  two or more teams ended up in the order shown, when natural sorting
+  (points → goal difference → goals scored) does NOT explain it.
+- When the block is present and concerns THIS team or a team adjacent to
+  it in the standings, the article MUST mention the tiebreaker rule
+  cited there (e.g. "edged ahead on head-to-head", "decided on head-to-
+  head goal difference", "decided by FIFA ranking") rather than
+  attributing the order to "goal difference" or "more goals scored".
+- NEVER claim a team finished higher (or lower) "on goal difference" or
+  "on goals scored" when the standings table shows those values are
+  equal between the relevant teams. The ONLY acceptable explanation in
+  that case is the one given in the Tiebreaker resolution block.
+- If the Tiebreaker resolution block is missing or empty, the natural
+  sort already explains the order — no tiebreaker mention is required.
+
 MATCH SCORES — NON-NEGOTIABLE RULE:
 - The "Played matches" block lists every already-played match in the
   group with its EXACT final score. That is the ONLY source of truth
@@ -177,7 +206,7 @@ export interface TeamArticleContext {
   teamId: number;
   teamName: string;
   /** Current standings of the whole group, ordered 1..4. */
-  currentStandings: { teamName: string; points: number; gd: number; position: number }[];
+  currentStandings: { teamName: string; points: number; gd: number; goalsFor: number; goalsAgainst: number; position: number }[];
   /** Already-played matches in the group with actual final scores. */
   playedMatches: PlayedMatchSummary[];
   /** Remaining matches in the group (with isTeamMatch flag). */
@@ -192,6 +221,10 @@ export interface TeamArticleContext {
   bestThirdQualProb: number;
   /** Per-position scenario summaries (cached HTML) for THIS team. */
   granularSummariesByPosition: { [pos: number]: string };
+  /** Human-readable tiebreaker explanations for the final order between
+   * equal-points teams in this group. Populated by the caller only once
+   * every group-stage match has finished. Empty/undefined otherwise. */
+  tiebreakerNotes?: string[];
 }
 
 export interface GeneratedTeamArticle {
@@ -245,7 +278,7 @@ function buildUserPrompt(ctx: TeamArticleContext): string {
   const standings = ctx.currentStandings
     .map(s => {
       const marker = s.teamName === ctx.teamName ? '  ← THIS TEAM' : '';
-      return `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}${marker}`;
+      return `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}, GF ${s.goalsFor}, GA ${s.goalsAgainst}${marker}`;
     })
     .join('\n');
 
@@ -281,10 +314,18 @@ function buildUserPrompt(ctx: TeamArticleContext): string {
     ? `\nBest-third qualification probability (conditional on finishing 3rd): ${ctx.bestThirdQualProb.toFixed(1)}%`
     : '';
 
+  // Tiebreaker block — only included once the group is fully decided and
+  // there is something non-obvious to explain. When present, the article
+  // MUST cite the exact criterion (e.g. head-to-head) rather than invent
+  // its own reason like "goal difference" when GD is equal.
+  const tiebreakerBlock = ctx.tiebreakerNotes && ctx.tiebreakerNotes.length > 0
+    ? `\n\nTiebreaker resolution (use this to explain the final order — do NOT invent your own reason):\n${ctx.tiebreakerNotes.map(n => `  - ${n}`).join('\n')}`
+    : '';
+
   return `Team: ${ctx.teamName} (Group ${ctx.groupId})
 
-Current standings of the whole group:
-${standings}
+Current standings of the whole group (THESE NUMBERS ARE THE SOURCE OF TRUTH — quote them verbatim, never round, alter, or recompute):
+${standings}${tiebreakerBlock}
 
 Played matches in the group (these are the ONLY scorelines you may quote):
 ${played}
@@ -376,7 +417,7 @@ interface TeamArticleRow {
 
 function hashContext(ctx: TeamArticleContext): string {
   const standings = ctx.currentStandings
-    .map(s => `${s.position}:${s.teamName}:${s.points}:${s.gd}`)
+    .map(s => `${s.position}:${s.teamName}:${s.points}:${s.gd}:${s.goalsFor}:${s.goalsAgainst}`)
     .join('|');
 
   const played = ctx.playedMatches
@@ -392,11 +433,13 @@ function hashContext(ctx: TeamArticleContext): string {
     .map(p => ctx.granularSummariesByPosition[p] ?? '')
     .join('§');
 
-  // v4: prompt now has an explicit CASE D for 3rd place in a concluded
-  // group with best-third still TBD, plus expanded CASE B/C wording for the
-  // 0-remaining-matches branch. Bump invalidates older articles so the
+  const tiebreaker = (ctx.tiebreakerNotes ?? []).join('§');
+
+  // v5: prompt now (1) carries GF/GA in standings, (2) injects an explicit
+  // tiebreaker block, and (3) the system prompt strengthens both table
+  // adherence and tiebreaker citation. Bump invalidates older articles so the
   // next admin save regenerates against the new structure.
-  const str = `v4:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>`;
+  const str = `v5:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

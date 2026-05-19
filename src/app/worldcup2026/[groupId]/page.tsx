@@ -2,6 +2,7 @@ import { cachedQuery } from '@/lib/cached-db';
 import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
+import { explainTiebreakers } from '@/engine/tiebreaker-explain';
 import { getCachedGroupProbs, recalculateGroupProbabilities } from '@/lib/probability-cache';
 import { getCachedGroupArticle } from '@/engine/group-article-ai';
 import GroupDetailClient from './GroupDetailClient';
@@ -129,6 +130,14 @@ export default async function GroupDetailPage({ params }: PageProps) {
   const finishedMatches = allMatches.filter((m) => m.status === 'FINISHED');
 
   const standings = calculateStandings({ teams, matches: finishedMatches });
+
+  // Tiebreaker notes — only meaningful once every group-stage match has been
+  // played (i.e. the order between equal-points teams is final). Empty array
+  // when the group is still in progress so the banner stays hidden.
+  const allMatchesPlayed = allMatches.length > 0 && allMatches.every((m) => m.status === 'FINISHED');
+  const tiebreakerNotes = allMatchesPlayed
+    ? explainTiebreakers(standings, finishedMatches)
+    : [];
 
   // Build team map for match display
   const teamMap = new Map(teams.map((t) => [t.id, t]));
@@ -269,6 +278,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
               fullMatches={allMatches}
               finishedCount={finishedMatches.length}
               totalCount={allMatches.length}
+              realTiebreakerNotes={tiebreakerNotes}
               narrowStandings
             />
           </div>
@@ -283,6 +293,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
           fullMatches={allMatches}
           finishedCount={finishedMatches.length}
           totalCount={allMatches.length}
+          realTiebreakerNotes={tiebreakerNotes}
         />
       )}
 
