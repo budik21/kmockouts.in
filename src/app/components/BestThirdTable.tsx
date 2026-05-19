@@ -52,18 +52,6 @@ export default function BestThirdTable({ teams, summaries, tiebreakerNotes }: Be
 
   return (
     <div className="table-responsive">
-      {hasTiebreakers && (
-        <div className="tiebreaker-info-banner" style={{ marginBottom: '0.5rem' }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0 }}>
-            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a1 1 0 110 2 1 1 0 010-2zm1.5 9h-3v-1h1V7.5h-1v-1h2V11h1v1z"/>
-          </svg>
-          <div className="scenario-banner-content">
-            <span className="scenario-tiebreaker-note">
-              Tiebreaker: {tiebreakerNotes!.join(' | ')}
-            </span>
-          </div>
-        </div>
-      )}
       <table className="standings-table table table-sm mb-0 b3-table-pts-highlight">
         <thead>
           <tr>
@@ -149,6 +137,22 @@ export default function BestThirdTable({ teams, summaries, tiebreakerNotes }: Be
           })}
         </tbody>
       </table>
+      {hasTiebreakers && (
+        <div className="tiebreaker-info-banner" style={{ marginTop: '0.5rem', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <div className="scenario-banner-content" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem', width: '100%' }}>
+            {tiebreakerNotes!.map((note, i) => (
+              <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0, marginTop: '2px' }}>
+                  <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a1 1 0 110 2 1 1 0 010-2zm1.5 9h-3v-1h1V7.5h-1v-1h2V11h1v1z"/>
+                </svg>
+                <span className="scenario-tiebreaker-note">
+                  <strong>Tiebreaker:</strong> {note}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="best-third-legend mt-2">
         <small>
           <span className="best-third-legend-qualify"></span> Qualifies for Round of 32
