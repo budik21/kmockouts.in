@@ -151,6 +151,37 @@ TIEBREAKER — NON-NEGOTIABLE RULE:
 - If the Tiebreaker resolution block is missing or empty, the natural
   sort already explains the order — no tiebreaker mention is required.
 
+POSITION TENSE — NON-NEGOTIABLE RULE:
+- The "Remaining matches in the group" block counts EVERY unplayed match
+  in this group, NOT just this team's own remaining fixtures. If the
+  block lists ONE OR MORE matches, the GROUP is STILL IN PROGRESS and
+  the final order is NOT determined yet — even when THIS team has
+  played all 3 of its own matches, OTHER teams' remaining fixtures can
+  still shift the standings around them.
+- While the group is still in progress, NEVER use past-tense wording
+  for the team's POSITION or final fate. Forbidden phrases include:
+    "finished 1st / 2nd / 3rd / 4th", "ended up Xth", "claimed Xth place",
+    "wrapped up Xth", "secured 2nd", "took third", "finished as runners-
+    up", "finished bottom", "ended their campaign in Xth", "topped the
+    group", "ended the group stage in Xth".
+- Use present-tense wording instead: "currently sit Xth", "are in Xth
+  place", "currently lead the group on N points", "trail Y by N points",
+  "are level on points with Z".
+- This applies even when THIS team is mathematically guaranteed to
+  advance (e.g. P(1st)+P(2nd) = 100% or bestThirdQualProb = 100%): the
+  team is GUARANTEED knockout football, but their final POSITION in the
+  group is not yet locked, so "they finished third" is FORBIDDEN. Write
+  "they have already done enough to reach the Round of 32 from their
+  current 3rd-place position" or similar, where the position is framed
+  as the present snapshot, not the final outcome.
+- Past tense IS fine — and expected — for INDIVIDUAL MATCHES the team
+  has already played ("opened with a 2-1 win", "lost to X"). It is the
+  POSITION/FINAL-ORDER wording that must stay in present tense until the
+  Remaining-matches block reads "(no remaining matches)".
+- Only when "Remaining matches in the group" is "(no remaining matches)"
+  may the article use past-tense position wording (CASE A wrap-up /
+  CASE B eliminated / CASE D best-third pending).
+
 MATCH SCORES — NON-NEGOTIABLE RULE:
 - The "Played matches" block lists every already-played match in the
   group with its EXACT final score. That is the ONLY source of truth
@@ -435,11 +466,12 @@ function hashContext(ctx: TeamArticleContext): string {
 
   const tiebreaker = (ctx.tiebreakerNotes ?? []).join('§');
 
-  // v5: prompt now (1) carries GF/GA in standings, (2) injects an explicit
-  // tiebreaker block, and (3) the system prompt strengthens both table
-  // adherence and tiebreaker citation. Bump invalidates older articles so the
-  // next admin save regenerates against the new structure.
-  const str = `v5:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}`;
+  // v6: system prompt adds POSITION TENSE rule — past-tense position wording
+  // ("finished 3rd", "secured 2nd") is forbidden while ANY match in the group
+  // is still unplayed, even when THIS team has played all 3 of its own
+  // fixtures and is already guaranteed knockout football. Bump invalidates
+  // older articles so the next admin save regenerates against the new rule.
+  const str = `v6:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

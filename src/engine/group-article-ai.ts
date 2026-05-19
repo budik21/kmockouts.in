@@ -123,6 +123,28 @@ TIEBREAKER — NON-NEGOTIABLE RULE:
   sort (points → goal difference → goals scored) already explains the
   order — no tiebreaker mention is required.
 
+POSITION TENSE — NON-NEGOTIABLE RULE:
+- The "Remaining matches in the group" block counts EVERY unplayed match
+  in this group. If the block lists ONE OR MORE matches, the group is
+  STILL IN PROGRESS and the final order is NOT determined yet — even for
+  a team that has already played all 3 of its own matches, because OTHER
+  teams' remaining fixtures can still shift the standings.
+- While the group is still in progress, NEVER use past-tense wording for
+  a team's POSITION or FATE. Forbidden phrases include:
+    "finished 1st / 2nd / 3rd / 4th", "ended up Xth", "claimed Xth place",
+    "wrapped up Xth", "topped the group", "ended bottom", "secured 2nd",
+    "took 3rd", "finished as runners-up", "finished bottom".
+- Use present-tense wording instead: "currently sit Xth", "are in Xth
+  place", "lead Group X on N points", "trail by N points", "are level
+  with Y on points".
+- Past tense IS fine — and expected — for INDIVIDUAL MATCHES the team
+  has already played ("opened with a win", "lost their second match",
+  "beat X"). It is the POSITION/FINAL-ORDER wording that must stay in
+  present tense until the Remaining-matches block reads "(no remaining
+  matches)".
+- Only when "Remaining matches in the group" is "(no remaining matches)"
+  may the article use past-tense position wording. That is STATE B.
+
 MATCH SCORES — NON-NEGOTIABLE RULE:
 - The "Played matches" block lists every already-played match in the
   group with its EXACT final score. That is the ONLY source of truth
@@ -378,11 +400,12 @@ function hashContext(ctx: GroupArticleContext): string {
 
   const tiebreaker = (ctx.tiebreakerNotes ?? []).join('§');
 
-  // v4: prompt now (1) carries GF/GA in standings, (2) injects an explicit
-  // tiebreaker block, and (3) the system prompt strengthens table adherence.
-  // Bump invalidates older articles so the next admin save regenerates against
-  // the new structure.
-  const str = `v4:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}|tb:${tiebreaker}`;
+  // v5: system prompt adds POSITION TENSE rule — past-tense position wording
+  // ("finished 3rd", "topped the group") is forbidden while any match in the
+  // group is still unplayed, even when a specific team has played all 3 of
+  // its own fixtures. Bump invalidates older articles so the next admin save
+  // regenerates against the new rule.
+  const str = `v5:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}|tb:${tiebreaker}`;
 
   // djb2-ish 32-bit hash
   let hash = 0;
