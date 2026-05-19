@@ -3,6 +3,7 @@ import { ALL_GROUPS } from '@/lib/constants';
 import { GroupId, TeamRow, MatchRow, Team, Match, TeamStanding } from '@/lib/types';
 import { calculateStandings } from '@/engine/standings';
 import { compareThirdPlaced } from '@/engine/best-third';
+import { explainBestThirdTiebreakers } from '@/engine/best-third-snapshot';
 import { getCachedBestThirdProbabilities, getCachedQualificationThreshold } from '@/engine/probability';
 import { getAllCachedProbs } from '@/lib/probability-cache';
 import BestThirdTable from '@/app/components/BestThirdTable';
@@ -176,6 +177,23 @@ export default async function BestThirdPlacedPage() {
     fairPlayPoints: tp.standing.fairPlayPoints,
   }));
 
+  // Tiebreaker explanations for rows that share points + GD. The snapshot
+  // helper expects the same shape we have in tableData, so map straight in.
+  const tiebreakerNotes = explainBestThirdTiebreakers(tableData.map(t => ({
+    rank: t.rank,
+    groupId: t.groupId as GroupId,
+    teamId: t.team.id,
+    teamName: t.team.name,
+    points: t.points,
+    goalDifference: t.goalDifference,
+    goalsFor: t.goalsFor,
+    goalsAgainst: t.goalsAgainst,
+    fairPlayPoints: t.fairPlayPoints,
+    fifaRanking: t.team.fifaRanking,
+    groupFullyPlayed: false, // unused by the explainer
+    snapshotStatus: 'qualify' as const, // unused by the explainer
+  })));
+
   const matchesGridData = thirdPlaced.map((tp, i) => ({
     rank: i + 1,
     groupId: tp.groupId,
@@ -295,6 +313,7 @@ export default async function BestThirdPlacedPage() {
             <BestThirdTable
               teams={tableData}
               summaries={summariesData.map(s => ({ teamId: s.teamId, summaryHtml: s.summaryHtml, qualProbability: s.qualProbability }))}
+              tiebreakerNotes={tiebreakerNotes}
             />
           </div>
         </div>

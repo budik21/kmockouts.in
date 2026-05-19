@@ -182,6 +182,33 @@ POSITION TENSE — NON-NEGOTIABLE RULE:
   may the article use past-tense position wording (CASE A wrap-up /
   CASE B eliminated / CASE D best-third pending).
 
+BEST-THIRD CERTAINTY — NON-NEGOTIABLE RULE:
+- The "8 best third-placed teams" qualification across all 12 groups is
+  only FINAL once every group-stage match in EVERY group has been
+  played. This is a STRICTER condition than this team's own group being
+  finished.
+- The "Cross-group best-third snapshot" block (when present) tells you
+  whether the snapshot is FINAL (header says "FINAL") or PROVISIONAL
+  (header says "PROVISIONAL — only X/12 groups have all matches played").
+- When the snapshot is PROVISIONAL, the article MUST NOT claim that
+  THIS team has "secured", "guaranteed", "locked in", "booked", "clinched"
+  or otherwise certainly qualified as a best-third — even if the
+  per-team data shows bestThirdQualProb = 100%. The cross-group ranking
+  is still a moving target, and presenting it as final misleads readers.
+- Required PROVISIONAL phrasing instead: "currently sit Xth among the
+  third-placed teams across all 12 groups", "would advance as a best-
+  third if the snapshot holds", "are inside the qualifying eight on
+  current numbers", "their chances of going through as a best-third
+  are strong / borderline / slim".
+- It IS fine to say "finished 3rd in Group X" once THAT group's
+  "Remaining matches" block is empty — only the cross-group best-third
+  qualification claim needs hedging, not the group-position claim.
+- When the snapshot is FINAL, certainty wording is allowed: "advance as
+  one of the eight best third-placed teams", "qualified as a best-third
+  team", "missed out on a best-third spot".
+- If the snapshot block is absent, do not invent cross-group ranking;
+  say only what the per-team probability data and group standings support.
+
 MATCH SCORES — NON-NEGOTIABLE RULE:
 - The "Played matches" block lists every already-played match in the
   group with its EXACT final score. That is the ONLY source of truth
@@ -256,6 +283,34 @@ export interface TeamArticleContext {
    * equal-points teams in this group. Populated by the caller only once
    * every group-stage match has finished. Empty/undefined otherwise. */
   tiebreakerNotes?: string[];
+  /** Cross-group snapshot of currently-3rd-placed teams, ranked by FIFA
+   *  Article 13. Lets the article describe THIS team's best-third chances
+   *  in concrete snapshot terms ("currently 5th among third-placed teams")
+   *  rather than as a guaranteed outcome before every group-stage match
+   *  across all 12 groups has been played. */
+  bestThirdSnapshot?: BestThirdSnapshotForPrompt;
+}
+
+export interface BestThirdSnapshotForPrompt {
+  /** True ONLY when every group-stage match across all 12 groups is finished.
+   *  The article may speak about best-third outcomes as certainties only when
+   *  this flag is true. */
+  isFinal: boolean;
+  /** Number of groups that already have every match played (0..12). */
+  groupsFullyPlayed: number;
+  /** Ranked rows of currently-3rd-placed teams. */
+  rows: {
+    rank: number;
+    groupId: string;
+    teamName: string;
+    points: number;
+    gd: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    /** True when this team's group has played every match. */
+    groupFullyPlayed: boolean;
+    snapshotStatus: 'qualify' | 'eliminate';
+  }[];
 }
 
 export interface GeneratedTeamArticle {
@@ -353,10 +408,24 @@ function buildUserPrompt(ctx: TeamArticleContext): string {
     ? `\n\nTiebreaker resolution (use this to explain the final order — do NOT invent your own reason):\n${ctx.tiebreakerNotes.map(n => `  - ${n}`).join('\n')}`
     : '';
 
+  // Cross-group best-third snapshot. The article uses this to describe
+  // THIS team's best-third standing in concrete snapshot terms. While the
+  // snapshot is PROVISIONAL (isFinal === false), the article MUST NOT
+  // claim certainty even when bestThirdQualProb is 100%.
+  const bestThirdBlock = ctx.bestThirdSnapshot && ctx.bestThirdSnapshot.rows.length > 0
+    ? `\n\nCross-group best-third snapshot (${ctx.bestThirdSnapshot.isFinal ? 'FINAL — every group-stage match across all 12 groups has been played; the top 8 are the final qualifiers' : `PROVISIONAL — only ${ctx.bestThirdSnapshot.groupsFullyPlayed}/12 groups have all matches played; this ranking may still change`}):\n${ctx.bestThirdSnapshot.rows.map(r => {
+      const gdStr = r.gd >= 0 ? `+${r.gd}` : `${r.gd}`;
+      const status = r.snapshotStatus === 'qualify' ? 'would qualify' : 'would be eliminated';
+      const marker = r.teamName === ctx.teamName ? '  ← THIS TEAM' : '';
+      const grpState = r.groupFullyPlayed ? '' : ' (group still in progress)';
+      return `  ${r.rank}. ${r.teamName} (Group ${r.groupId}) — ${r.points} pts, GD ${gdStr}, GF ${r.goalsFor}, GA ${r.goalsAgainst}${grpState} → ${status}${marker}`;
+    }).join('\n')}`
+    : '';
+
   return `Team: ${ctx.teamName} (Group ${ctx.groupId})
 
 Current standings of the whole group (THESE NUMBERS ARE THE SOURCE OF TRUTH — quote them verbatim, never round, alter, or recompute):
-${standings}${tiebreakerBlock}
+${standings}${tiebreakerBlock}${bestThirdBlock}
 
 Played matches in the group (these are the ONLY scorelines you may quote):
 ${played}
@@ -466,12 +535,16 @@ function hashContext(ctx: TeamArticleContext): string {
 
   const tiebreaker = (ctx.tiebreakerNotes ?? []).join('§');
 
-  // v6: system prompt adds POSITION TENSE rule — past-tense position wording
-  // ("finished 3rd", "secured 2nd") is forbidden while ANY match in the group
-  // is still unplayed, even when THIS team has played all 3 of its own
-  // fixtures and is already guaranteed knockout football. Bump invalidates
-  // older articles so the next admin save regenerates against the new rule.
-  const str = `v6:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}`;
+  const snapshot = ctx.bestThirdSnapshot
+    ? `${ctx.bestThirdSnapshot.isFinal ? 'F' : 'P'}:${ctx.bestThirdSnapshot.groupsFullyPlayed}:` +
+      ctx.bestThirdSnapshot.rows.map(r => `${r.rank}=${r.teamName}/${r.groupId}/${r.points}/${r.gd}/${r.goalsFor}/${r.goalsAgainst}/${r.groupFullyPlayed ? 'F' : 'P'}/${r.snapshotStatus}`).join('|')
+    : '';
+
+  // v7: prompt now (1) carries a cross-group best-third snapshot and (2) the
+  // system prompt forbids "guaranteed best-third" claims while the snapshot
+  // is PROVISIONAL. Bump invalidates older articles so the next admin save
+  // regenerates against the new rule.
+  const str = `v7:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}|bts:${snapshot}`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

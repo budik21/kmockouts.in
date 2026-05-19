@@ -186,6 +186,51 @@ export async function recalculateAffectedProbabilities(changedGroupId: GroupId):
 }
 
 /**
+ * Load every group's teams + matches and shape them into the input shape
+ * `buildBestThirdSnapshot` expects. Used both by the per-group pregenerate
+ * cascade and by the cross-group regen helper after a group transitions to
+ * fully-decided state.
+ */
+async function loadAllGroupsForSnapshot(): Promise<import('../engine/best-third-snapshot').GroupSnapshotInput[]> {
+  const result: import('../engine/best-third-snapshot').GroupSnapshotInput[] = [];
+  for (const gid of ALL_GROUPS) {
+    const teamRows = await query<{
+      id: number; name: string; short_name: string; country_code: string; group_id: string;
+      is_placeholder: boolean; external_id: string | null; fifa_ranking: number | null;
+    }>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
+    const matchRows = await query<{
+      id: number; group_id: string; round: number;
+      home_team_id: number; away_team_id: number;
+      home_goals: number | null; away_goals: number | null;
+      home_yc: number; home_yc2: number; home_rc_direct: number; home_yc_rc: number;
+      away_yc: number; away_yc2: number; away_rc_direct: number; away_yc_rc: number;
+      venue: string; kick_off: string; status: string;
+    }>('SELECT * FROM match WHERE group_id = $1', [gid]);
+    const teams = teamRows.map(r => ({
+      id: r.id, name: r.name, shortName: r.short_name, countryCode: r.country_code,
+      groupId: r.group_id as GroupId, isPlaceholder: r.is_placeholder,
+      externalId: r.external_id ?? undefined, fifaRanking: r.fifa_ranking ?? undefined,
+    }));
+    const allMatches = matchRows.map(r => ({
+      id: r.id, groupId: r.group_id as GroupId, round: r.round,
+      homeTeamId: r.home_team_id, awayTeamId: r.away_team_id,
+      homeGoals: r.home_goals, awayGoals: r.away_goals,
+      homeYc: r.home_yc, homeYc2: r.home_yc2, homeRcDirect: r.home_rc_direct, homeYcRc: r.home_yc_rc,
+      awayYc: r.away_yc, awayYc2: r.away_yc2, awayRcDirect: r.away_rc_direct, awayYcRc: r.away_yc_rc,
+      venue: r.venue, kickOff: r.kick_off, status: r.status as 'FINISHED' | 'LIVE' | 'SCHEDULED',
+    }));
+    const played = allMatches.filter(m => m.status === 'FINISHED');
+    result.push({
+      groupId: gid,
+      teams,
+      playedMatches: played,
+      totalMatches: allMatches.length,
+    });
+  }
+  return result;
+}
+
+/**
  * Pre-generate AI scenario summaries for every team in a group at every
  * position their position probability is > 0 and < 100. Populates the
  * `ai_summary_cache` table so subsequent team-detail page renders hit the
@@ -231,6 +276,7 @@ export async function pregenerateTeamScenarioSummaries(
   const { enumerateGroupScenarios } = await import('../engine/scenarios');
   const { generateAiScenarioSummaries } = await import('../engine/scenario-summary-ai');
   const { explainTiebreakers } = await import('../engine/tiebreaker-explain');
+  const { buildBestThirdSnapshot } = await import('../engine/best-third-snapshot');
 
   const teamRows = await query<{
     id: number; name: string; short_name: string; country_code: string; group_id: string;
@@ -293,6 +339,39 @@ export async function pregenerateTeamScenarioSummaries(
   const tiebreakerNotes = isWrapUp
     ? explainTiebreakers(standings, played)
     : [];
+
+  // Cross-group best-third snapshot — built from EVERY group's current
+  // standings, not just this one. Fed into both the group + team article
+  // prompts so the AI can describe a 3rd-placed team's best-third chances
+  // in concrete snapshot terms rather than treating a 100% probability as
+  // a guaranteed outcome before the table is locked. Errors during the
+  // collection step are swallowed so the article generation still proceeds.
+  let bestThirdSnapshotForPrompt: import('../engine/group-article-ai').BestThirdSnapshotForPrompt | undefined;
+  try {
+    const groupSnapshots = await loadAllGroupsForSnapshot();
+    const snapshot = buildBestThirdSnapshot(groupSnapshots);
+    bestThirdSnapshotForPrompt = {
+      isFinal: snapshot.isFinal,
+      groupsFullyPlayed: snapshot.groupsFullyPlayed,
+      rows: snapshot.rows.map(r => ({
+        rank: r.rank,
+        groupId: r.groupId,
+        teamName: r.teamName,
+        points: r.points,
+        gd: r.goalDifference,
+        goalsFor: r.goalsFor,
+        goalsAgainst: r.goalsAgainst,
+        groupFullyPlayed: r.groupFullyPlayed,
+        snapshotStatus: r.snapshotStatus,
+      })),
+    };
+  } catch (err) {
+    console.error(`[pregenerate] Best-third snapshot collection failed for group ${groupId}:`, err);
+    options.trace?.errors.push({
+      step: `best-third-snapshot:${groupId}`,
+      message: String(err),
+    });
+  }
 
   const summaries = enumerateGroupScenarios(teams, played, remaining);
   const remainingMatchesInfo = remaining.map((m, i) => ({
@@ -417,6 +496,7 @@ export async function pregenerateTeamScenarioSummaries(
             })),
             teams: articleTeams,
             tiebreakerNotes,
+            bestThirdSnapshot: bestThirdSnapshotForPrompt,
           },
           {
             force: options.force,
@@ -478,6 +558,7 @@ export async function pregenerateTeamScenarioSummaries(
               bestThirdQualProb: bestThirdProbByTeam.get(t.id) ?? 0,
               granularSummariesByPosition: freshGranularByTeam.get(t.id) ?? {},
               tiebreakerNotes,
+              bestThirdSnapshot: bestThirdSnapshotForPrompt,
             },
             {
               force: options.force,
@@ -503,6 +584,269 @@ export async function pregenerateTeamScenarioSummaries(
   } catch (err) {
     console.error(`[pregenerate] Article cascade failed for ${groupId}:`, err);
   }
+}
+
+/**
+ * Cross-group regeneration triggered when a group transitions to fully-decided
+ * (every match in that group is FINISHED). Force-regenerates the group article
+ * AND the current 3rd-placed team's article for EVERY OTHER group, because the
+ * cross-group best-third snapshot fed into those articles has just changed.
+ *
+ * The affected group itself is intentionally skipped: the normal cascade
+ * inside `pregenerateTeamScenarioSummaries` already regenerated its articles
+ * against the same fresh snapshot (the read inside this helper is from the
+ * same DB state).
+ *
+ * Per-position scenario summaries are NOT regenerated here — they are
+ * independent of best-third snapshot and would just duplicate cache writes.
+ * The 3rd-placed team article reads its scenario summaries from cache (or
+ * falls back to "(none — already decided)" for wrap-up groups).
+ *
+ * Cost: 11 group articles + up to 11 team articles = ≤22 AI calls (gated by
+ * the 6-slot Claude semaphore). Triggered at most 12 times per tournament.
+ */
+export async function pregenerateAfterGroupClosure(
+  closedGroupId: GroupId,
+  options: PregenerateOptions = {},
+): Promise<void> {
+  if (!process.env.ANTHROPIC_API_KEY) return;
+
+  if (!options.ignoreFlags) {
+    const { isFeatureEnabled, isAiGenerationEnabledByEnv } = await import('./feature-flags');
+    if (!isAiGenerationEnabledByEnv()) {
+      console.log(`[pregenerate] Skipping after-closure regen (AI_PREDICTIONS_ENABLED env off) for closed group ${closedGroupId}`);
+      return;
+    }
+    if (!(await isFeatureEnabled('ai_predictions', true))) {
+      console.log(`[pregenerate] Skipping after-closure regen (ai_predictions flag off) for closed group ${closedGroupId}`);
+      return;
+    }
+  }
+
+  const { calculateStandings } = await import('../engine/standings');
+  const { explainTiebreakers } = await import('../engine/tiebreaker-explain');
+  const { buildBestThirdSnapshot } = await import('../engine/best-third-snapshot');
+  const { enumerateGroupScenarios } = await import('../engine/scenarios');
+  const { getCachedAiScenarioSummaries } = await import('../engine/scenario-summary-ai');
+  const { pregenerateGroupArticle } = await import('../engine/group-article-ai');
+  const { pregenerateTeamArticle } = await import('../engine/team-article-ai');
+
+  console.log(`[pregenerate] Cross-group regen kicked off — closed group: ${closedGroupId}`);
+
+  // Build the cross-group best-third snapshot once from current DB state.
+  const allGroups = await loadAllGroupsForSnapshot();
+  const snapshot = buildBestThirdSnapshot(allGroups);
+  const snapshotForPrompt: import('../engine/group-article-ai').BestThirdSnapshotForPrompt = {
+    isFinal: snapshot.isFinal,
+    groupsFullyPlayed: snapshot.groupsFullyPlayed,
+    rows: snapshot.rows.map(r => ({
+      rank: r.rank,
+      groupId: r.groupId,
+      teamName: r.teamName,
+      points: r.points,
+      gd: r.goalDifference,
+      goalsFor: r.goalsFor,
+      goalsAgainst: r.goalsAgainst,
+      groupFullyPlayed: r.groupFullyPlayed,
+      snapshotStatus: r.snapshotStatus,
+    })),
+  };
+
+  // Per-team best-third qualification probabilities across every group —
+  // already refreshed by `recalculateAffectedProbabilities` in the parent
+  // cascade. Load all rows once and index by team.
+  const probRows = await query<{
+    team_id: number; group_id: string; prob_first: number; prob_second: number;
+    prob_third: number; prob_out: number; prob_third_qual: number;
+  }>('SELECT team_id, group_id, prob_first, prob_second, prob_third, prob_out, prob_third_qual FROM probability_cache');
+  const probsByTeam = new Map<number, { p1: number; p2: number; p3: number; p4: number; thirdQual: number }>();
+  for (const r of probRows) {
+    probsByTeam.set(r.team_id, {
+      p1: r.prob_first,
+      p2: r.prob_second,
+      p3: r.prob_third,
+      p4: r.prob_out,
+      thirdQual: r.prob_third_qual,
+    });
+  }
+
+  // Need full match lists per group (played + remaining + match details) to
+  // build the article contexts. Load them all in one pass.
+  const matchRowsAll = await query<{
+    id: number; group_id: string; round: number;
+    home_team_id: number; away_team_id: number;
+    home_goals: number | null; away_goals: number | null;
+    home_yc: number; home_yc2: number; home_rc_direct: number; home_yc_rc: number;
+    away_yc: number; away_yc2: number; away_rc_direct: number; away_yc_rc: number;
+    venue: string; kick_off: string; status: string;
+  }>('SELECT * FROM match');
+  const matchesByGroup = new Map<string, typeof matchRowsAll>();
+  for (const r of matchRowsAll) {
+    const arr = matchesByGroup.get(r.group_id) ?? [];
+    arr.push(r);
+    matchesByGroup.set(r.group_id, arr);
+  }
+
+  const targetGroups = allGroups.filter(g => g.groupId !== closedGroupId);
+
+  // Fan out group + 3rd-place-team article regen across the 11 other groups.
+  // Promise.allSettled so a single failed regen does not block the others.
+  await Promise.allSettled(targetGroups.map(async g => {
+    try {
+      const gAllMatchRows = matchesByGroup.get(g.groupId) ?? [];
+      const gAllMatches = gAllMatchRows.map(r => ({
+        id: r.id, groupId: r.group_id as GroupId, round: r.round,
+        homeTeamId: r.home_team_id, awayTeamId: r.away_team_id,
+        homeGoals: r.home_goals, awayGoals: r.away_goals,
+        homeYc: r.home_yc, homeYc2: r.home_yc2, homeRcDirect: r.home_rc_direct, homeYcRc: r.home_yc_rc,
+        awayYc: r.away_yc, awayYc2: r.away_yc2, awayRcDirect: r.away_rc_direct, awayYcRc: r.away_yc_rc,
+        venue: r.venue, kickOff: r.kick_off, status: r.status as 'FINISHED' | 'LIVE' | 'SCHEDULED',
+      }));
+      const played = gAllMatches.filter(m => m.status === 'FINISHED');
+      const remaining = gAllMatches.filter(m => m.status !== 'FINISHED');
+
+      const standings = calculateStandings({ teams: g.teams, matches: played });
+      const currentStandings = standings.map(s => ({
+        teamName: s.team.name,
+        points: s.points,
+        gd: s.goalsFor - s.goalsAgainst,
+        goalsFor: s.goalsFor,
+        goalsAgainst: s.goalsAgainst,
+        position: s.position,
+      }));
+      const isWrapUp = remaining.length === 0;
+      const tiebreakerNotes = isWrapUp ? explainTiebreakers(standings, played) : [];
+
+      const playedMatchesForArticles = played.map(m => ({
+        homeTeam: g.teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+        awayTeam: g.teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+        homeGoals: m.homeGoals ?? 0,
+        awayGoals: m.awayGoals ?? 0,
+      }));
+      const remainingForGroup = remaining.map(m => ({
+        homeTeam: g.teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+        awayTeam: g.teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+      }));
+
+      // Per-team scenario summaries — read from cache for in-progress groups,
+      // empty for fully-decided groups (the article generator handles that).
+      const groupScenarios = enumerateGroupScenarios(g.teams, played, remaining);
+      const remainingMatchesInfo = remaining.map((m, i) => ({
+        matchIndex: i,
+        homeTeamId: m.homeTeamId,
+        awayTeamId: m.awayTeamId,
+        homeTeamName: g.teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+        awayTeamName: g.teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+      }));
+
+      const granularByTeam = new Map<number, { [pos: number]: string }>();
+      if (!isWrapUp) {
+        await Promise.allSettled(g.teams.map(async t => {
+          const ts = groupScenarios.find(s => s.teamId === t.id);
+          if (!ts) return;
+          try {
+            const cached = await getCachedAiScenarioSummaries({
+              teamId: t.id,
+              teamName: t.name,
+              groupId: g.groupId,
+              outcomePatternsByPosition: ts.outcomePatternsByPosition,
+              probabilities: ts.positionProbabilities,
+              remainingMatches: remainingMatchesInfo,
+              currentStandings,
+            });
+            granularByTeam.set(t.id, cached);
+          } catch {
+            granularByTeam.set(t.id, {});
+          }
+        }));
+      }
+
+      const articleTeams = g.teams.map(t => {
+        const ts = groupScenarios.find(s => s.teamId === t.id);
+        return {
+          teamName: t.name,
+          probabilities: ts?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
+          granularSummariesByPosition: granularByTeam.get(t.id) ?? {},
+        };
+      });
+
+      // (1) Force-regen the group article against the fresh snapshot.
+      await pregenerateGroupArticle(
+        {
+          groupId: g.groupId,
+          currentStandings,
+          playedMatches: playedMatchesForArticles,
+          remainingMatches: remainingForGroup,
+          teams: articleTeams,
+          tiebreakerNotes,
+          bestThirdSnapshot: snapshotForPrompt,
+        },
+        {
+          force: true,
+          ignoreFlags: options.ignoreFlags,
+          usage: options.usage,
+          trace: options.trace,
+        },
+      ).catch(err => {
+        console.error(`[pregenerate] Cross-group regen — group article failed for ${g.groupId}:`, err);
+        options.trace?.errors.push({
+          step: `after-closure-group-article:${g.groupId}`,
+          message: String(err),
+        });
+      });
+
+      // (2) Force-regen the current 3rd-place team's article. Their best-
+      // third standing is what shifts most when another group closes.
+      const third = standings.find(s => s.position === 3);
+      if (third) {
+        const t = third.team;
+        const ts = groupScenarios.find(s => s.teamId === t.id);
+        const teamProb = probsByTeam.get(t.id);
+        await pregenerateTeamArticle(
+          {
+            groupId: g.groupId,
+            teamId: t.id,
+            teamName: t.name,
+            currentStandings,
+            playedMatches: playedMatchesForArticles.map((pm, i) => ({
+              ...pm,
+              isTeamMatch: played[i].homeTeamId === t.id || played[i].awayTeamId === t.id,
+            })),
+            remainingMatches: remaining.map(m => ({
+              homeTeam: g.teams.find(team => team.id === m.homeTeamId)?.name ?? '?',
+              awayTeam: g.teams.find(team => team.id === m.awayTeamId)?.name ?? '?',
+              isTeamMatch: m.homeTeamId === t.id || m.awayTeamId === t.id,
+            })),
+            probabilities: ts?.positionProbabilities ?? { 1: 0, 2: 0, 3: 0, 4: 0 },
+            bestThirdQualProb: teamProb?.thirdQual ?? 0,
+            granularSummariesByPosition: granularByTeam.get(t.id) ?? {},
+            tiebreakerNotes,
+            bestThirdSnapshot: snapshotForPrompt,
+          },
+          {
+            force: true,
+            ignoreFlags: options.ignoreFlags,
+            usage: options.usage,
+            trace: options.trace,
+          },
+        ).catch(err => {
+          console.error(`[pregenerate] Cross-group regen — team article failed for ${t.name}:`, err);
+          options.trace?.errors.push({
+            step: `after-closure-team-article:${t.name}`,
+            message: String(err),
+          });
+        });
+      }
+    } catch (err) {
+      console.error(`[pregenerate] Cross-group regen failed for group ${g.groupId}:`, err);
+      options.trace?.errors.push({
+        step: `after-closure-group:${g.groupId}`,
+        message: String(err),
+      });
+    }
+  }));
+
+  console.log(`[pregenerate] Cross-group regen done (closed: ${closedGroupId})`);
 }
 
 /**

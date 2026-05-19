@@ -222,6 +222,60 @@ function renderTipTransitions(trace: MatchUpdateTrace): string {
     </table>`;
 }
 
+function renderBestThirdSnapshot(trace: MatchUpdateTrace): string {
+  if (!trace.bestThirdSnapshot) {
+    return '<p style="color:#9a9aa3;font-style:italic;">(snapshot not captured)</p>';
+  }
+  const snap = trace.bestThirdSnapshot;
+  const statusLine = snap.isFinal
+    ? '<p style="color:#0a7e3b;font-weight:600;margin:0 0 8px;">FINAL — every group-stage match has been played; the top 8 are the final qualifiers.</p>'
+    : `<p style="color:#6b6b73;margin:0 0 8px;">PROVISIONAL — only ${snap.groupsFullyPlayed}/12 groups have all matches played; this ranking may still change.</p>`;
+  const rows = snap.rows.map(r => {
+    const gdStr = r.gd >= 0 ? `+${r.gd}` : `${r.gd}`;
+    const fifa = r.fifaRanking ? String(r.fifaRanking) : '–';
+    const qualifies = r.snapshotStatus === 'qualify';
+    const rowStyle = qualifies
+      ? 'background:#e7f8ed;'
+      : 'background:#fdecea;';
+    const groupState = r.groupFullyPlayed
+      ? '<span style="color:#0a7e3b;font-size:11px;">finished</span>'
+      : '<span style="color:#c47f00;font-size:11px;">in progress</span>';
+    return `<tr style="${rowStyle}">
+      <td style="padding:4px 10px;text-align:center;">${r.rank}</td>
+      <td style="padding:4px 10px;">${esc(r.teamName)}</td>
+      <td style="padding:4px 10px;text-align:center;">${esc(r.groupId)}</td>
+      <td style="padding:4px 10px;text-align:center;">${r.points}</td>
+      <td style="padding:4px 10px;text-align:center;">${gdStr}</td>
+      <td style="padding:4px 10px;text-align:center;">${r.goalsFor}:${r.goalsAgainst}</td>
+      <td style="padding:4px 10px;text-align:center;">${r.fairPlayPoints}</td>
+      <td style="padding:4px 10px;text-align:center;">${fifa}</td>
+      <td style="padding:4px 10px;text-align:center;">${groupState}</td>
+    </tr>`;
+  }).join('');
+  const tableHtml = `<table style="border-collapse:collapse;font:13px/1.4 -apple-system,Segoe UI,sans-serif;width:100%;">
+    <thead>
+      <tr style="background:#f5f5f7;">
+        <th style="padding:6px 10px;text-align:center;">#</th>
+        <th style="padding:6px 10px;text-align:left;">Team</th>
+        <th style="padding:6px 10px;">Grp</th>
+        <th style="padding:6px 10px;">Pts</th>
+        <th style="padding:6px 10px;">GD</th>
+        <th style="padding:6px 10px;">GF:GA</th>
+        <th style="padding:6px 10px;">FP</th>
+        <th style="padding:6px 10px;">FIFA</th>
+        <th style="padding:6px 10px;">Group state</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+  const tiebreakerHtml = snap.tiebreakerNotes.length > 0
+    ? `<div style="margin-top:8px;padding:8px 10px;background:#eff6ff;border-left:3px solid #1e40af;color:#1e40af;font:12px/1.5 -apple-system,Segoe UI,sans-serif;">
+        <strong>Tiebreaker:</strong> ${snap.tiebreakerNotes.map(esc).join(' | ')}
+      </div>`
+    : '';
+  return statusLine + tableHtml + tiebreakerHtml;
+}
+
 function renderCacheInvalidation(trace: MatchUpdateTrace): string {
   if (!trace.cacheInvalidation) return '<p style="color:#9a9aa3;font-style:italic;">(cache invalidation step not reached)</p>';
   const ci = trace.cacheInvalidation;
@@ -259,6 +313,7 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
       ${row('Started at', esc(trace.startedAt))}
       ${row('Total cascade duration', fmtMs(trace.totalDurationMs))}
       ${trace.timedOut ? row('Timeout', `<span style="color:#c47f00;font-weight:600;">${esc(trace.timedOut.stage)} after ${fmtMs(trace.timedOut.afterMs)} (budget ${fmtMs(trace.timedOut.budgetMs)})</span>`) : ''}
+      ${trace.groupClosure ? row('Group closure', `<span style="color:#0a7e3b;font-weight:600;">Group ${esc(trace.groupClosure.groupId)} just transitioned to fully decided (${trace.groupClosure.finishedMatches}/${trace.groupClosure.totalMatches} matches) — cross-group regen triggered.</span>`) : ''}
     </table>`);
 
   const standingsHtml = section('Group standings after recalculation', renderStandings(trace) + renderProbabilities(trace));
@@ -271,6 +326,8 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
   const teamArticlesHtml = section('Team articles', trace.teamArticles.length > 0
     ? trace.teamArticles.map(t => renderArticleCall(`${t.teamName} (team ${t.teamId})`, t)).join('')
     : '<p style="color:#9a9aa3;font-style:italic;">(no team articles generated)</p>');
+
+  const bestThirdHtml = section('Cross-group best-third snapshot (fed into AI prompts)', renderBestThirdSnapshot(trace));
 
   const tipsHtml = section('Tip points & user e-mails', renderTipTransitions(trace));
   const cacheHtml = section('Cache invalidation', renderCacheInvalidation(trace));
@@ -287,6 +344,7 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
     ${scenariosHtml}
     ${groupArticleHtml}
     ${teamArticlesHtml}
+    ${bestThirdHtml}
     ${tipsHtml}
     ${cacheHtml}
     ${errorsHtml}

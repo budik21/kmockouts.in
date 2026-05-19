@@ -92,6 +92,37 @@ export interface MatchUpdateTrace {
     cloudflarePurged: boolean;
     cloudflareError?: string;
   };
+  /** Set when THIS update was the one that closed out a group (every match
+   *  in the group is now FINISHED for the first time). Surfaces in the
+   *  diagnostic e-mail so it's obvious which save triggered the expensive
+   *  cross-group regen of every other group's article + 3rd-place team
+   *  article. */
+  groupClosure?: {
+    groupId: string;
+    finishedMatches: number;
+    totalMatches: number;
+  };
+  /** Cross-group ranking of currently-3rd-placed teams as it stood when the
+   *  AI articles were generated. Included in the diagnostic e-mail so the
+   *  admin can verify the snapshot fed into the prompts. */
+  bestThirdSnapshot?: {
+    isFinal: boolean;
+    groupsFullyPlayed: number;
+    rows: Array<{
+      rank: number;
+      groupId: string;
+      teamName: string;
+      points: number;
+      gd: number;
+      goalsFor: number;
+      goalsAgainst: number;
+      fairPlayPoints: number;
+      fifaRanking?: number;
+      groupFullyPlayed: boolean;
+      snapshotStatus: 'qualify' | 'eliminate';
+    }>;
+    tiebreakerNotes: string[];
+  };
   /** Free-form error log — anything the cascade swallowed. */
   errors: Array<{ step: string; message: string }>;
   /** Total cascade duration in milliseconds. Set just before the e-mail is sent. */

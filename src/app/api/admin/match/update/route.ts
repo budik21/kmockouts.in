@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { query, queryOne } from '@/lib/db';
-import { recalculateAffectedProbabilities, pregenerateBestThirdSummaries, pregenerateTeamScenarioSummaries } from '@/lib/probability-cache';
+import { recalculateAffectedProbabilities, pregenerateBestThirdSummaries, pregenerateTeamScenarioSummaries, pregenerateAfterGroupClosure } from '@/lib/probability-cache';
 import type { GroupId } from '@/lib/types';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { dispatchTipResultEmails } from '@/lib/tip-notifications';
@@ -106,6 +106,22 @@ export async function POST(request: NextRequest) {
       awayGoals,
       status,
     });
+
+    // Snapshot of the group's match-completion state BEFORE the update.
+    // Used after the save + recalc cascade to detect whether THIS update is
+    // the one that transitions the group to fully-decided. The cross-group
+    // best-third snapshot only locks in for that group at this moment, so
+    // every OTHER group's cached articles + 3rd-place team articles need a
+    // forced refresh against the fresh snapshot.
+    const groupCountsBefore = await queryOne<{ total: number; finished: number }>(
+      `SELECT COUNT(*)::int AS total,
+              COUNT(*) FILTER (WHERE status = 'FINISHED')::int AS finished
+       FROM match WHERE group_id = $1`,
+      [groupId],
+    );
+    const wasGroupFullyDecidedBefore = groupCountsBefore !== null
+      && groupCountsBefore.total > 0
+      && groupCountsBefore.finished === groupCountsBefore.total;
 
     // Update the match
     await query(
@@ -221,6 +237,70 @@ export async function POST(request: NextRequest) {
         trace.errors.push({ step: 'snapshot-standings', message: String(err) });
       }
 
+      // Cross-group best-third snapshot for the diagnostic e-mail. Reflects
+      // the DB state AFTER `recalculateAffectedProbabilities` — same view the
+      // AI prompts will see in the next step. Errors are swallowed; the
+      // snapshot is decorative for the e-mail, not load-bearing.
+      try {
+        const { buildBestThirdSnapshot } = await import('@/engine/best-third-snapshot');
+        const { ALL_GROUPS: ALL_GROUP_IDS } = await import('@/lib/constants');
+        const groupInputs: import('@/engine/best-third-snapshot').GroupSnapshotInput[] = [];
+        for (const gid of ALL_GROUP_IDS) {
+          const tRows = await query<{
+            id: number; name: string; short_name: string; country_code: string; group_id: string;
+            is_placeholder: boolean; external_id: string | null; fifa_ranking: number | null;
+          }>('SELECT * FROM team WHERE group_id = $1 ORDER BY id', [gid]);
+          const mRows = await query<{
+            id: number; group_id: string; round: number;
+            home_team_id: number; away_team_id: number;
+            home_goals: number | null; away_goals: number | null;
+            home_yc: number; home_yc2: number; home_rc_direct: number; home_yc_rc: number;
+            away_yc: number; away_yc2: number; away_rc_direct: number; away_yc_rc: number;
+            venue: string; kick_off: string; status: string;
+          }>('SELECT * FROM match WHERE group_id = $1', [gid]);
+          const allMs = mRows.map(r => ({
+            id: r.id, groupId: r.group_id as GroupId, round: r.round,
+            homeTeamId: r.home_team_id, awayTeamId: r.away_team_id,
+            homeGoals: r.home_goals, awayGoals: r.away_goals,
+            homeYc: r.home_yc, homeYc2: r.home_yc2, homeRcDirect: r.home_rc_direct, homeYcRc: r.home_yc_rc,
+            awayYc: r.away_yc, awayYc2: r.away_yc2, awayRcDirect: r.away_rc_direct, awayYcRc: r.away_yc_rc,
+            venue: r.venue, kickOff: r.kick_off, status: r.status as 'FINISHED' | 'LIVE' | 'SCHEDULED',
+          }));
+          groupInputs.push({
+            groupId: gid,
+            teams: tRows.map(r => ({
+              id: r.id, name: r.name, shortName: r.short_name, countryCode: r.country_code,
+              groupId: r.group_id as GroupId, isPlaceholder: r.is_placeholder,
+              externalId: r.external_id ?? undefined, fifaRanking: r.fifa_ranking ?? undefined,
+            })),
+            playedMatches: allMs.filter(m => m.status === 'FINISHED'),
+            totalMatches: allMs.length,
+          });
+        }
+        const snap = buildBestThirdSnapshot(groupInputs);
+        trace.bestThirdSnapshot = {
+          isFinal: snap.isFinal,
+          groupsFullyPlayed: snap.groupsFullyPlayed,
+          rows: snap.rows.map(r => ({
+            rank: r.rank,
+            groupId: r.groupId,
+            teamName: r.teamName,
+            points: r.points,
+            gd: r.goalDifference,
+            goalsFor: r.goalsFor,
+            goalsAgainst: r.goalsAgainst,
+            fairPlayPoints: r.fairPlayPoints,
+            fifaRanking: r.fifaRanking,
+            groupFullyPlayed: r.groupFullyPlayed,
+            snapshotStatus: r.snapshotStatus,
+          })),
+          tiebreakerNotes: snap.tiebreakerNotes,
+        };
+      } catch (err) {
+        console.error('[admin] Best-third snapshot for trace failed:', err);
+        trace.errors.push({ step: 'snapshot-best-third', message: String(err) });
+      }
+
       // Race the AI block against a hard budget. On timeout the abandoned
       // pregenerate promises continue in the background — they cannot block
       // the response, but any team/group articles that DO manage to finish
@@ -259,6 +339,53 @@ export async function POST(request: NextRequest) {
           message: `AI generation exceeded the ${(AI_PHASE_BUDGET_MS / 1000).toFixed(0)}s budget (ran for ${(elapsed / 1000).toFixed(1)}s). In-flight Claude calls were abandoned so the admin response and diagnostic e-mail still go out before the platform recycles the container. Partial trace below — anything missing is what didn't finish in time.`,
         });
         console.error(`[admin] AI phase exceeded ${AI_PHASE_BUDGET_MS}ms — abandoning, proceeding to tip recalc + e-mail`);
+      }
+
+      // Did THIS update transition the group from "still open" to "fully
+      // decided"? If yes, the cross-group best-third snapshot fed into
+      // every other group's articles has just shifted, so we force-regen
+      // those. Skipped on edits to an already-decided group (no transition).
+      // Budgeted separately so the second phase has its own ~60s window
+      // and a slow main cascade doesn't starve it.
+      const groupCountsAfter = await queryOne<{ total: number; finished: number }>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'FINISHED')::int AS finished
+         FROM match WHERE group_id = $1`,
+        [groupId],
+      ).catch(() => null);
+      const isGroupFullyDecidedNow = groupCountsAfter !== null
+        && groupCountsAfter.total > 0
+        && groupCountsAfter.finished === groupCountsAfter.total;
+      if (isGroupFullyDecidedNow && !wasGroupFullyDecidedBefore) {
+        trace.groupClosure = {
+          groupId,
+          finishedMatches: groupCountsAfter!.finished,
+          totalMatches: groupCountsAfter!.total,
+        };
+        console.log(`[admin] Group ${groupId} just transitioned to fully-decided — triggering cross-group regen`);
+        const closureStartedAt = Date.now();
+        const closureWork = pregenerateAfterGroupClosure(groupId as GroupId, { trace })
+          .catch(err => {
+            console.error(`[admin] Cross-group regen failed after closure of group ${groupId}:`, err);
+            trace.errors.push({ step: 'pregenerate-after-group-closure', message: String(err) });
+          });
+        let closureBudgetTimer: ReturnType<typeof setTimeout> | undefined;
+        const closureTimeout = new Promise<'TIMEOUT'>((resolve) => {
+          closureBudgetTimer = setTimeout(() => resolve('TIMEOUT'), AI_PHASE_BUDGET_MS);
+        });
+        const closureOutcome = await Promise.race([
+          closureWork.then(() => 'DONE' as const),
+          closureTimeout,
+        ]);
+        if (closureBudgetTimer) clearTimeout(closureBudgetTimer);
+        if (closureOutcome === 'TIMEOUT') {
+          const elapsed = Date.now() - closureStartedAt;
+          trace.errors.push({
+            step: 'cascade-timeout-closure',
+            message: `Cross-group after-closure regen exceeded the ${(AI_PHASE_BUDGET_MS / 1000).toFixed(0)}s budget (ran for ${(elapsed / 1000).toFixed(1)}s). In-flight Claude calls abandoned; some other groups' articles may still reference the pre-closure snapshot.`,
+          });
+          console.error(`[admin] After-closure regen exceeded ${AI_PHASE_BUDGET_MS}ms — abandoning, proceeding to tip recalc + e-mail`);
+        }
       }
     } catch (err) {
       console.error(`[admin] Probability recalculation failed for group ${groupId}:`, err);

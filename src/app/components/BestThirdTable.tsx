@@ -37,15 +37,33 @@ interface BestThirdTableProps {
   teams: ThirdPlacedTeam[];
   /** AI-generated summaries keyed by team ID */
   summaries?: TeamSummary[];
+  /** Human-readable explanations for non-obvious tiebreaker resolutions —
+   * shown as a neutral info banner above the table when two or more teams
+   * share points + GD and the ranking needed FIFA Article 13 step c/d/e to
+   * separate them. */
+  tiebreakerNotes?: string[];
 }
 
-export default function BestThirdTable({ teams, summaries }: BestThirdTableProps) {
+export default function BestThirdTable({ teams, summaries, tiebreakerNotes }: BestThirdTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const summaryMap = new Map(summaries?.map(s => [s.teamId, s]) ?? []);
   const hasSummaries = summaryMap.size > 0;
+  const hasTiebreakers = tiebreakerNotes && tiebreakerNotes.length > 0;
 
   return (
     <div className="table-responsive">
+      {hasTiebreakers && (
+        <div className="tiebreaker-info-banner" style={{ marginBottom: '0.5rem' }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ flexShrink: 0 }}>
+            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2a1 1 0 110 2 1 1 0 010-2zm1.5 9h-3v-1h1V7.5h-1v-1h2V11h1v1z"/>
+          </svg>
+          <div className="scenario-banner-content">
+            <span className="scenario-tiebreaker-note">
+              Tiebreaker: {tiebreakerNotes!.join(' | ')}
+            </span>
+          </div>
+        </div>
+      )}
       <table className="standings-table table table-sm mb-0 b3-table-pts-highlight">
         <thead>
           <tr>
