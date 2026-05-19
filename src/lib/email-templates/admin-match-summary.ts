@@ -276,6 +276,44 @@ function renderBestThirdSnapshot(trace: MatchUpdateTrace): string {
   return statusLine + tableHtml + tiebreakerHtml;
 }
 
+function renderCrossGroupThirdPlaceRegen(trace: MatchUpdateTrace): string {
+  const regen = trace.crossGroupThirdPlaceRegen;
+  if (!regen) {
+    return '<p style="color:#9a9aa3;font-style:italic;">(cross-group 3rd-place regen step not reached)</p>';
+  }
+  // Mode-specific intro so the reader instantly knows WHY a given list is
+  // empty (or non-empty) — closure path is a superset of decided-only; the
+  // decided-only path can simply find no decided other groups yet.
+  const introByMode: Record<typeof regen.mode, string> = {
+    'closure-covered': `<p style="color:#6b6b73;margin:0 0 8px;">This save closed out the entered group, so the closure regen pass refreshed the group + 3rd-placed-team article for <strong>every</strong> other group (decided + in-progress). The list below is the subset that picks out the 3rd-placed team from each.</p>`,
+    'snapshot-shift': `<p style="color:#6b6b73;margin:0 0 8px;">This save did not close the entered group, but it can still shift the best-third ranking — so the group + 3rd-placed-team article was force-regenerated for every OTHER group that is already fully-decided. In-progress other groups are intentionally skipped (their 3rd-placed team is still a moving target).</p>`,
+    'no-decided-others': `<p style="color:#9a9aa3;font-style:italic;margin:0 0 8px;">No OTHER group is fully-decided yet, so nothing needed refreshing for the cross-group snapshot shift.</p>`,
+  };
+  const intro = introByMode[regen.mode];
+  if (regen.regeneratedTeams.length === 0) {
+    return intro;
+  }
+  const rows = regen.regeneratedTeams
+    .slice()
+    .sort((a, b) => a.groupId.localeCompare(b.groupId))
+    .map(t => `<tr>
+      <td style="padding:4px 10px;text-align:center;">${esc(t.groupId)}</td>
+      <td style="padding:4px 10px;">${esc(t.teamName)}</td>
+      <td style="padding:4px 10px;color:#6b6b73;">team ${t.teamId}</td>
+    </tr>`).join('');
+  return `${intro}
+    <table style="border-collapse:collapse;font:13px/1.4 -apple-system,Segoe UI,sans-serif;width:100%;">
+      <thead>
+        <tr style="background:#f5f5f7;">
+          <th style="padding:6px 10px;text-align:center;">Group</th>
+          <th style="padding:6px 10px;text-align:left;">3rd-placed team</th>
+          <th style="padding:6px 10px;text-align:left;color:#6b6b73;">Team ID</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
 function renderCacheInvalidation(trace: MatchUpdateTrace): string {
   if (!trace.cacheInvalidation) return '<p style="color:#9a9aa3;font-style:italic;">(cache invalidation step not reached)</p>';
   const ci = trace.cacheInvalidation;
@@ -328,6 +366,7 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
     : '<p style="color:#9a9aa3;font-style:italic;">(no team articles generated)</p>');
 
   const bestThirdHtml = section('Cross-group best-third snapshot (fed into AI prompts)', renderBestThirdSnapshot(trace));
+  const crossGroupRegenHtml = section('Cross-group 3rd-place predictions regen (other groups)', renderCrossGroupThirdPlaceRegen(trace));
 
   const tipsHtml = section('Tip points & user e-mails', renderTipTransitions(trace));
   const cacheHtml = section('Cache invalidation', renderCacheInvalidation(trace));
@@ -345,6 +384,7 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
     ${groupArticleHtml}
     ${teamArticlesHtml}
     ${bestThirdHtml}
+    ${crossGroupRegenHtml}
     ${tipsHtml}
     ${cacheHtml}
     ${errorsHtml}

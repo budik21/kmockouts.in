@@ -102,6 +102,30 @@ export interface MatchUpdateTrace {
     finishedMatches: number;
     totalMatches: number;
   };
+  /** Audit of the cross-group 3rd-place regen step. Every match-update save
+   *  can shift the best-third table, so the predictions/articles for
+   *  3rd-placed teams in OTHER already-fully-decided groups need refreshing
+   *  even when THIS update did not close a group. This field records what
+   *  the regen step actually did (or why it skipped) so the diagnostic
+   *  e-mail can show which teams from other groups had their articles
+   *  refreshed because of the snapshot shift.
+   *
+   *  - `closure-covered`: skipped because the closure regen pass already
+   *    covers every other group (closure regen is a superset).
+   *  - `no-decided-others`: no other group is fully decided yet, so there
+   *    is nothing to refresh.
+   *  - `snapshot-shift`: the regen ran; `regeneratedTeams` lists the
+   *    3rd-placed teams (one per decided other group) whose articles were
+   *    force-regenerated against the fresh best-third snapshot.
+   */
+  crossGroupThirdPlaceRegen?: {
+    mode: 'closure-covered' | 'no-decided-others' | 'snapshot-shift';
+    regeneratedTeams: Array<{
+      groupId: string;
+      teamId: number;
+      teamName: string;
+    }>;
+  };
   /** Cross-group ranking of currently-3rd-placed teams as it stood when the
    *  AI articles were generated. Included in the diagnostic e-mail so the
    *  admin can verify the snapshot fed into the prompts. */

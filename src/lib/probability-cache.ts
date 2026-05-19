@@ -587,39 +587,50 @@ export async function pregenerateTeamScenarioSummaries(
 }
 
 /**
- * Cross-group regeneration triggered when a group transitions to fully-decided
- * (every match in that group is FINISHED). Force-regenerates the group article
- * AND the current 3rd-placed team's article for EVERY OTHER group, because the
- * cross-group best-third snapshot fed into those articles has just changed.
+ * Internal: regenerate the group article AND the 3rd-placed team article for
+ * EVERY OTHER group (relative to `changedGroupId`), against a freshly built
+ * cross-group best-third snapshot.
  *
- * The affected group itself is intentionally skipped: the normal cascade
- * inside `pregenerateTeamScenarioSummaries` already regenerated its articles
- * against the same fresh snapshot (the read inside this helper is from the
- * same DB state).
+ * Two callers fan into this:
+ *   1. `pregenerateAfterGroupClosure` — fires after a group transitions to
+ *      fully-decided; processes EVERY other group (decided + in-progress)
+ *      because the snapshot's `isFinal` flag has changed for everyone.
+ *      Opts: `decidedOnly: false`.
+ *   2. `pregenerateThirdPlacedInOtherDecidedGroups` — fires after any other
+ *      match-result save that did NOT close a group; processes ONLY OTHER
+ *      groups that are already fully-decided, because only those groups'
+ *      3rd-place team's `bestThirdSnapshot` can have shifted underneath
+ *      them (in-progress groups will refresh on their own next save).
+ *      Opts: `decidedOnly: true`.
  *
  * Per-position scenario summaries are NOT regenerated here — they are
  * independent of best-third snapshot and would just duplicate cache writes.
  * The 3rd-placed team article reads its scenario summaries from cache (or
  * falls back to "(none — already decided)" for wrap-up groups).
  *
- * Cost: 11 group articles + up to 11 team articles = ≤22 AI calls (gated by
- * the 6-slot Claude semaphore). Triggered at most 12 times per tournament.
+ * Returns the list of 3rd-placed teams that had their article regenerated,
+ * so the caller can surface them in the diagnostic e-mail.
  */
-export async function pregenerateAfterGroupClosure(
-  closedGroupId: GroupId,
-  options: PregenerateOptions = {},
-): Promise<void> {
-  if (!process.env.ANTHROPIC_API_KEY) return;
+async function regenerateOtherGroupArticlesAgainstSnapshot(
+  changedGroupId: GroupId,
+  opts: PregenerateOptions & {
+    /** True ⇒ skip OTHER groups that still have remaining matches. */
+    decidedOnly: boolean;
+    /** Used as the prefix for trace error step labels. */
+    traceLabelPrefix: string;
+  },
+): Promise<{ regeneratedThirdPlacedTeams: Array<{ groupId: string; teamId: number; teamName: string }> }> {
+  if (!process.env.ANTHROPIC_API_KEY) return { regeneratedThirdPlacedTeams: [] };
 
-  if (!options.ignoreFlags) {
+  if (!opts.ignoreFlags) {
     const { isFeatureEnabled, isAiGenerationEnabledByEnv } = await import('./feature-flags');
     if (!isAiGenerationEnabledByEnv()) {
-      console.log(`[pregenerate] Skipping after-closure regen (AI_PREDICTIONS_ENABLED env off) for closed group ${closedGroupId}`);
-      return;
+      console.log(`[pregenerate] Skipping ${opts.traceLabelPrefix} regen (AI_PREDICTIONS_ENABLED env off) for changed group ${changedGroupId}`);
+      return { regeneratedThirdPlacedTeams: [] };
     }
     if (!(await isFeatureEnabled('ai_predictions', true))) {
-      console.log(`[pregenerate] Skipping after-closure regen (ai_predictions flag off) for closed group ${closedGroupId}`);
-      return;
+      console.log(`[pregenerate] Skipping ${opts.traceLabelPrefix} regen (ai_predictions flag off) for changed group ${changedGroupId}`);
+      return { regeneratedThirdPlacedTeams: [] };
     }
   }
 
@@ -631,7 +642,7 @@ export async function pregenerateAfterGroupClosure(
   const { pregenerateGroupArticle } = await import('../engine/group-article-ai');
   const { pregenerateTeamArticle } = await import('../engine/team-article-ai');
 
-  console.log(`[pregenerate] Cross-group regen kicked off — closed group: ${closedGroupId}`);
+  console.log(`[pregenerate] ${opts.traceLabelPrefix} regen kicked off — changed group: ${changedGroupId}, decidedOnly: ${opts.decidedOnly}`);
 
   // Build the cross-group best-third snapshot once from current DB state.
   const allGroups = await loadAllGroupsForSnapshot();
@@ -687,9 +698,23 @@ export async function pregenerateAfterGroupClosure(
     matchesByGroup.set(r.group_id, arr);
   }
 
-  const targetGroups = allGroups.filter(g => g.groupId !== closedGroupId);
+  const targetGroups = allGroups.filter(g => {
+    if (g.groupId === changedGroupId) return false;
+    if (opts.decidedOnly) {
+      // Only fully-decided OTHER groups. A group is "decided" when every
+      // scheduled match has a FINISHED status (i.e. there are no remaining
+      // matches left to play).
+      return g.totalMatches > 0 && g.playedMatches.length === g.totalMatches;
+    }
+    return true;
+  });
 
-  // Fan out group + 3rd-place-team article regen across the 11 other groups.
+  // Collected as each per-group regen succeeds — surfaced in the trace so
+  // the diagnostic e-mail can show which 3rd-placed teams from OTHER
+  // groups had their article rewritten because of this save.
+  const regeneratedThirdPlacedTeams: Array<{ groupId: string; teamId: number; teamName: string }> = [];
+
+  // Fan out group + 3rd-place-team article regen across the target groups.
   // Promise.allSettled so a single failed regen does not block the others.
   await Promise.allSettled(targetGroups.map(async g => {
     try {
@@ -783,20 +808,21 @@ export async function pregenerateAfterGroupClosure(
         },
         {
           force: true,
-          ignoreFlags: options.ignoreFlags,
-          usage: options.usage,
-          trace: options.trace,
+          ignoreFlags: opts.ignoreFlags,
+          usage: opts.usage,
+          trace: opts.trace,
         },
       ).catch(err => {
-        console.error(`[pregenerate] Cross-group regen — group article failed for ${g.groupId}:`, err);
-        options.trace?.errors.push({
-          step: `after-closure-group-article:${g.groupId}`,
+        console.error(`[pregenerate] ${opts.traceLabelPrefix} regen — group article failed for ${g.groupId}:`, err);
+        opts.trace?.errors.push({
+          step: `${opts.traceLabelPrefix}-group-article:${g.groupId}`,
           message: String(err),
         });
       });
 
       // (2) Force-regen the current 3rd-place team's article. Their best-
-      // third standing is what shifts most when another group closes.
+      // third standing is what shifts most when another group closes — and
+      // for already-decided OTHER groups it is the ONLY thing that can shift.
       const third = standings.find(s => s.position === 3);
       if (third) {
         const t = third.team;
@@ -825,28 +851,102 @@ export async function pregenerateAfterGroupClosure(
           },
           {
             force: true,
-            ignoreFlags: options.ignoreFlags,
-            usage: options.usage,
-            trace: options.trace,
+            ignoreFlags: opts.ignoreFlags,
+            usage: opts.usage,
+            trace: opts.trace,
           },
         ).catch(err => {
-          console.error(`[pregenerate] Cross-group regen — team article failed for ${t.name}:`, err);
-          options.trace?.errors.push({
-            step: `after-closure-team-article:${t.name}`,
+          console.error(`[pregenerate] ${opts.traceLabelPrefix} regen — team article failed for ${t.name}:`, err);
+          opts.trace?.errors.push({
+            step: `${opts.traceLabelPrefix}-team-article:${t.name}`,
             message: String(err),
           });
         });
+        regeneratedThirdPlacedTeams.push({
+          groupId: g.groupId,
+          teamId: t.id,
+          teamName: t.name,
+        });
       }
     } catch (err) {
-      console.error(`[pregenerate] Cross-group regen failed for group ${g.groupId}:`, err);
-      options.trace?.errors.push({
-        step: `after-closure-group:${g.groupId}`,
+      console.error(`[pregenerate] ${opts.traceLabelPrefix} regen failed for group ${g.groupId}:`, err);
+      opts.trace?.errors.push({
+        step: `${opts.traceLabelPrefix}-group:${g.groupId}`,
         message: String(err),
       });
     }
   }));
 
-  console.log(`[pregenerate] Cross-group regen done (closed: ${closedGroupId})`);
+  console.log(`[pregenerate] ${opts.traceLabelPrefix} regen done (changed: ${changedGroupId}; regenerated ${regeneratedThirdPlacedTeams.length} 3rd-placed teams)`);
+  return { regeneratedThirdPlacedTeams };
+}
+
+/**
+ * Cross-group regeneration triggered when a group transitions to fully-decided
+ * (every match in that group is FINISHED for the first time). Force-regenerates
+ * the group article AND the current 3rd-placed team's article for EVERY OTHER
+ * group — both decided and in-progress — because the snapshot's `isFinal` flag
+ * has just changed for everyone.
+ *
+ * The affected group itself is intentionally skipped: the normal cascade
+ * inside `pregenerateTeamScenarioSummaries` already regenerated its articles
+ * against the same fresh snapshot (the read inside this helper is from the
+ * same DB state).
+ *
+ * Cost: 11 group articles + up to 11 team articles = ≤22 AI calls (gated by
+ * the 6-slot Claude semaphore). Triggered at most 12 times per tournament.
+ */
+export async function pregenerateAfterGroupClosure(
+  closedGroupId: GroupId,
+  options: PregenerateOptions = {},
+): Promise<void> {
+  const { regeneratedThirdPlacedTeams } = await regenerateOtherGroupArticlesAgainstSnapshot(
+    closedGroupId,
+    { ...options, decidedOnly: false, traceLabelPrefix: 'after-closure' },
+  );
+  // Surface in the diagnostic e-mail. Mode is `closure-covered` because in
+  // the closure path the closure regen pass IS the cross-group 3rd-place
+  // refresh; there is no separate snapshot-shift run for this save.
+  if (options.trace) {
+    options.trace.crossGroupThirdPlaceRegen = {
+      mode: 'closure-covered',
+      regeneratedTeams: regeneratedThirdPlacedTeams,
+    };
+  }
+}
+
+/**
+ * Cross-group regeneration triggered after a match-result save that did NOT
+ * close a group. Every result can shift the cross-group best-third ranking,
+ * which is the cross-group input into the article prompt for any group's
+ * 3rd-placed team. For OTHER groups that are already fully-decided, the
+ * 3rd-placed team is fixed but its `bestThirdSnapshot` context has just
+ * shifted underneath it — without a force-regen the team page would show a
+ * stale article describing the old ranking.
+ *
+ * In-progress OTHER groups are intentionally NOT refreshed here: their
+ * 3rd-placed team is still a moving target, and their article will be
+ * regenerated naturally on the next match-result save inside that group.
+ *
+ * Worst case (every other group decided ⇒ 11 decided OTHER groups): 11
+ * group articles + 11 team articles = 22 AI calls, gated by the 6-slot
+ * Claude semaphore. This is bounded by the caller's separate AI-phase
+ * time budget.
+ */
+export async function pregenerateThirdPlacedInOtherDecidedGroups(
+  changedGroupId: GroupId,
+  options: PregenerateOptions = {},
+): Promise<void> {
+  const { regeneratedThirdPlacedTeams } = await regenerateOtherGroupArticlesAgainstSnapshot(
+    changedGroupId,
+    { ...options, decidedOnly: true, traceLabelPrefix: 'snapshot-shift' },
+  );
+  if (options.trace) {
+    options.trace.crossGroupThirdPlaceRegen = {
+      mode: regeneratedThirdPlacedTeams.length > 0 ? 'snapshot-shift' : 'no-decided-others',
+      regeneratedTeams: regeneratedThirdPlacedTeams,
+    };
+  }
 }
 
 /**

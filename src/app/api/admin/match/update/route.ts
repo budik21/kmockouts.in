@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { query, queryOne } from '@/lib/db';
-import { recalculateAffectedProbabilities, pregenerateBestThirdSummaries, pregenerateTeamScenarioSummaries, pregenerateAfterGroupClosure } from '@/lib/probability-cache';
+import { recalculateAffectedProbabilities, pregenerateBestThirdSummaries, pregenerateTeamScenarioSummaries, pregenerateAfterGroupClosure, pregenerateThirdPlacedInOtherDecidedGroups } from '@/lib/probability-cache';
 import type { GroupId } from '@/lib/types';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { dispatchTipResultEmails } from '@/lib/tip-notifications';
@@ -385,6 +385,42 @@ export async function POST(request: NextRequest) {
             message: `Cross-group after-closure regen exceeded the ${(AI_PHASE_BUDGET_MS / 1000).toFixed(0)}s budget (ran for ${(elapsed / 1000).toFixed(1)}s). In-flight Claude calls abandoned; some other groups' articles may still reference the pre-closure snapshot.`,
           });
           console.error(`[admin] After-closure regen exceeded ${AI_PHASE_BUDGET_MS}ms — abandoning, proceeding to tip recalc + e-mail`);
+        }
+      } else {
+        // Non-closure path: THIS save did not flip the entered group between
+        // open and decided, but it CAN still have shifted the cross-group
+        // best-third ranking. Any OTHER group that is already fully-decided
+        // holds a 3rd-placed team whose article references the now-stale
+        // snapshot, so we force-regen their group + team articles.
+        //
+        // In-progress OTHER groups are skipped (they would just be wasted
+        // Claude calls — their 3rd-placed team is still a moving target and
+        // will get a fresh article when a result lands in their group).
+        //
+        // Bounded by its own AI_PHASE_BUDGET_MS window so a slow run cannot
+        // starve tip recalc, cache invalidation or the diagnostic e-mail.
+        const snapshotShiftStartedAt = Date.now();
+        const snapshotShiftWork = pregenerateThirdPlacedInOtherDecidedGroups(groupId as GroupId, { trace })
+          .catch(err => {
+            console.error(`[admin] Cross-group 3rd-place regen failed for group ${groupId}:`, err);
+            trace.errors.push({ step: 'pregenerate-third-placed-in-other-decided-groups', message: String(err) });
+          });
+        let snapshotShiftBudgetTimer: ReturnType<typeof setTimeout> | undefined;
+        const snapshotShiftTimeout = new Promise<'TIMEOUT'>((resolve) => {
+          snapshotShiftBudgetTimer = setTimeout(() => resolve('TIMEOUT'), AI_PHASE_BUDGET_MS);
+        });
+        const snapshotShiftOutcome = await Promise.race([
+          snapshotShiftWork.then(() => 'DONE' as const),
+          snapshotShiftTimeout,
+        ]);
+        if (snapshotShiftBudgetTimer) clearTimeout(snapshotShiftBudgetTimer);
+        if (snapshotShiftOutcome === 'TIMEOUT') {
+          const elapsed = Date.now() - snapshotShiftStartedAt;
+          trace.errors.push({
+            step: 'cascade-timeout-snapshot-shift',
+            message: `Cross-group 3rd-place regen exceeded the ${(AI_PHASE_BUDGET_MS / 1000).toFixed(0)}s budget (ran for ${(elapsed / 1000).toFixed(1)}s). In-flight Claude calls abandoned; some decided OTHER groups' 3rd-placed team articles may still reference the pre-save snapshot.`,
+          });
+          console.error(`[admin] Snapshot-shift regen exceeded ${AI_PHASE_BUDGET_MS}ms — abandoning, proceeding to tip recalc + e-mail`);
         }
       }
     } catch (err) {
