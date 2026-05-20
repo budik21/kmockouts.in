@@ -26,8 +26,12 @@ export async function POST(request: NextRequest) {
 
     const matchesApplied = await applyScenario(scenarioId);
 
-    // Invalidate AI summary cache so commentary regenerates fresh for the new data
+    // Invalidate every AI prediction cache so all commentary regenerates fresh
+    // for the new data — the granular scenario summaries plus the synthesized
+    // group and team articles, which would otherwise describe the old results.
     await query('DELETE FROM ai_summary_cache');
+    await query('DELETE FROM ai_group_article_cache');
+    await query('DELETE FROM ai_team_article_cache');
 
     await recalculateAllProbabilities();
 

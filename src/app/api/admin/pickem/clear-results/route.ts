@@ -33,8 +33,13 @@ export async function POST() {
       ['SCHEDULED'],
     );
 
-    // 2. Clear AI interpretation cache
+    // 2. Clear all AI prediction caches: the granular per-team/per-position
+    //    scenario summaries plus the synthesized group and team articles. All
+    //    three are result-derived; without this they survive as stale
+    //    predictions describing results that no longer exist.
     await query('DELETE FROM ai_summary_cache');
+    await query('DELETE FROM ai_group_article_cache');
+    await query('DELETE FROM ai_team_article_cache');
 
     // 3. Clear probability cache
     await query('DELETE FROM probability_cache');
