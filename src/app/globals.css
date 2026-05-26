@@ -5566,8 +5566,11 @@ a.ranking-team-name:hover {
     font-size: 0.75rem;
   }
 
-  .tipovacka-team-full { display: none; }
-  .tipovacka-team-short { display: inline; }
+  .tipovacka-match-team-labels {
+    flex-wrap: wrap;
+    row-gap: 0.15rem;
+    font-size: 0.8rem;
+  }
 
   .tipovacka-title {
     font-size: 1.8rem;
