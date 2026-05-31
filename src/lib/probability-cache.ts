@@ -449,6 +449,23 @@ export async function pregenerateTeamScenarioSummaries(
           });
           freshGranularByTeam.set(team.id, result);
 
+          // Detect positions that SHOULD have produced an AI summary but didn't
+          // (timed out / rate-limited inside generateAiScenarioSummaries, where
+          // the failure is swallowed). Surface to the trace so the slow-lane
+          // drainer re-queues the job and retries just the missing ones.
+          const missingPositions = [1, 2, 3, 4].filter(p => {
+            const prob = teamSummary.positionProbabilities[p] ?? 0;
+            if (prob <= 0 || prob >= 100) return false;
+            if ((teamSummary.outcomePatternsByPosition[p] ?? []).length === 0) return false;
+            return !result[p];
+          });
+          if (missingPositions.length > 0) {
+            options.trace?.errors.push({
+              step: `scenario-summaries-incomplete:${team.name}`,
+              message: `${missingPositions.length} position(s) failed to generate: ${missingPositions.join(', ')}`,
+            });
+          }
+
           // Capture the granular scenario summaries into the diagnostic trace
           // so the admin e-mail shows what each team was told for each position.
           if (options.trace) {

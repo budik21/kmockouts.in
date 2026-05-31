@@ -13,7 +13,9 @@ import { isFeatureEnabled, isAiGenerationEnabledByEnv } from '../lib/feature-fla
 import { getAiPredictionModelId } from '../lib/ai-model-server';
 import { RemainingMatchInfo } from './scenario-summary';
 
-const client = new Anthropic();
+// maxRetries lets the SDK ride through 429s honoring the retry-after header.
+// A 429 is rejected BEFORE generation, so retrying it bills nothing.
+const client = new Anthropic({ maxRetries: Number(process.env.ANTHROPIC_MAX_RETRIES) || 4 });
 
 const SYSTEM_PROMPT = `You are a football (soccer) analyst writing for a World Cup prediction website.
 

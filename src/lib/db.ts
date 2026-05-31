@@ -163,8 +163,12 @@ export async function initializeSchema(): Promise<void> {
       claimed_at   TIMESTAMPTZ,
       created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       completed_at TIMESTAMPTZ,
-      last_error   TEXT
+      last_error   TEXT,
+      -- Earliest time a 'pending' row may be claimed. Set into the future on a
+      -- retry so a failed job backs off instead of being re-claimed instantly.
+      next_attempt_at TIMESTAMPTZ
     );
+    ALTER TABLE ai_generation_queue ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ;
     CREATE INDEX IF NOT EXISTS idx_ai_queue_pending ON ai_generation_queue(status, created_at);
     CREATE INDEX IF NOT EXISTS idx_ai_queue_group ON ai_generation_queue(group_id, status);
 

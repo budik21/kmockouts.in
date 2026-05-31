@@ -17,8 +17,10 @@ import { query, queryOne } from './db';
  *  (in case the worker that claimed it crashed mid-job). */
 const STALE_PROCESSING_MINUTES = 5;
 
-/** Max attempts before a failing job is parked in 'error' instead of retried. */
-const MAX_ATTEMPTS = 3;
+/** Max attempts before a failing job is parked in 'error' instead of retried.
+ *  Each retry only re-calls the API for the items that actually failed (the
+ *  successes are content-hash cache hits), so retries are cheap. */
+export const MAX_ATTEMPTS = 5;
 
 export interface AiQueueJob {
   id: number;
@@ -58,7 +60,7 @@ export async function claimNextAiJob(): Promise<AiQueueJob | null> {
         SET status = 'processing', claimed_at = NOW(), attempts = attempts + 1
       WHERE id = (
         SELECT id FROM ai_generation_queue
-         WHERE status = 'pending'
+         WHERE (status = 'pending' AND (next_attempt_at IS NULL OR next_attempt_at <= NOW()))
             OR (status = 'processing' AND claimed_at < NOW() - INTERVAL '${STALE_PROCESSING_MINUTES} minutes')
          ORDER BY created_at
          LIMIT 1
@@ -84,12 +86,17 @@ export async function markJobDone(id: number): Promise<void> {
  * 'error' for the admin to inspect.
  */
 export async function markJobFailed(id: number, attempts: number, message: string): Promise<void> {
-  const finalStatus = attempts >= MAX_ATTEMPTS ? 'error' : 'pending';
+  const willRetry = attempts < MAX_ATTEMPTS;
+  const finalStatus = willRetry ? 'pending' : 'error';
+  // Back off before the next attempt so a failing job doesn't get re-claimed
+  // instantly (which would spin and hammer the rate limit). Grows with attempts.
+  const backoffSeconds = willRetry ? Math.min(attempts, 6) * 20 : 0;
   await query(
     `UPDATE ai_generation_queue
-        SET status = $2, last_error = $3, claimed_at = NULL
+        SET status = $2, last_error = $3, claimed_at = NULL,
+            next_attempt_at = CASE WHEN $2 = 'pending' THEN NOW() + ($4 * INTERVAL '1 second') ELSE next_attempt_at END
       WHERE id = $1`,
-    [id, finalStatus, message.slice(0, 2000)],
+    [id, finalStatus, message.slice(0, 2000), backoffSeconds],
   );
 }
 

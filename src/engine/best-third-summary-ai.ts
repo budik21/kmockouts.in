@@ -17,7 +17,7 @@ import type { QualificationThreshold } from './best-third';
 // imports this module (even just to read cached summaries).
 let _client: Anthropic | null = null;
 function getClient(): Anthropic {
-  if (!_client) _client = new Anthropic();
+  if (!_client) _client = new Anthropic({ maxRetries: Number(process.env.ANTHROPIC_MAX_RETRIES) || 4 });
   return _client;
 }
 

@@ -15,6 +15,7 @@ import {
   claimNextAiJob,
   markJobDone,
   markJobFailed,
+  MAX_ATTEMPTS,
   type AiQueueJob,
 } from '../lib/ai-queue';
 import {
@@ -118,8 +119,22 @@ async function processJob(job: AiQueueJob): Promise<void> {
       });
     }
 
-    // 4. Tip-result e-mails for the match — now that the articles exist they
-    //    embed the fresh headline/lede. Idempotent via tip.notified_at.
+    // Did any generation step fail (timeout / rate-limit / parse)? If so and we
+    // still have attempts left, re-queue the whole group. The next drainer tick
+    // retries it — successes are content-hash cache hits, so only the failed
+    // items re-call the API. Work spreads over time and the cost stays bounded.
+    const genFailed = trace.errors.length > 0;
+    if (genFailed && job.attempts < MAX_ATTEMPTS) {
+      await markJobFailed(job.id, job.attempts, `partial generation failure (${trace.errors.length} error(s)) — retrying`);
+      console.log(`[ai-drainer] job #${job.id} partial failure (${trace.errors.length} errors), re-queued — attempt ${job.attempts}/${MAX_ATTEMPTS}`);
+      // Group stays pending → pages keep the "no predictions yet" state until a
+      // clean run lands. No e-mails / revalidation / diagnostic on a retry.
+      return;
+    }
+
+    // Success, or attempts exhausted → finalize.
+    // 4. Tip-result e-mails for the match — articles now exist, so they embed
+    //    the fresh headline/lede. Idempotent via tip.notified_at.
     if (job.matchId !== null) {
       try {
         trace.tipEmailDispatch = await dispatchTipResultEmailsForMatch(job.matchId);
@@ -133,15 +148,21 @@ async function processJob(job: AiQueueJob): Promise<void> {
     //    inside the Next.js server; targeted Cloudflare purge of the group URLs).
     await revalidateGroup(job.groupId, trace);
 
-    await markJobDone(job.id);
-    console.log(`[ai-drainer] job #${job.id} done in ${Date.now() - startedAt}ms`);
+    if (genFailed) {
+      await markJobFailed(job.id, job.attempts, `gave up after ${job.attempts} attempts with ${trace.errors.length} error(s)`);
+      console.log(`[ai-drainer] job #${job.id} GAVE UP after ${job.attempts} attempts in ${Date.now() - startedAt}ms`);
+    } else {
+      await markJobDone(job.id);
+      console.log(`[ai-drainer] job #${job.id} done in ${Date.now() - startedAt}ms`);
+    }
   } catch (err) {
     console.error(`[ai-drainer] job #${job.id} failed:`, err);
     trace.errors.push({ step: 'process-job', message: String(err) });
     await markJobFailed(job.id, job.attempts, String(err)).catch(() => {});
   }
 
-  // Slow-lane diagnostic e-mail (sender swallows its own errors).
+  // Slow-lane diagnostic e-mail (sender swallows its own errors). Skipped on
+  // retries (we returned above) — sent only once the job finalizes.
   trace.totalDurationMs = Date.now() - startedAt;
   await sendAdminMatchSummary(trace).catch(err =>
     console.error('[ai-drainer] diagnostic e-mail failed:', err),
