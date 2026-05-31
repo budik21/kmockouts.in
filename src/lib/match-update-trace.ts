@@ -165,6 +165,24 @@ export interface MatchUpdateTrace {
     }>;
     tiebreakerNotes: string[];
   };
+  /** Slow-lane pass summary. Set by the scraper drainer on every pass (each
+   *  retry sends its own diagnostic e-mail). Drives the subject icon + attempt
+   *  counter and the summary block at the top of the e-mail body. */
+  slowPass?: {
+    /** 1-based attempt number for this job. */
+    attempt: number;
+    maxAttempts: number;
+    /** Clean run — every generation passed (no errors). */
+    succeeded: boolean;
+    /** Exhausted all attempts and finalized with errors still present. */
+    gaveUp: boolean;
+    /** Article generations that produced output (incl. cache hits). */
+    okCount: number;
+    /** Generation errors counted at the retry/finalize decision. */
+    failedCount: number;
+    /** Seconds until the next retry runs — set only when a retry is scheduled. */
+    nextAttemptInSeconds?: number;
+  };
   /** Free-form error log — anything the cascade swallowed. */
   errors: Array<{ step: string; message: string }>;
   /** Total cascade duration in milliseconds. Set just before the e-mail is sent. */

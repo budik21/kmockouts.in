@@ -367,12 +367,46 @@ function renderErrors(trace: MatchUpdateTrace): string {
   return `<ul style="margin:0;padding-left:20px;color:#c62828;font:13px/1.5 -apple-system,Segoe UI,sans-serif;">${rows}</ul>`;
 }
 
+function renderSlowPassSummary(trace: MatchUpdateTrace): string {
+  const sp = trace.slowPass;
+  if (!sp) return '';
+  const icon = sp.succeeded ? '✅' : '❌';
+  const color = sp.succeeded ? '#1a7f37' : '#c1121f';
+  const bg = sp.succeeded ? 'rgba(26,127,55,0.08)' : 'rgba(193,18,31,0.08)';
+  const border = sp.succeeded ? 'rgba(26,127,55,0.4)' : 'rgba(193,18,31,0.4)';
+  const statusLine = sp.succeeded
+    ? 'Completed cleanly — every generation passed. Tip e-mails sent and caches revalidated.'
+    : sp.gaveUp
+      ? `Gave up after ${sp.attempt} attempt(s) — ${sp.failedCount} generation(s) still failing. Finalized with what succeeded.`
+      : `Will retry — next attempt (#${sp.attempt + 1}/${sp.maxAttempts}) runs in about <strong>${sp.nextAttemptInSeconds ?? 0} s</strong>. The group's pages stay in their "no predictions yet" state until a clean run lands.`;
+  return `
+    <div style="margin:0 0 20px;padding:14px 18px;background:${bg};border:1px solid ${border};border-left:4px solid ${color};border-radius:4px;">
+      <div style="font:700 18px/1.3 -apple-system,Segoe UI,sans-serif;color:${color};">
+        ${icon} ${sp.okCount} passed · ${sp.failedCount} failed — attempt ${sp.attempt}/${sp.maxAttempts}
+      </div>
+      <div style="margin-top:6px;color:#444;font:400 13px/1.5 -apple-system,Segoe UI,sans-serif;">${statusLine}</div>
+    </div>`;
+}
+
 export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOutput {
   const m = trace.match;
   const scoreStr = `${m.homeGoals ?? '?'}:${m.awayGoals ?? '?'}`;
   const timeoutPrefix = trace.timedOut ? '[TIMEOUT] ' : '';
   const lanePrefix = trace.lane === 'fast' ? '[FAST] ' : trace.lane === 'slow' ? '[SLOW] ' : '';
-  const subject = `${timeoutPrefix}${lanePrefix}[admin] ${m.homeTeam} ${scoreStr} ${m.awayTeam} — Group ${m.groupId} (${trace.errors.length} errors)`;
+
+  let subject: string;
+  if (trace.slowPass) {
+    const sp = trace.slowPass;
+    const icon = sp.succeeded ? '✅' : '❌';
+    const status = sp.succeeded
+      ? 'all done'
+      : sp.gaveUp
+        ? `gave up · ${sp.failedCount} failed`
+        : `${sp.failedCount} failed · retry in ${sp.nextAttemptInSeconds ?? 0}s`;
+    subject = `${icon} ${lanePrefix}[admin] ${m.homeTeam} ${scoreStr} ${m.awayTeam} — Group ${m.groupId} · attempt ${sp.attempt}/${sp.maxAttempts} · ${status}`;
+  } else {
+    subject = `${timeoutPrefix}${lanePrefix}[admin] ${m.homeTeam} ${scoreStr} ${m.awayTeam} — Group ${m.groupId} (${trace.errors.length} errors)`;
+  }
 
   const timeoutBanner = trace.timedOut
     ? `<div style="margin:0 0 20px;padding:14px 18px;background:#fff3cd;border:1px solid #ffc107;border-left:4px solid #c47f00;border-radius:4px;color:#5a4500;font:600 14px/1.5 -apple-system,Segoe UI,sans-serif;">
@@ -416,6 +450,7 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
   <div style="max-width:900px;margin:0 auto;">
     <h1 style="font:600 20px/1.3 -apple-system,Segoe UI,sans-serif;margin:0 0 8px;">${esc(m.homeTeam)} <span style="font-variant:tabular-nums;">${scoreStr}</span> ${esc(m.awayTeam)} — Group ${esc(m.groupId)}</h1>
     <p style="color:#6b6b73;margin:0 0 24px;">Diagnostic trace of the synchronous match-update cascade. Generated ${esc(trace.startedAt)}.</p>
+    ${renderSlowPassSummary(trace)}
     ${timeoutBanner}
     ${headerHtml}
     ${standingsHtml}
