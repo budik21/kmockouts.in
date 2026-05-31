@@ -85,8 +85,21 @@ export interface MatchUpdateTrace {
     oldPoints: number | null;
     newPoints: number | null;
   }>;
-  /** How many tip-result e-mails were queued for delivery (fire-and-forget). */
+  /** How many tip-result e-mails were eligible for delivery (transitions
+   *  NULL → 0/1/4). Compare against `tipEmailDispatch` to see how many of
+   *  those actually went out vs were skipped/disabled/failed. */
   tipEmailsQueued?: number;
+  /** Per-recipient outcome of the tip-result e-mail dispatch. Lets the
+   *  diagnostic e-mail show exactly what happened to each notification:
+   *  sent, skipped (which toggle), disabled (no API key), or failed (error). */
+  tipEmailDispatch?: Array<{
+    tipId: number;
+    userName: string;
+    userEmail: string;
+    points: number | null;
+    outcome: 'sent' | 'skipped' | 'disabled' | 'failed';
+    reason?: string;
+  }>;
   cacheInvalidation?: {
     revalidatedTags: string[];
     cloudflarePurged: boolean;

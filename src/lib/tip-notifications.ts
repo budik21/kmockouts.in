@@ -24,6 +24,28 @@ function shouldSend(user: NotifyUser, points: 0 | 1 | 4): boolean {
   return user.notify_wrong_tip;
 }
 
+/** Human-readable reason why a recipient was skipped, for the diagnostic e-mail. */
+function skipReason(points: 0 | 1 | 4): string {
+  if (points === 4) return 'exact-score notifications off';
+  if (points === 1) return 'winner-only notifications off';
+  return 'wrong-tip notifications off';
+}
+
+/**
+ * Per-recipient outcome of a tip-result e-mail dispatch. Returned by
+ * `dispatchTipResultEmails` so the caller (the match-update cascade) can fold
+ * it into the superadmin diagnostic e-mail and see exactly what happened to
+ * each notification.
+ */
+export interface TipEmailDispatchResult {
+  tipId: number;
+  userName: string;
+  userEmail: string;
+  points: number | null;
+  outcome: 'sent' | 'skipped' | 'disabled' | 'failed';
+  reason?: string;
+}
+
 /**
  * Send a single tip-result e-mail if the user opted in.
  * Returns 'skipped' when the user has the relevant toggle off,
@@ -79,17 +101,19 @@ interface TransitionRow {
 /**
  * Send tip-result e-mails for transitions where a tip was just scored
  * (oldPoints was NULL and newPoints is 0/1/4). Respects per-user opt-in.
- * Fire-and-forget: individual failures are logged but do not throw.
+ * Individual failures are captured (not thrown) so one bad recipient cannot
+ * abort the rest. Returns a per-recipient outcome list for the diagnostic
+ * e-mail.
  */
-export async function dispatchTipResultEmails(transitions: TipTransition[]): Promise<void> {
+export async function dispatchTipResultEmails(transitions: TipTransition[]): Promise<TipEmailDispatchResult[]> {
   const firstScored = transitions.filter(
     (t) => t.oldPoints === null && t.newPoints !== null,
   );
+  const hasKey = !!process.env.RESEND_API_KEY;
   console.log(
-    `[tip-notifications] transitions=${transitions.length} firstScored=${firstScored.length} resendKey=${process.env.RESEND_API_KEY ? 'set' : 'missing'}`,
+    `[tip-notifications] transitions=${transitions.length} firstScored=${firstScored.length} resendKey=${hasKey ? 'set' : 'missing'}`,
   );
-  if (firstScored.length === 0) return;
-  if (!process.env.RESEND_API_KEY) return;
+  if (firstScored.length === 0) return [];
 
   const tipIds = firstScored.map((t) => t.tipId);
 
@@ -139,21 +163,41 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
   );
   const articleByTeamId = new Map(articleEntries);
 
+  const results: TipEmailDispatchResult[] = [];
   await Promise.allSettled(
     rows.map(async (r) => {
-      if (r.new_points !== 0 && r.new_points !== 1 && r.new_points !== 4) return;
+      const base = {
+        tipId: r.tip_id,
+        userName: r.user_name,
+        userEmail: r.email,
+        points: r.new_points,
+      };
+      if (r.new_points !== 0 && r.new_points !== 1 && r.new_points !== 4) {
+        results.push({ ...base, outcome: 'skipped', reason: `points=${r.new_points} not a scorable result` });
+        return;
+      }
+      const points = r.new_points as 0 | 1 | 4;
+      const user = {
+        email: r.email,
+        name: r.user_name,
+        notify_exact_score: r.notify_exact_score,
+        notify_winner_only: r.notify_winner_only,
+        notify_wrong_tip: r.notify_wrong_tip,
+      };
+      if (!hasKey) {
+        results.push({ ...base, outcome: 'disabled', reason: 'RESEND_API_KEY missing' });
+        return;
+      }
+      if (!shouldSend(user, points)) {
+        results.push({ ...base, outcome: 'skipped', reason: skipReason(points) });
+        return;
+      }
       try {
         const homeArticle = articleByTeamId.get(r.home_team_id) ?? undefined;
         const awayArticle = articleByTeamId.get(r.away_team_id) ?? undefined;
         await sendTipResultEmail({
-          user: {
-            email: r.email,
-            name: r.user_name,
-            notify_exact_score: r.notify_exact_score,
-            notify_winner_only: r.notify_winner_only,
-            notify_wrong_tip: r.notify_wrong_tip,
-          },
-          points: r.new_points as 0 | 1 | 4,
+          user,
+          points,
           data: {
             match: {
               groupId: r.match_group_id,
@@ -175,9 +219,12 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
               : undefined,
           },
         });
+        results.push({ ...base, outcome: 'sent' });
       } catch (err) {
         console.error('[tip-notifications] send failed for tip', r.tip_id, err);
+        results.push({ ...base, outcome: 'failed', reason: String(err) });
       }
     }),
   );
+  return results;
 }

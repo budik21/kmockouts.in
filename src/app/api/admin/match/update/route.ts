@@ -486,12 +486,19 @@ export async function POST(request: NextRequest) {
       }
       trace.tipEmailsQueued = transitions.filter(t => t.oldPoints === null && t.newPoints !== null).length;
 
-      // Tip-result e-mails are fire-and-forget so the admin response is not
-      // gated on the e-mail provider. The transitions list is already
-      // captured, so a slow Resend call cannot lose data.
-      dispatchTipResultEmails(transitions).catch((err) =>
-        console.error('[admin/match/update] email dispatch failed:', err),
-      );
+      // Tip-result e-mails are dispatched synchronously here (not fire-and-
+      // forget) for two reasons: (1) on a platform that recycles the container
+      // right after the response, an un-awaited send can be dropped; (2) we
+      // want each recipient's outcome (sent / skipped / disabled / failed) in
+      // the superadmin diagnostic e-mail, which is built and sent below. The
+      // dispatcher swallows individual send failures, so a single bad
+      // recipient cannot abort the rest or the cascade.
+      try {
+        trace.tipEmailDispatch = await dispatchTipResultEmails(transitions);
+      } catch (err) {
+        console.error('[admin/match/update] email dispatch failed:', err);
+        trace.errors.push({ step: 'dispatch-tip-emails', message: String(err) });
+      }
     } catch (err) {
       console.error('[admin] Tip recalculation failed:', err);
       trace.errors.push({ step: 'recalculate-tip-points', message: String(err) });
