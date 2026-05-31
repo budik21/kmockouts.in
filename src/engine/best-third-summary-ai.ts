@@ -182,7 +182,7 @@ async function saveCache(teamId: number, summaryHtml: string, contextHash: strin
 // Public API
 // ============================================================
 
-const AI_CALL_TIMEOUT_MS = 12_000;
+const AI_CALL_TIMEOUT_MS = Number(process.env.AI_CALL_TIMEOUT_MS) || 12_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {

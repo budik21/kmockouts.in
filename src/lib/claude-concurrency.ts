@@ -8,7 +8,11 @@
  * in-flight Claude calls globally across all callers.
  */
 
-const MAX_CONCURRENT_CLAUDE_CALLS = 6;
+// Overridable via env. The web keeps the default (6) so the fast-lane scenario
+// burst finishes quickly; the standalone scraper sets a low value (1–2) so the
+// slow-lane article generation is serialized and stays near the per-minute
+// output-token rate limit instead of bursting into 429s.
+const MAX_CONCURRENT_CLAUDE_CALLS = Number(process.env.CLAUDE_MAX_CONCURRENCY) || 6;
 
 let inFlight = 0;
 const waiters: Array<() => void> = [];

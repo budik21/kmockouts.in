@@ -334,7 +334,10 @@ export interface TeamArticleUsageStats {
   calls: number;
 }
 
-const AI_CALL_TIMEOUT_MS = 30_000;
+// Per-call timeout. Overridable via env so the standalone scraper (slow lane)
+// can be far more patient than the web request — a high timeout lets a call
+// ride through the SDK's 429 rate-limit backoff instead of being abandoned.
+const AI_CALL_TIMEOUT_MS = Number(process.env.AI_CALL_TIMEOUT_MS) || 30_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {

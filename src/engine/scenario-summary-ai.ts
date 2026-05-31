@@ -420,8 +420,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/** Per-position timeout for Claude API call (seconds) */
-const AI_CALL_TIMEOUT_MS = 15_000;
+/** Per-position timeout for Claude API call. Overridable via env (slow lane). */
+const AI_CALL_TIMEOUT_MS = Number(process.env.AI_CALL_TIMEOUT_MS) || 15_000;
 
 /**
  * Read-only variant: returns cached AI summaries only, NEVER calls the Claude API.

@@ -270,7 +270,9 @@ export interface GroupArticleUsageStats {
   calls: number;
 }
 
-const AI_CALL_TIMEOUT_MS = 30_000;
+// Per-call timeout. Overridable via env so the slow-lane scraper can be far
+// more patient than the web request (ride through 429 backoff, not abandon).
+const AI_CALL_TIMEOUT_MS = Number(process.env.AI_CALL_TIMEOUT_MS) || 30_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
