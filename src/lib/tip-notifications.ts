@@ -65,12 +65,22 @@ export async function sendTipResultEmail(payload: NotifyPayload): Promise<'sent'
     ...payload.data,
   });
 
-  await resend.emails.send({
+  // Resend does NOT throw on API-level rejections (unverified domain, invalid
+  // recipient, sandbox-only sending, …) — it returns `{ data, error }`. If we
+  // ignore `error` we'd mark the tip notified without anything being sent. Throw
+  // so the dispatcher records 'failed' (and leaves notified_at unset to retry).
+  const { data, error } = await resend.emails.send({
     from,
     to: payload.user.email,
     subject,
     html,
   });
+  if (error) {
+    throw new Error(`Resend rejected: ${error.message ?? JSON.stringify(error)}`);
+  }
+  if (!data?.id) {
+    throw new Error('Resend returned no message id');
+  }
 
   return 'sent';
 }
@@ -233,6 +243,11 @@ async function sendTipEmailsForRows(rows: TransitionRow[], hasKey: boolean): Pro
       }
     }),
   );
+  // Per-recipient outcome in the log, so the reason (skipped toggle, Resend
+  // rejection, …) is visible without waiting for the diagnostic e-mail.
+  for (const r of results) {
+    console.log(`[tip-notifications] tip ${r.tipId} ${r.userEmail} pts=${r.points} → ${r.outcome}${r.reason ? ` (${r.reason})` : ''}`);
+  }
   return results;
 }
 

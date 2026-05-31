@@ -60,7 +60,12 @@ export async function recalculateAllTipPoints(): Promise<TipTransition[]> {
      ),
      updated AS (
         UPDATE tip t
-           SET points = c.new_points
+           SET points = c.new_points,
+               -- When a result is cleared (points → NULL) re-arm the tip-result
+               -- e-mail by resetting notified_at, so re-entering the result later
+               -- sends the notification again. A correction (value → value)
+               -- keeps notified_at so it doesn't re-send.
+               notified_at = CASE WHEN c.new_points IS NULL THEN NULL ELSE t.notified_at END
           FROM changed c
          WHERE t.id = c.id
         RETURNING t.id
