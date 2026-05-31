@@ -554,7 +554,18 @@ function hashContext(ctx: TeamArticleContext): string {
   return hash.toString(36);
 }
 
-export async function getCachedTeamArticle(teamId: number): Promise<GeneratedTeamArticle | null> {
+/**
+ * Read the cached team article. Returns null while the team's group has an AI
+ * job in flight (slow-lane regeneration), so pages fall back to their "no
+ * predictions yet" state instead of showing the stale pre-update article. Pass
+ * `{ ignorePending: true }` to bypass that gate (used by the slow-lane tip
+ * e-mail dispatch, which embeds the freshly-generated article during
+ * 'processing').
+ */
+export async function getCachedTeamArticle(
+  teamId: number,
+  opts: { ignorePending?: boolean } = {},
+): Promise<GeneratedTeamArticle | null> {
   try {
     const rows = await query<TeamArticleRow>(
       'SELECT * FROM ai_team_article_cache WHERE team_id = $1',
@@ -562,6 +573,10 @@ export async function getCachedTeamArticle(teamId: number): Promise<GeneratedTea
     );
     if (rows.length === 0) return null;
     const row = rows[0];
+    if (!opts.ignorePending) {
+      const { groupHasPendingAiJob } = await import('../lib/ai-queue');
+      if (await groupHasPendingAiJob(row.group_id)) return null;
+    }
     return { headline: row.headline, lede: row.lede, body_html: row.body_html, generatedAt: row.created_at };
   } catch {
     return null;

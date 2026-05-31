@@ -144,6 +144,30 @@ export async function initializeSchema(): Promise<void> {
     );
     INSERT INTO tip_recalc_status (id) VALUES (1) ON CONFLICT DO NOTHING;
 
+    -- AI-generation job queue. A match-update saves results + recalculates
+    -- standings/tips synchronously (fast lane), then enqueues a row here. The
+    -- standalone scraper process drains this queue (slow lane): it generates
+    -- the group + team articles, best-third summaries, cross-group regen, and
+    -- sends the tip-result e-mails — paced under the Anthropic rate limit and
+    -- free of the web request's time budget.
+    CREATE TABLE IF NOT EXISTS ai_generation_queue (
+      id           SERIAL PRIMARY KEY,
+      group_id     TEXT NOT NULL,
+      match_id     INTEGER,
+      -- True when THIS save transitioned the group from open to fully-decided;
+      -- drives whether the slow lane runs the broader after-closure cross-group
+      -- regen vs. the narrower 3rd-place-in-other-decided-groups refresh.
+      just_closed  BOOLEAN NOT NULL DEFAULT false,
+      status       TEXT NOT NULL DEFAULT 'pending',  -- pending | processing | done | error
+      attempts     INTEGER NOT NULL DEFAULT 0,
+      claimed_at   TIMESTAMPTZ,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at TIMESTAMPTZ,
+      last_error   TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_queue_pending ON ai_generation_queue(status, created_at);
+    CREATE INDEX IF NOT EXISTS idx_ai_queue_group ON ai_generation_queue(group_id, status);
+
     -- User feedback
     CREATE TABLE IF NOT EXISTS feedback (
       id          SERIAL PRIMARY KEY,
@@ -293,6 +317,11 @@ export async function initializeSchema(): Promise<void> {
       updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (user_id, match_id)
     );
+
+    -- Set once when the first tip-result e-mail for this tip is sent. Lets the
+    -- slow-lane dispatcher send exactly one e-mail per tip (first scoring) and
+    -- stay idempotent across job retries — see dispatchTipResultEmailsForMatch.
+    ALTER TABLE tip ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;
 
     CREATE INDEX IF NOT EXISTS idx_tip_user ON tip(user_id);
     CREATE INDEX IF NOT EXISTS idx_tip_match ON tip(match_id);

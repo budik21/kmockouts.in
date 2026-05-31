@@ -371,7 +371,8 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
   const m = trace.match;
   const scoreStr = `${m.homeGoals ?? '?'}:${m.awayGoals ?? '?'}`;
   const timeoutPrefix = trace.timedOut ? '[TIMEOUT] ' : '';
-  const subject = `${timeoutPrefix}[admin] ${m.homeTeam} ${scoreStr} ${m.awayTeam} — Group ${m.groupId} (${trace.errors.length} errors)`;
+  const lanePrefix = trace.lane === 'fast' ? '[FAST] ' : trace.lane === 'slow' ? '[SLOW] ' : '';
+  const subject = `${timeoutPrefix}${lanePrefix}[admin] ${m.homeTeam} ${scoreStr} ${m.awayTeam} — Group ${m.groupId} (${trace.errors.length} errors)`;
 
   const timeoutBanner = trace.timedOut
     ? `<div style="margin:0 0 20px;padding:14px 18px;background:#fff3cd;border:1px solid #ffc107;border-left:4px solid #c47f00;border-radius:4px;color:#5a4500;font:600 14px/1.5 -apple-system,Segoe UI,sans-serif;">

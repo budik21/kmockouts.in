@@ -148,16 +148,23 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
     [tipIds],
   );
 
-  // Load the AI-generated team articles once per unique team so the e-mail
-  // can include the headline + lede for both teams. Missing articles (AI
-  // disabled, pregeneration failed, first match before any cache) simply
-  // result in the section being omitted.
+  return sendTipEmailsForRows(rows, hasKey);
+}
+
+/**
+ * Shared send loop: takes joined tip+user+match+team rows and sends one
+ * tip-result e-mail per row, respecting the per-user opt-in. Returns a
+ * per-recipient outcome list. Team articles are loaded with
+ * `ignorePending: true` so the e-mail always embeds the freshly-generated
+ * article even while the group's AI job is still 'processing'.
+ */
+async function sendTipEmailsForRows(rows: TransitionRow[], hasKey: boolean): Promise<TipEmailDispatchResult[]> {
   const uniqueTeamIds = Array.from(
     new Set(rows.flatMap((r) => [r.home_team_id, r.away_team_id])),
   );
   const articleEntries = await Promise.all(
     uniqueTeamIds.map(async (id) => {
-      const article = await getCachedTeamArticle(id);
+      const article = await getCachedTeamArticle(id, { ignorePending: true });
       return [id, article] as const;
     }),
   );
@@ -226,5 +233,69 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
       }
     }),
   );
+  return results;
+}
+
+/**
+ * Slow-lane dispatch: send tip-result e-mails for every scored tip on a match
+ * that has not been notified yet (`points IS NOT NULL AND notified_at IS NULL`).
+ * Called by the scraper drainer AFTER the match's articles are regenerated, so
+ * the e-mails embed fresh articles. Idempotent: tips that were actually decided
+ * (sent or skipped by preference) get `notified_at` stamped, so a job retry
+ * never re-sends. 'failed'/'disabled' tips are left unstamped to retry later.
+ */
+export async function dispatchTipResultEmailsForMatch(matchId: number): Promise<TipEmailDispatchResult[]> {
+  const hasKey = !!process.env.RESEND_API_KEY;
+
+  const rows = await query<TransitionRow>(
+    `SELECT
+       t.id AS tip_id,
+       t.home_goals AS tip_home_goals,
+       t.away_goals AS tip_away_goals,
+       t.points AS new_points,
+       u.email,
+       u.name AS user_name,
+       u.notify_exact_score,
+       u.notify_winner_only,
+       u.notify_wrong_tip,
+       m.id AS match_id,
+       m.group_id AS match_group_id,
+       m.kick_off,
+       m.home_goals,
+       m.away_goals,
+       ht.id AS home_team_id,
+       ht.name AS home_team_name,
+       ht.country_code AS home_country_code,
+       at.id AS away_team_id,
+       at.name AS away_team_name,
+       at.country_code AS away_country_code
+     FROM tip t
+     JOIN tipster_user u ON u.id = t.user_id
+     JOIN match m ON m.id = t.match_id
+     JOIN team ht ON ht.id = m.home_team_id
+     JOIN team at ON at.id = m.away_team_id
+     WHERE t.match_id = $1 AND t.points IS NOT NULL AND t.notified_at IS NULL`,
+    [matchId],
+  );
+
+  console.log(
+    `[tip-notifications] dispatchForMatch match=${matchId} pending=${rows.length} resendKey=${hasKey ? 'set' : 'missing'}`,
+  );
+  if (rows.length === 0) return [];
+
+  const results = await sendTipEmailsForRows(rows, hasKey);
+
+  // Stamp notified_at for tips that were actually decided (sent or
+  // preference-skipped). Leave 'failed'/'disabled' unstamped so a later run retries.
+  const decidedTipIds = results
+    .filter((r) => r.outcome === 'sent' || r.outcome === 'skipped')
+    .map((r) => r.tipId);
+  if (decidedTipIds.length > 0) {
+    await query(
+      `UPDATE tip SET notified_at = NOW() WHERE id = ANY($1::int[])`,
+      [decidedTipIds],
+    );
+  }
+
   return results;
 }

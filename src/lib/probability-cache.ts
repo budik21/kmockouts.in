@@ -250,6 +250,15 @@ export interface PregenerateOptions {
   usage?: import('../engine/scenario-summary-ai').AiUsageStats;
   /** Diagnostic trace — when provided, every AI call writes its inputs/outputs here. */
   trace?: import('./match-update-trace').MatchUpdateTrace;
+  /**
+   * Fast-lane flag: generate ONLY the per-position scenario summaries and stop
+   * before the (slow, rate-limit-heavy) group + team article cascade. The admin
+   * match-update request sets this so the save stays fast and reliable; the
+   * standalone scraper later calls this function WITHOUT the flag, at which
+   * point the scenario summaries are already cached (cache hits, no API calls)
+   * and only the articles are generated — paced, off the request budget.
+   */
+  skipArticles?: boolean;
 }
 
 /**
@@ -469,6 +478,15 @@ export async function pregenerateTeamScenarioSummaries(
     console.log(`[pregenerate] Team scenario AI summaries done for group ${groupId}`);
   } else {
     console.log(`[pregenerate] Group ${groupId} fully decided — skipping per-position scenario AI, jumping to wrap-up articles`);
+  }
+
+  // Fast lane stops here: scenario summaries are now generated + cached. The
+  // group + team articles (slow, rate-limit-heavy) are left to the scraper's
+  // slow-lane drainer, which calls this function again without skipArticles —
+  // the scenarios above are cache hits by then, so only the articles run.
+  if (options.skipArticles) {
+    console.log(`[pregenerate] skipArticles — scenario summaries done for group ${groupId}, deferring articles to slow lane`);
+    return;
   }
 
   // Cascade: synthesize the in-memory per-team summaries into:

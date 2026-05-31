@@ -41,6 +41,11 @@ export interface ScenarioSummaryTrace {
 }
 
 export interface MatchUpdateTrace {
+  /** Which lane produced this trace: 'fast' = the synchronous admin request
+   *  (save + standings + scenarios + enqueue), 'slow' = the scraper drainer
+   *  (articles + best-third + tip e-mails). Drives the subject prefix so the
+   *  two diagnostic e-mails per result are distinguishable. */
+  lane?: 'fast' | 'slow';
   startedAt: string;
   match: {
     matchId: number;

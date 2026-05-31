@@ -489,8 +489,22 @@ function hashContext(ctx: GroupArticleContext): string {
   return hash.toString(36);
 }
 
-export async function getCachedGroupArticle(groupId: string): Promise<GeneratedGroupArticle | null> {
+/**
+ * Read the cached group article. Returns null while the group has an AI job in
+ * flight (slow-lane regeneration), so pages fall back to their "no predictions
+ * yet" state instead of showing the stale pre-update article. Pass
+ * `{ ignorePending: true }` to bypass that gate (used by the slow-lane e-mail
+ * dispatch, which needs the freshly-generated article during 'processing').
+ */
+export async function getCachedGroupArticle(
+  groupId: string,
+  opts: { ignorePending?: boolean } = {},
+): Promise<GeneratedGroupArticle | null> {
   try {
+    if (!opts.ignorePending) {
+      const { groupHasPendingAiJob } = await import('../lib/ai-queue');
+      if (await groupHasPendingAiJob(groupId)) return null;
+    }
     const rows = await query<GroupArticleRow>(
       'SELECT * FROM ai_group_article_cache WHERE group_id = $1',
       [groupId],

@@ -13,6 +13,10 @@ import { writeMatchUpdates } from './writer';
 import { scrapeFlashscoreNews, writeNewsArticles } from './flashscore-news';
 import { scrapeFifaRankings } from './fifa-ranking';
 import { sendDailySummaryEmail } from './daily-summary';
+import { drainAiQueue } from './ai-queue-drainer';
+
+/** How often the AI-generation queue is drained (ms). */
+const AI_DRAINER_INTERVAL_MS = 20_000;
 
 // ============================================================
 // Scraper job definitions
@@ -131,6 +135,14 @@ async function main() {
   for (const job of jobs) {
     cron.schedule(job.schedule, () => runJob(job));
   }
+
+  // AI-generation queue drainer — runs far more often than the daily cron jobs,
+  // so it uses a plain interval rather than a cron schedule. Picks up jobs the
+  // web app enqueues after a match-update (slow lane: articles + tip e-mails).
+  console.log(`     • AI Queue Drainer  —  every ${AI_DRAINER_INTERVAL_MS / 1000}s`);
+  setInterval(() => {
+    drainAiQueue().catch((err) => console.error('[scraper] AI drainer error:', err));
+  }, AI_DRAINER_INTERVAL_MS);
 
   // Graceful shutdown
   process.on('SIGINT', async () => {
