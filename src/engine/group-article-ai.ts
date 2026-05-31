@@ -290,6 +290,19 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * The opening verdict sentence of a scenario summary, HTML stripped. The
+ * group prompt only needs the one-line verdict per position, not the full
+ * multi-paragraph prose — that prose was the single biggest input-token cost
+ * driver. The scenario generator always leads with "the shortest possible
+ * verdict", so the first sentence is exactly what we want.
+ */
+function firstSentence(html: string): string {
+  const text = stripHtml(html);
+  const m = text.match(/^(.*?[.!?])(?:\s|$)/);
+  return (m ? m[1] : text).trim();
+}
+
 function buildUserPrompt(ctx: GroupArticleContext): string {
   const standings = ctx.currentStandings
     .map(s => `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}, GF ${s.goalsFor}, GA ${s.goalsAgainst}`)
@@ -338,7 +351,7 @@ ${ctx.bestThirdSnapshot.rows.map(r => {
 
     const summaryLines = [1, 2, 3, 4]
       .filter(p => (t.probabilities[p] ?? 0) > 0 && t.granularSummariesByPosition[p])
-      .map(p => `      ${p}${posLabel(p)}: ${stripHtml(t.granularSummariesByPosition[p])}`)
+      .map(p => `      ${p}${posLabel(p)}: ${firstSentence(t.granularSummariesByPosition[p])}`)
       .join('\n');
 
     return `  ${t.teamName}:\n    Probabilities:\n${probLines}\n    Per-position scenarios (use these as the source of truth):\n${summaryLines || '      (none — already decided)'}`;
@@ -482,7 +495,9 @@ function hashContext(ctx: GroupArticleContext): string {
   // system prompt forbids "guaranteed best-third" claims while the snapshot
   // is PROVISIONAL. Bump invalidates older articles so the next admin save
   // regenerates against the new rule.
-  const str = `v6:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}|tb:${tiebreaker}|bt:${snapshot}`;
+  // v7: prompt now sends only the one-line verdict per position (not the full
+  // scenario prose). Bump forces regeneration against the slimmer prompt.
+  const str = `v7:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}|tb:${tiebreaker}|bt:${snapshot}`;
 
   // djb2-ish 32-bit hash
   let hash = 0;
