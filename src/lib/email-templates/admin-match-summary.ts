@@ -465,7 +465,11 @@ export function buildAdminMatchSummaryEmail(trace: MatchUpdateTrace): TemplateOu
     ${tipsHtml}
     ${cacheHtml}
     ${errorsHtml}
-    <p style="color:#9a9aa3;font-size:11px;margin-top:32px;border-top:1px solid #e3e3e8;padding-top:12px;">knockouts.in admin trace — automatic notification</p>
+    <p style="color:#9a9aa3;font-size:11px;margin-top:32px;border-top:1px solid #e3e3e8;padding-top:12px;">knockouts.in admin trace — automatic notification${
+      process.env.RAILWAY_GIT_COMMIT_SHA
+        ? ` · build ${esc(process.env.RAILWAY_GIT_COMMIT_SHA.slice(0, 7))}`
+        : ''
+    }</p>
   </div>
 </body></html>`;
 

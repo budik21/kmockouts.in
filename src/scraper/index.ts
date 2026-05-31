@@ -115,7 +115,9 @@ async function runJob(job: ScraperJob): Promise<void> {
 async function main() {
   await initializeSchema();
 
-  console.log('🏟️  WC2026 Scraper started\n');
+  console.log('🏟️  WC2026 Scraper started');
+  console.log(`   build commit: ${process.env.RAILWAY_GIT_COMMIT_SHA ?? 'unknown'}`);
+  console.log(`   RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'set' : 'MISSING'} · AUTH_SECRET: ${process.env.AUTH_SECRET ? 'set' : 'MISSING'} · AI_PREDICTIONS_ENABLED: ${process.env.AI_PREDICTIONS_ENABLED ?? 'unset'}\n`);
   console.log('   Registered jobs:');
   for (const job of jobs) {
     console.log(`     • ${job.name}  —  ${job.schedule}`);
