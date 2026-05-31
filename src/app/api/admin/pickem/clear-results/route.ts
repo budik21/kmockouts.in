@@ -50,8 +50,18 @@ export async function POST() {
     // 5. Clear qualification threshold cache
     await query('DELETE FROM qualification_threshold_cache');
 
-    // 6. Recalculate all tips (they'll all be 0 since no results)
+    // 6. Recalculate all tips (their points reset to NULL since no results)
     await recalculateAllTipPoints();
+
+    // 7. Re-arm tip-result e-mail notifications. Clearing the tournament must
+    //    wipe ALL tip evaluation — points AND the notified_at marker — so that
+    //    re-entering a result later sends the notification again instead of
+    //    being silently suppressed (notified_at still set from a prior run).
+    await query('UPDATE tip SET points = NULL, notified_at = NULL');
+
+    // Drain any queued/in-flight AI generation jobs — they reference the now
+    // wiped results and their tip e-mails were just re-armed.
+    await query(`DELETE FROM ai_generation_queue WHERE status IN ('pending', 'processing')`);
 
     // Invalidate all related caches
     revalidateTag(LEADERBOARD_TAG, 'max');
