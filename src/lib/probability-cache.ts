@@ -252,6 +252,21 @@ export interface PregenerateOptions {
   trace?: import('./match-update-trace').MatchUpdateTrace;
 }
 
+/**
+ * A team currently sitting 3rd whose group is still early — fewer than 2 of
+ * its own matches played — has the most volatile best-third fate and the most
+ * expendable article in the post-save AI fan-out. Defer its team article until
+ * it has 2 matches behind it. This trims the burst of Claude calls triggered
+ * by a single result on a cold cache, which would otherwise exceed the
+ * Anthropic per-minute output-token limit and time out.
+ */
+function shouldDeferThirdPlaceTeamArticle(
+  position: number | undefined,
+  playedCount: number,
+): boolean {
+  return position === 3 && playedCount < 2;
+}
+
 export async function pregenerateTeamScenarioSummaries(
   groupId: GroupId,
   options: PregenerateOptions = {},
@@ -530,9 +545,21 @@ export async function pregenerateTeamScenarioSummaries(
         bestThirdProbByTeam.set(r.team_id, r.prob_third_qual);
       }
 
-      const teamArticleTargets = options.teamId
+      const allTeamArticleTargets = options.teamId
         ? teams.filter(t => t.id === options.teamId)
         : teams;
+
+      // Skip the article for any team that is currently 3rd but has played
+      // fewer than 2 of its matches — see shouldDeferThirdPlaceTeamArticle.
+      const teamArticleTargets = allTeamArticleTargets.filter(t => {
+        const position = currentStandings.find(s => s.teamName === t.name)?.position;
+        const playedCount = played.filter(m => m.homeTeamId === t.id || m.awayTeamId === t.id).length;
+        if (shouldDeferThirdPlaceTeamArticle(position, playedCount)) {
+          console.log(`[pregenerate] Deferring team article for ${t.name} (group ${groupId}) — currently 3rd with ${playedCount}/2 matches played`);
+          return false;
+        }
+        return true;
+      });
 
       const remainingForCtx = (teamId: number) => remaining.map(m => ({
         homeTeam: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
@@ -824,7 +851,12 @@ async function regenerateOtherGroupArticlesAgainstSnapshot(
       // third standing is what shifts most when another group closes — and
       // for already-decided OTHER groups it is the ONLY thing that can shift.
       const third = standings.find(s => s.position === 3);
-      if (third) {
+      const thirdPlayedCount = third
+        ? played.filter(m => m.homeTeamId === third.team.id || m.awayTeamId === third.team.id).length
+        : 0;
+      if (third && shouldDeferThirdPlaceTeamArticle(3, thirdPlayedCount)) {
+        console.log(`[pregenerate] ${opts.traceLabelPrefix} regen — deferring 3rd-place team article for ${third.team.name} (group ${g.groupId}): only ${thirdPlayedCount}/2 matches played`);
+      } else if (third) {
         const t = third.team;
         const ts = groupScenarios.find(s => s.teamId === t.id);
         const teamProb = probsByTeam.get(t.id);
