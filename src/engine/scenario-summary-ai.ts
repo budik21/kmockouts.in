@@ -198,14 +198,14 @@ Write the scenario summary for this position. Start with a probability assessmen
 
   const modelId = await getAiPredictionModelId();
 
-  const response = await withClaudeSlot(() => client.messages.create({
+  const response = await withClaudeSlot(() => withTimeout(client.messages.create({
     model: modelId,
     max_tokens: 512,
     system: [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
     messages: [{ role: 'user', content: userPrompt }],
-  }));
+  }), AI_CALL_TIMEOUT_MS));
 
   const textBlock = response.content.find(b => b.type === 'text');
   return {
@@ -523,20 +523,17 @@ export async function generateAiScenarioSummaries(
   // Run all uncached API calls in parallel with timeout
   const promises = tasks.map(async ({ pos, patterns, pHash }) => {
     try {
-      const summary = await withTimeout(
-        generateAiSummary({
-          teamId: ctx.teamId,
-          teamName: ctx.teamName,
-          groupId: ctx.groupId,
-          position: pos,
-          probability: ctx.probabilities[pos] ?? 0,
-          allProbabilities: ctx.probabilities,
-          remainingMatches: remainingMatchesForPrompt,
-          outcomePatterns: patterns,
-          currentStandings: ctx.currentStandings,
-        }),
-        AI_CALL_TIMEOUT_MS,
-      );
+      const summary = await generateAiSummary({
+        teamId: ctx.teamId,
+        teamName: ctx.teamName,
+        groupId: ctx.groupId,
+        position: pos,
+        probability: ctx.probabilities[pos] ?? 0,
+        allProbabilities: ctx.probabilities,
+        remainingMatches: remainingMatchesForPrompt,
+        outcomePatterns: patterns,
+        currentStandings: ctx.currentStandings,
+      });
 
       if (options.usage) {
         options.usage.calls += 1;

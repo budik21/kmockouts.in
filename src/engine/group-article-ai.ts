@@ -407,14 +407,14 @@ async function generateGroupArticle(ctx: GroupArticleContext): Promise<GenerateR
   const userPrompt = buildUserPrompt(ctx);
   const modelId = await getAiPredictionModelId();
 
-  const response = await withClaudeSlot(() => client.messages.create({
+  const response = await withClaudeSlot(() => withTimeout(client.messages.create({
     model: modelId,
     max_tokens: 1500,
     system: [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
     messages: [{ role: 'user', content: userPrompt }],
-  }));
+  }), AI_CALL_TIMEOUT_MS));
 
   const textBlock = response.content.find(b => b.type === 'text');
   const raw = textBlock?.text ?? '';
@@ -615,7 +615,7 @@ export async function pregenerateGroupArticle(
   const userPrompt = buildUserPrompt(ctx);
   const startedAt = Date.now();
   try {
-    const result = await withTimeout(generateGroupArticle(ctx), AI_CALL_TIMEOUT_MS);
+    const result = await generateGroupArticle(ctx);
     if (!result) {
       console.error(`[pregenerate] Group article parse failed for ${ctx.groupId}`);
       if (options.trace) {

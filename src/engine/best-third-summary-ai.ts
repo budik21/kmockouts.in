@@ -113,14 +113,14 @@ Write a short summary (2-4 sentences) of what this team needs to qualify as best
 
   const modelId = await getAiPredictionModelId();
 
-  const response = await withClaudeSlot(() => getClient().messages.create({
+  const response = await withClaudeSlot(() => withTimeout(getClient().messages.create({
     model: modelId,
     max_tokens: 256,
     system: [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
     messages: [{ role: 'user', content: userPrompt }],
-  }));
+  }), AI_CALL_TIMEOUT_MS));
 
   const textBlock = response.content.find(b => b.type === 'text');
   return textBlock?.text ?? '';
@@ -255,10 +255,7 @@ export async function generateBestThirdSummaries(
   // in-flight Claude calls process-wide, so we don't need a local batch loop.
   const promises = tasks.map(async (targetTeam) => {
     try {
-      const summary = await withTimeout(
-        generateBestThirdSummary({ allTeams, targetTeam, threshold: threshold ?? null }),
-        AI_CALL_TIMEOUT_MS,
-      );
+      const summary = await generateBestThirdSummary({ allTeams, targetTeam, threshold: threshold ?? null });
       if (summary) {
         result.set(targetTeam.teamId, summary);
         try {
