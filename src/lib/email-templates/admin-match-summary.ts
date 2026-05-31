@@ -223,9 +223,12 @@ function renderTipTransitions(trace: MatchUpdateTrace): string {
 }
 
 function renderTipEmailDispatch(trace: MatchUpdateTrace): string {
+  const deferredNote = trace.tipEmailsDeferred
+    ? `<p style="color:#b35900;margin-top:14px;font-weight:600;">⏳ ${trace.tipEmailsDeferred} tip e-mail(s) deferred — the match's team articles aren't generated yet; they will send on a later pass once the articles exist.</p>`
+    : '';
   const dispatch = trace.tipEmailDispatch;
   if (!dispatch || dispatch.length === 0) {
-    return '<p style="color:#9a9aa3;font-style:italic;margin-top:14px;">(no tip-result e-mails dispatched)</p>';
+    return deferredNote || '<p style="color:#9a9aa3;font-style:italic;margin-top:14px;">(no tip-result e-mails dispatched)</p>';
   }
   const colorFor = (outcome: string): string => {
     if (outcome === 'sent') return '#1a7f37';
@@ -244,7 +247,7 @@ function renderTipEmailDispatch(trace: MatchUpdateTrace): string {
       <td style="padding:4px 10px;color:#6b6b73;">${esc(d.reason ?? '')}</td>
     </tr>`;
   }).join('');
-  return `
+  return `${deferredNote}
     <p style="color:#6b6b73;margin:14px 0 8px;">Dispatch outcome: <strong>${sent}/${dispatch.length}</strong> e-mail(s) sent.</p>
     <table style="border-collapse:collapse;font:13px/1.4 -apple-system,Segoe UI,sans-serif;width:100%;">
       <thead>

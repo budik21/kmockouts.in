@@ -239,12 +239,17 @@ async function sendTipEmailsForRows(rows: TransitionRow[], hasKey: boolean): Pro
 /**
  * Slow-lane dispatch: send tip-result e-mails for every scored tip on a match
  * that has not been notified yet (`points IS NOT NULL AND notified_at IS NULL`).
- * Called by the scraper drainer AFTER the match's articles are regenerated, so
- * the e-mails embed fresh articles. Idempotent: tips that were actually decided
- * (sent or skipped by preference) get `notified_at` stamped, so a job retry
- * never re-sends. 'failed'/'disabled' tips are left unstamped to retry later.
+ * Called by the scraper drainer on EVERY pass — as soon as BOTH match teams'
+ * articles are cached it sends (so the e-mail embeds them); until then it
+ * defers (returns `deferred > 0`, leaving notified_at NULL to retry next pass),
+ * UNLESS `force` is set (the final/give-up pass) so tipsters are notified even
+ * if an article never generated. Idempotent: only 'sent'/'skipped' tips get
+ * `notified_at` stamped, so it never re-sends.
  */
-export async function dispatchTipResultEmailsForMatch(matchId: number): Promise<TipEmailDispatchResult[]> {
+export async function dispatchTipResultEmailsForMatch(
+  matchId: number,
+  opts: { force?: boolean } = {},
+): Promise<{ results: TipEmailDispatchResult[]; deferred: number }> {
   const hasKey = !!process.env.RESEND_API_KEY;
 
   const rows = await query<TransitionRow>(
@@ -281,7 +286,21 @@ export async function dispatchTipResultEmailsForMatch(matchId: number): Promise<
   console.log(
     `[tip-notifications] dispatchForMatch match=${matchId} pending=${rows.length} resendKey=${hasKey ? 'set' : 'missing'}`,
   );
-  if (rows.length === 0) return [];
+  if (rows.length === 0) return { results: [], deferred: 0 };
+
+  // The e-mail embeds both match teams' articles. Until those exist, defer the
+  // send (unless forced on the final pass) so tipsters get the article version
+  // rather than a bare result. notified_at stays NULL, so a later pass retries.
+  if (!opts.force && hasKey) {
+    const [homeArticle, awayArticle] = await Promise.all([
+      getCachedTeamArticle(rows[0].home_team_id, { ignorePending: true }),
+      getCachedTeamArticle(rows[0].away_team_id, { ignorePending: true }),
+    ]);
+    if (!homeArticle || !awayArticle) {
+      console.log(`[tip-notifications] match ${matchId}: ${rows.length} tip e-mail(s) deferred — match articles not ready yet`);
+      return { results: [], deferred: rows.length };
+    }
+  }
 
   const results = await sendTipEmailsForRows(rows, hasKey);
 
@@ -297,5 +316,5 @@ export async function dispatchTipResultEmailsForMatch(matchId: number): Promise<
     );
   }
 
-  return results;
+  return { results, deferred: 0 };
 }

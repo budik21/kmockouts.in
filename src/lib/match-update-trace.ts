@@ -105,6 +105,9 @@ export interface MatchUpdateTrace {
     outcome: 'sent' | 'skipped' | 'disabled' | 'failed';
     reason?: string;
   }>;
+  /** Number of tip-result e-mails deferred this pass because the match's team
+   *  articles weren't generated yet (they'll send on a later pass). */
+  tipEmailsDeferred?: number;
   cacheInvalidation?: {
     revalidatedTags: string[];
     cloudflarePurged: boolean;

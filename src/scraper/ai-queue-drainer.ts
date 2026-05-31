@@ -139,27 +139,30 @@ async function processJob(job: AiQueueJob): Promise<void> {
       nextAttemptInSeconds: willRetry ? backoffSeconds : undefined,
     };
 
+    // Dispatch tip-result e-mails on EVERY pass: as soon as the match's two team
+    // articles are cached they send (so the e-mail embeds them), independent of
+    // whether OTHER groups' best-third / cross-group regen failed. `force` on the
+    // final pass notifies tipsters even if an article never generated. Idempotent
+    // via tip.notified_at, so calling it each pass never double-sends.
+    if (job.matchId !== null) {
+      try {
+        const dispatch = await dispatchTipResultEmailsForMatch(job.matchId, { force: !willRetry });
+        trace.tipEmailDispatch = dispatch.results;
+        if (dispatch.deferred > 0) trace.tipEmailsDeferred = dispatch.deferred;
+      } catch (err) {
+        console.error('[ai-drainer] tip e-mail dispatch failed:', err);
+        trace.errors.push({ step: 'dispatch-tip-emails', message: String(err) });
+      }
+    }
+
     if (willRetry) {
       // Re-queue with backoff. The group stays pending (pages keep the "no
-      // predictions yet" state); no tip e-mails / cache revalidation on a retry.
+      // predictions yet" state). No cache revalidation on a retry.
       await markJobFailed(job.id, job.attempts, `partial generation failure (${genErrorCount} error(s)) — retrying`);
       console.log(`[ai-drainer] job #${job.id} partial failure (${genErrorCount} errors), re-queued — attempt ${job.attempts}/${MAX_ATTEMPTS}, retry in ${backoffSeconds}s`);
     } else {
-      // Success, or attempts exhausted → finalize.
-      // Tip-result e-mails for the match — articles now exist, so they embed the
-      // fresh headline/lede. Idempotent via tip.notified_at.
-      if (job.matchId !== null) {
-        try {
-          trace.tipEmailDispatch = await dispatchTipResultEmailsForMatch(job.matchId);
-        } catch (err) {
-          console.error('[ai-drainer] tip e-mail dispatch failed:', err);
-          trace.errors.push({ step: 'dispatch-tip-emails', message: String(err) });
-        }
-      }
-
-      // Invalidate caches via the internal endpoint.
+      // Success, or attempts exhausted → finalize: invalidate caches and close out.
       await revalidateGroup(job.groupId, trace);
-
       if (genFailed) {
         await markJobFailed(job.id, job.attempts, `gave up after ${job.attempts} attempts with ${genErrorCount} error(s)`);
         console.log(`[ai-drainer] job #${job.id} GAVE UP after ${job.attempts} attempts in ${Date.now() - startedAt}ms`);
