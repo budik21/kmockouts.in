@@ -177,16 +177,15 @@ function renderArticleCall(
     ? `<details style="margin-top:8px;"><summary style="cursor:pointer;color:#6b6b73;">User prompt sent to Claude (${call.userPrompt.length} chars)</summary>${pre(call.userPrompt)}</details>`
     : '';
 
-  const inputHtml = call.inputData
-    ? `<details style="margin-top:8px;"><summary style="cursor:pointer;color:#6b6b73;">Structured input data (JSON)</summary>${pre(JSON.stringify(call.inputData, null, 2))}</details>`
-    : '';
+  // The raw structured input (ctx) is intentionally NOT rendered: it is never
+  // sent to the API (only `userPrompt` is), and dumping the full context — with
+  // the unstripped scenario HTML — just bloated the e-mail and was misleading.
 
   return `<div style="margin:8px 0 20px;">
     <h3 style="font:600 14px/1.3 -apple-system,Segoe UI,sans-serif;margin:0 0 6px;color:#1a1a1f;">${esc(label)} <span style="font-weight:400;color:#6b6b73;font-size:12px;">${meta.join(' · ')}</span></h3>
     ${errHtml}
     ${outHtml}
     ${promptHtml}
-    ${inputHtml}
   </div>`;
 }
 
