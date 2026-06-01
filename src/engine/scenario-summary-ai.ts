@@ -33,9 +33,13 @@ CONTENT:
 - ACCURACY IS PARAMOUNT: before any general claim ("must win", "needs to beat X"), verify it against EVERY combination; if even one contradicts it, do not make it. Use ONLY the data given; never invent. If a team qualifies or is eliminated no matter what, say so. When another match matters, name it.
 - Real team names, never IDs. All matches are at neutral venues — never "home"/"away"; say "plays"/"faces". Position meanings: 1st = group winner, 2nd = runner-up (both auto-qualify), 3rd = may qualify as a best third-placed team, 4th = eliminated.
 
-OUTPUT — return ONLY one JSON object, no markdown, no commentary. Keys are the requested position numbers (as strings); each value is that position's summary as a SINGLE LINE of clean HTML (no newlines inside any value):
-{"1":"<p>…</p>…","3":"<p>…</p>…"}
-HTML inside each value:
+OUTPUT — for EACH requested position write a delimiter line exactly "===POSITION N===" (N = the position number) on its own line, then that position's summary HTML on the following line(s). No JSON, no markdown fences, no commentary. The HTML may contain double quotes freely. Example:
+===POSITION 1===
+<p>...</p><div class="scenario-paths">...</div>
+===POSITION 3===
+<div class="scenario-path single">...</div>
+
+HTML for each position:
 - Lead with the verdict + probability context as one or two short <p>…</p> paragraphs. Wrap a team or opponent name in <strong> on first mention (inline, never on its own line).
 - For multiple distinct paths, append numbered items:
   <div class="scenario-paths"><div class="scenario-path"><span class="scenario-path-num">1</span><span class="scenario-path-text">Path (1–2 sentences max)</span></div><div class="scenario-path"><span class="scenario-path-num">2</span><span class="scenario-path-text">Path (1–2 sentences max)</span></div></div>
@@ -135,25 +139,24 @@ function buildPositionBlock(
 ${patternExplanation}${preComputedPaths}`;
 }
 
-/** Parse the batched response: a JSON object mapping position number → HTML. */
+/**
+ * Parse the batched response. Sections are delimited by `===POSITION N===`
+ * lines, the HTML follows until the next delimiter. A delimiter format (not
+ * JSON) is used deliberately: the HTML values contain double quotes
+ * (class="scenario-paths") which models routinely fail to escape inside a JSON
+ * string, silently producing invalid JSON. Here the HTML needs no escaping.
+ */
 function parseBatchResponse(raw: string): { [pos: number]: string } {
-  let text = raw.trim();
-  const fence = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  if (fence) text = fence[1].trim();
-  const first = text.indexOf('{');
-  const last = text.lastIndexOf('}');
-  if (first < 0 || last < 0 || last <= first) return {};
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text.slice(first, last + 1));
-  } catch {
-    return {};
-  }
-  if (!parsed || typeof parsed !== 'object') return {};
   const out: { [pos: number]: string } = {};
-  for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-    const pos = Number(k);
-    if (pos >= 1 && pos <= 4 && typeof v === 'string' && v.trim()) out[pos] = v.trim();
+  // Split on the delimiter, capturing the position number. parts = [preamble,
+  // posNum, content, posNum, content, ...].
+  const parts = raw.split(/===\s*POSITION\s*(\d)\s*===/i);
+  for (let i = 1; i < parts.length; i += 2) {
+    const pos = Number(parts[i]);
+    let content = (parts[i + 1] ?? '').trim();
+    // Strip stray markdown fences the model may wrap around the HTML.
+    content = content.replace(/^```(?:html)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    if (pos >= 1 && pos <= 4 && content) out[pos] = content;
   }
   return out;
 }
@@ -198,7 +201,7 @@ ${standingsContext}
 Remaining matches in the group:
 ${matchList}
 
-Write a scenario summary for EACH of these finishing positions: ${requested}. Return one JSON object keyed by position number.
+Write a scenario summary for EACH of these finishing positions: ${requested}. Output each one under its "===POSITION N===" delimiter line as described.
 
 ${positionBlocks}`;
 
