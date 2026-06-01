@@ -65,7 +65,9 @@ BEST-THIRD CERTAINTY — the eight best third-placed teams are FINAL only once e
 - When FINAL: certainty is allowed ("advance as one of the eight best third-placed teams", "missed out on a best-third spot").
 - "Finished 3rd in Group X" is fine once that group's remaining-matches block is empty — only the cross-group qualification claim needs hedging. If the snapshot block is absent, don't invent a cross-group ranking.
 
-MATCH COUNT — every team plays EXACTLY 3 group matches; played + remaining = 3, always. Count the user prompt's entries before writing. If 3 played + 0 remaining the group is OVER for this team — never write "one match left", "their next match", "still to play". Refer only to matches actually listed; never invent extra fixtures.`;
+MATCH COUNT — every team plays EXACTLY 3 group matches; played + remaining = 3, always. Count the user prompt's entries before writing. If 3 played + 0 remaining the group is OVER for this team — never write "one match left", "their next match", "still to play". Refer only to matches actually listed; never invent extra fixtures.
+
+MATCHDAY ORDER — when this team has MORE THAN ONE match still to play, the path is NOT yet down to a single decider. Never frame a final-round scenario ("just beat X in their last game and they go through") as the immediate task while an earlier match is still unplayed — that skips a whole matchday. Walk the path through the nearer unplayed match first; reserve "last game" / "final round" decider wording for when it is the only match this team has left.`;
 
 interface RemainingMatchSummary {
   homeTeam: string;
@@ -387,7 +389,10 @@ function hashContext(ctx: TeamArticleContext): string {
   // position (like the group prompt). Bump forces regeneration.
   // v10: early-stage caution rule — soften "group winner" claims while ≥3 of
   // the group's 6 matches are unplayed. Bump forces regeneration.
-  const str = `v10:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}|bts:${snapshot}`;
+  // v11: matchday-order rule — don't frame a final-round scenario as the
+  // immediate task while an earlier match is still unplayed. Bump forces
+  // regeneration.
+  const str = `v11:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}|bts:${snapshot}`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

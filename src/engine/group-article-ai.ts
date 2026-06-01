@@ -146,6 +146,12 @@ POSITION TENSE — NON-NEGOTIABLE RULE:
   matches)".
 - Only when "Remaining matches in the group" is "(no remaining matches)"
   may the article use past-tense position wording. That is STATE B.
+- When the block lists MORE THAN ONE match, the group is NOT yet at its
+  final round. Never frame a last-round scenario ("a win in their final
+  match would send them through") as the next/immediate task while earlier
+  matches remain — that skips a whole matchday. Describe the nearer
+  unplayed match(es) first; reserve "final match" / "last round" decider
+  wording for when only one round is left.
 
 BEST-THIRD CERTAINTY — NON-NEGOTIABLE RULE:
 - The "8 best third-placed teams" qualification across all 12 groups is
@@ -497,7 +503,9 @@ function hashContext(ctx: GroupArticleContext): string {
   // regenerates against the new rule.
   // v7: prompt now sends only the one-line verdict per position (not the full
   // scenario prose). Bump forces regeneration against the slimmer prompt.
-  const str = `v7:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}|tb:${tiebreaker}|bt:${snapshot}`;
+  // v8: matchday-order rule — don't frame a final-round scenario as the
+  // immediate task while earlier matches remain. Bump forces regeneration.
+  const str = `v8:${ctx.groupId}|${standings}|played:${played}|rem:${remaining}|${perTeam}|tb:${tiebreaker}|bt:${snapshot}`;
 
   // djb2-ish 32-bit hash
   let hash = 0;
