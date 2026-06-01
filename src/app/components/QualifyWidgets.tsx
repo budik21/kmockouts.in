@@ -11,6 +11,8 @@ interface QualifyWidgetsProps {
   prob4th: number;
   totalScenarios: number;
   matchesRemaining: number;
+  /** Matches the focus team has already played in its group. */
+  teamMatchesPlayed: number;
   teamName: string;
   bestThirdRank: number | null;
   bestThirdQualifies: boolean;
@@ -38,6 +40,7 @@ export default function QualifyWidgets({
   prob4th,
   totalScenarios,
   matchesRemaining,
+  teamMatchesPlayed,
   teamName,
   bestThirdRank,
   bestThirdQualifies,
@@ -172,8 +175,10 @@ export default function QualifyWidgets({
 
   return (
     <div className="row g-3 mb-4">
-      {/* Best-3rd infobox — only shown when team is currently in 3rd place */}
-      {has3rdChance && bestThirdRank !== null && (
+      {/* Best-3rd infobox — only shown when team is currently in 3rd place
+          and has played at least two matches (the best-third table is too
+          unsettled to be meaningful before then). */}
+      {has3rdChance && bestThirdRank !== null && teamMatchesPlayed >= 2 && (
         <div className="col-12">
           <div className={`best-third-infobox ${bestThirdQualifies ? 'best-third-infobox--in' : 'best-third-infobox--out'}`}>
             <div className="best-third-infobox-content">

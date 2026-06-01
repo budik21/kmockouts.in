@@ -198,7 +198,9 @@ export default async function TeamDetailPage({ params }: PageProps) {
   // Compute best-3rd ranking (current snapshot across all groups)
   let bestThirdRank: number | null = null;
   let bestThirdQualifies = false;
-  const currentPosition = standings.find((s) => s.team.id === team.id)?.position ?? null;
+  const teamStanding = standings.find((s) => s.team.id === team.id);
+  const currentPosition = teamStanding?.position ?? null;
+  const teamMatchesPlayed = teamStanding?.matchesPlayed ?? 0;
   const isCurrentlyThird = currentPosition === 3;
   if ((probs[3] ?? 0) > 0 && isCurrentlyThird) {
     const thirdPlaced: { groupId: GroupId; standing: typeof standings[0] }[] = [];
@@ -473,6 +475,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
           prob4th={probs[4] ?? 0}
           totalScenarios={teamSummary.totalScenarios}
           matchesRemaining={remaining.length}
+          teamMatchesPlayed={teamMatchesPlayed}
           teamName={team.name}
           bestThirdRank={bestThirdRank}
           bestThirdQualifies={bestThirdQualifies}

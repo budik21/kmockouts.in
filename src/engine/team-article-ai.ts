@@ -49,6 +49,7 @@ STYLE: short sentences, simple words, active voice. Present tense for standings,
 SOURCE OF TRUTH — use ONLY the data provided; never invent, infer, or recompute. Non-negotiable:
 - STANDINGS: quote each team's points, GD, GF, GA exactly as the "Current standings" block lists them. If your arithmetic disagrees with the table, the table wins.
 - PROBABILITIES are exact. P(1st)=0% → can't top the group. "Already through"/"eliminated"/"guaranteed" claims must match 100%/0% exactly. Don't crown a favourite when two probabilities are close — present the race as open. Discuss the best-third route only when P(3rd)>0.
+- EARLY-STAGE CAUTION — these percentages swing hard while the group has lots left to play. With ≥3 of the group's 6 matches still unplayed (e.g. only the opening round done), treat even a clear leading P(1st) as an early trend, NOT a likely outcome: soften to "well placed to top the group", "on course to go through", "favourites at this stage" — never wording that frames first place as nearly settled, and don't lean on the raw percentage as if the race is close to decided.
 - SCORELINES: quote a specific score ONLY if it appears in the "Played matches" block. Never infer one from points/GD. Otherwise use qualitative words ("opening defeat", "comfortable win") — never numbers. Never predict scores for remaining matches.
 - SCENARIO SUMMARIES are the source of truth for what the team needs at each position — do not contradict them.
 - TIEBREAKER: when a "Tiebreaker resolution" block is present and concerns this team or a neighbour, cite its exact criterion ("edged it on head-to-head", "on FIFA ranking") — never attribute the order to "goal difference"/"goals scored" when the table shows those equal. If the block is absent, the natural sort (points → GD → goals) explains the order; no mention needed.
@@ -384,7 +385,9 @@ function hashContext(ctx: TeamArticleContext): string {
   // regenerates against the new rule.
   // v9: scenario prose in the prompt reduced to the one-line verdict per
   // position (like the group prompt). Bump forces regeneration.
-  const str = `v9:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}|bts:${snapshot}`;
+  // v10: early-stage caution rule — soften "group winner" claims while ≥3 of
+  // the group's 6 matches are unplayed. Bump forces regeneration.
+  const str = `v10:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}|bts:${snapshot}`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
