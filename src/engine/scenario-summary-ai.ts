@@ -17,74 +17,29 @@ import { RemainingMatchInfo } from './scenario-summary';
 // A 429 is rejected BEFORE generation, so retrying it bills nothing.
 const client = new Anthropic({ maxRetries: Number(process.env.ANTHROPIC_MAX_RETRIES) || 4 });
 
-const SYSTEM_PROMPT = `You are a football (soccer) analyst writing for a World Cup prediction website.
+const SYSTEM_PROMPT = `You are a football (soccer) analyst for a World Cup prediction website. For ONE team you are given, for EACH of several finishing positions (1st/2nd/3rd/4th), the complete set of result combinations that lead there. Write one short summary per requested position.
 
-Your job: given a team's computed qualification scenarios, write a clear summary of what the team needs.
+EACH SUMMARY:
+1. First sentence — the shortest possible verdict (what must happen). E.g. "A win against Japan is enough." / "Mexico needs to beat South Korea and hope Czech Republic draws or loses." / "Already safe — any result will do." / "Only a very specific combination of results can save them."
+2. Second sentence — probability context: likely, possible, or a long shot, and how it compares to the other positions.
+3. Then cover ALL remaining outcome combinations — every distinct path in the data, even unlikely ones. Use the PRE-COMPUTED PATHS exactly; never reinterpret the raw patterns.
 
-STRUCTURE — VERY IMPORTANT:
-1. FIRST SENTENCE: Start with the shortest possible verdict. One sentence that tells the reader what must happen. Examples:
-   - "A win against Japan is enough."
-   - "Mexico needs to beat South Korea and hope Czech Republic draws or loses."
-   - "Only a very specific combination of results can save them."
-   - "Already safe — any result will do."
-2. SECOND SENTENCE: Probability context — is this likely or unlikely? Compare to other positions. One sentence only.
-3. THEN: Cover ALL remaining outcome combinations. Every distinct path in the data must be mentioned — do not skip any, even unlikely ones.
+LENGTH & STYLE (per summary): 3–8 sentences, in short paragraphs of at most 2 sentences. Very simple English for non-native readers — short sentences, common words, active voice, no idioms/slang, no filler, no labels ("In short:", "Bottom line:"). NEVER use negations: write "wins or draws", not "does not lose".
 
-LENGTH — VERY IMPORTANT:
-- The TOTAL output must be 3–8 sentences. Never more than 8 sentences.
-- Break the text into short paragraphs. Each paragraph has at most 2 sentences.
-- Wrap each paragraph in <p> tags. Do NOT use <br> or <br><br> for paragraph breaks.
-- Do NOT write long blocks of text. Keep it short and scannable.
+CONTENT:
+- State minimum goal margins when a combination needs one ("by X+ goals") — these edge cases are the interesting part.
+- SIMPLIFY AGGRESSIVELY: if all combinations share one condition for this team (e.g. it loses in all of them), state just that and add "regardless of the other result" — do NOT list the other match per variant. Only mention the other match when its result actually changes the outcome. Never produce numbered paths that differ only in an irrelevant match result — merge them.
+- ACCURACY IS PARAMOUNT: before any general claim ("must win", "needs to beat X"), verify it against EVERY combination; if even one contradicts it, do not make it. Use ONLY the data given; never invent. If a team qualifies or is eliminated no matter what, say so. When another match matters, name it.
+- Real team names, never IDs. All matches are at neutral venues — never "home"/"away"; say "plays"/"faces". Position meanings: 1st = group winner, 2nd = runner-up (both auto-qualify), 3rd = may qualify as a best third-placed team, 4th = eliminated.
 
-LANGUAGE & STYLE:
-- Very simple English — many readers are not native speakers
-- Short sentences. Simple words. No idioms, no slang.
-- Be direct. Like explaining to a friend.
-- Do NOT use labels like "Probability assessment:", "What X needs:", "In short:", "Bottom line:" — just write the content directly
-- No filler words
-- NEVER use negations like "does not lose", "does not beat", "fails to win". Instead use positive phrasing: "wins or draws", "draws or loses". Negations are harder to parse for non-native speakers. Always prefer the simplest, most direct phrasing.
-
-CONTENT — VERY IMPORTANT:
-- You are given ALL distinct outcome combinations that lead to this position. Do not omit any path, even if it requires a large goal difference or seems unlikely.
-- When a combination requires a specific minimum goal difference (shown as "by X+ goals"), always state this threshold explicitly. These are the most interesting edge cases for the reader.
-- SIMPLIFY AGGRESSIVELY: If all combinations share the same condition for the analyzed team (e.g. the team loses in all of them), just state that one condition. Do NOT list what happens in the other match separately for each variant — say "regardless of the other result" or omit the other match entirely. Only mention the other match when its result actually matters (i.e. some outcomes of the other match lead to this position and others do not).
-- Never list multiple numbered paths that differ only in an irrelevant match result. Merge them into one statement.
-- ACCURACY IS PARAMOUNT: Before writing ANY general claim (e.g. "must win", "must not lose", "needs to beat X"), verify it against ALL provided combinations. If even ONE combination contradicts the claim, DO NOT make it. For example, if 6 out of 7 combinations show a win but 1 shows a loss, do NOT say "must win" — instead describe the different paths accurately. Over-generalizing is a serious error.
-- If a team qualifies no matter what, say so
-- If a team is eliminated no matter what, say so
-- When other matches matter, name them (e.g. "…if Germany draws or loses to Japan")
-- Mention probability in one sentence — is this the most likely outcome, or a long shot?
-
-FORMATTING:
-- Use team names, never IDs
-- Wrap team names in <strong> tags INLINE — never put <strong> on its own line. Write "<strong>Mexico</strong> needs" not "<strong>\nMexico\n</strong> needs"
-- Do NOT use markdown — output clean HTML only
-- Output must be a SINGLE LINE of HTML — no newlines inside the output. Use <br><br> for paragraph breaks.
-- For multiple distinct paths, use numbered items:
-  <div class="scenario-paths"><div class="scenario-path"><span class="scenario-path-num">1</span><span class="scenario-path-text">Path here (1-2 sentences max)</span></div><div class="scenario-path"><span class="scenario-path-num">2</span><span class="scenario-path-text">Path here (1-2 sentences max)</span></div></div>
-- For a single path: <div class="scenario-path single">Description here.</div>
-- Position labels: 1st = group winner, 2nd = runner-up (both auto-qualify), 3rd = may qualify as best third-placed, 4th = eliminated
-- IMPORTANT: Cover all key scenarios but be brief — do not repeat yourself
-- IMPORTANT: This is a tournament — all matches are played at neutral venues. Never say "home" or "away". Just say "plays against" or "faces".`;
-
-interface AiSummaryInput {
-  teamId: number;
-  teamName: string;
-  groupId: string;
-  position: number;
-  probability: number;
-  /** Probabilities for ALL positions — so the AI can compare and contextualize */
-  allProbabilities: { [pos: number]: number };
-  remainingMatches: {
-    homeTeam: string;
-    awayTeam: string;
-    isTeamMatch: boolean;
-  }[];
-  /** All outcome patterns like "H3|D0|A2" — the complete set of result combos leading to this position */
-  outcomePatterns: string[];
-  /** Current standings context */
-  currentStandings: { teamName: string; points: number; gd: number; position: number }[];
-}
+OUTPUT — return ONLY one JSON object, no markdown, no commentary. Keys are the requested position numbers (as strings); each value is that position's summary as a SINGLE LINE of clean HTML (no newlines inside any value):
+{"1":"<p>…</p>…","3":"<p>…</p>…"}
+HTML inside each value:
+- Lead with the verdict + probability context as one or two short <p>…</p> paragraphs. Wrap a team or opponent name in <strong> on first mention (inline, never on its own line).
+- For multiple distinct paths, append numbered items:
+  <div class="scenario-paths"><div class="scenario-path"><span class="scenario-path-num">1</span><span class="scenario-path-text">Path (1–2 sentences max)</span></div><div class="scenario-path"><span class="scenario-path-num">2</span><span class="scenario-path-text">Path (1–2 sentences max)</span></div></div>
+- For a single path: <div class="scenario-path single">Description.</div>
+- No tags other than <p>, <strong>, and the scenario-path divs/spans shown above.`;
 
 export interface AiUsageStats {
   inputTokens: number;
@@ -92,56 +47,58 @@ export interface AiUsageStats {
   calls: number;
 }
 
-interface AiSummaryResult {
-  text: string;
+/** Shared (per-team) context for a batched scenario-summary call. */
+interface BatchSharedContext {
+  teamId: number;
+  teamName: string;
+  groupId: string;
+  allProbabilities: { [pos: number]: number };
+  remainingMatches: { homeTeam: string; awayTeam: string; isTeamMatch: boolean }[];
+  currentStandings: { teamName: string; points: number; gd: number; position: number }[];
+}
+
+/** One finishing position to summarise. */
+interface PositionTask {
+  position: number;
+  probability: number;
+  outcomePatterns: string[];
+}
+
+interface BatchResult {
+  byPosition: { [pos: number]: string };
   inputTokens: number;
   outputTokens: number;
 }
 
 /**
- * Generate an AI-powered summary for a single team+position combo.
+ * The per-position data block: reduced outcome combinations + the pre-computed
+ * own-match/other-match paths. Shared context (team, standings, remaining
+ * matches, probabilities) is emitted once by the caller, not per position.
  */
-async function generateAiSummary(input: AiSummaryInput): Promise<AiSummaryResult> {
-  const matchList = input.remainingMatches
-    .map((m, i) => `  Match ${i}: ${m.homeTeam} vs ${m.awayTeam}${m.isTeamMatch ? ' (team\'s own match)' : ''}`)
-    .join('\n');
+function buildPositionBlock(
+  task: PositionTask,
+  teamName: string,
+  remainingMatches: { homeTeam: string; awayTeam: string; isTeamMatch: boolean }[],
+): string {
+  const { text: patternExplanation, reducedCount } = reduceAndDecodePatterns(task.outcomePatterns, remainingMatches);
 
-  // Reduce patterns to unique W/D/L combinations with min GD thresholds
-  const { text: patternExplanation, reducedCount } = reduceAndDecodePatterns(
-    input.outcomePatterns, input.remainingMatches,
-  );
-
-  const standingsContext = input.currentStandings
-    .map(s => `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}`)
-    .join('\n');
-
-  // Build probability comparison context
-  const probLines = [1, 2, 3, 4]
-    .filter(p => (input.allProbabilities[p] ?? 0) > 0)
-    .map(p => `  ${p}${posLabel(p)}: ${(input.allProbabilities[p] ?? 0).toFixed(1)}%${p === input.position ? ' ← THIS POSITION' : ''}`)
-    .join('\n');
-
-  // Pre-analyze own-match outcomes and group other-match conditions by own outcome
-  // This gives the AI a clear, pre-computed structure so it can't misinterpret the data
-  const ownMatchIdx = input.remainingMatches.findIndex(m => m.isTeamMatch);
+  // Pre-analyse own-match outcomes, grouping other-match conditions by own
+  // outcome, so the model gets a clear structure it can't misread.
   let preComputedPaths = '';
+  const ownMatchIdx = remainingMatches.findIndex(m => m.isTeamMatch);
   if (ownMatchIdx >= 0) {
-    const ownMatch = input.remainingMatches[ownMatchIdx];
-    const teamIsHome = ownMatch.homeTeam === input.teamName;
+    const ownMatch = remainingMatches[ownMatchIdx];
+    const teamIsHome = ownMatch.homeTeam === teamName;
     const winLetter = teamIsHome ? 'H' : 'A';
-    const loseLetter = teamIsHome ? 'A' : 'H';
     const opponent = teamIsHome ? ownMatch.awayTeam : ownMatch.homeTeam;
-    const otherMatches = input.remainingMatches.filter((_, i) => i !== ownMatchIdx);
+    const otherMatches = remainingMatches.filter((_, i) => i !== ownMatchIdx);
 
-    // Group reduced patterns by own-match outcome, collect other-match conditions
     const grouped: Record<string, Set<string>> = {};
-    for (const pattern of input.outcomePatterns) {
+    for (const pattern of task.outcomePatterns) {
       const parts = pattern.split('|');
       const ownLetter = parts[ownMatchIdx]?.charAt(0);
       const ownLabel = ownLetter === winLetter ? 'WIN' : ownLetter === 'D' ? 'DRAW' : 'LOSS';
-
       if (!grouped[ownLabel]) grouped[ownLabel] = new Set();
-      // Build other-match conditions
       const otherParts = parts.filter((_, i) => i !== ownMatchIdx);
       const otherDesc = otherParts.map((p, i) => {
         const m = otherMatches[i];
@@ -161,27 +118,77 @@ async function generateAiSummary(input: AiSummaryInput): Promise<AiSummaryResult
       const condArray = [...conditions];
       const verb = outcome === 'WIN' ? `beats ${opponent}` : outcome === 'DRAW' ? `draws with ${opponent}` : `loses to ${opponent}`;
       if (otherMatches.length === 0) {
-        pathLines.push(`  ${outcome}: ${input.teamName} ${verb} → reaches this position`);
-      } else if (condArray.length === otherMatches.length * 3 || condArray.length >= 3) {
-        // All other-match outcomes work → simplify
-        const allOutcomes = new Set(condArray.flatMap(c => [c]));
-        // Check if truly all outcomes of the other match are covered
-        pathLines.push(`  ${outcome}: ${input.teamName} ${verb}, and: ${condArray.join(' OR ')}`);
+        pathLines.push(`    ${outcome}: ${teamName} ${verb} → reaches this position`);
       } else {
-        pathLines.push(`  ${outcome}: ${input.teamName} ${verb}, and: ${condArray.join(' OR ')}`);
+        pathLines.push(`    ${outcome}: ${teamName} ${verb}, and: ${condArray.join(' OR ')}`);
       }
     }
-
-    preComputedPaths = `\nPRE-COMPUTED PATHS (use these EXACTLY — do not reinterpret the raw patterns):\n${pathLines.join('\n')}`;
+    preComputedPaths = `\n  PRE-COMPUTED PATHS (use these EXACTLY — do not reinterpret the raw patterns):\n${pathLines.join('\n')}`;
     if (grouped['LOSS']) {
-      preComputedPaths += `\n⚠️ ${input.teamName} CAN reach this position even when LOSING. Include this as a numbered path.`;
+      preComputedPaths += `\n  ⚠️ ${teamName} CAN reach this position even when LOSING — include this as a numbered path.`;
     }
   }
 
-  const userPrompt = `Team: ${input.teamName} (Group ${input.groupId})
-Position analyzed: ${input.position}${posLabel(input.position)} — probability ${input.probability.toFixed(1)}%
+  return `Position ${task.position}${posLabel(task.position)} — probability ${task.probability.toFixed(1)}%
+  ${reducedCount} distinct outcome combinations (reduced from ${task.outcomePatterns.length} goal-difference variants), with minimum goal differences where relevant:
+${patternExplanation}${preComputedPaths}`;
+}
 
-All position probabilities for ${input.teamName}:
+/** Parse the batched response: a JSON object mapping position number → HTML. */
+function parseBatchResponse(raw: string): { [pos: number]: string } {
+  let text = raw.trim();
+  const fence = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  if (fence) text = fence[1].trim();
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first < 0 || last < 0 || last <= first) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text.slice(first, last + 1));
+  } catch {
+    return {};
+  }
+  if (!parsed || typeof parsed !== 'object') return {};
+  const out: { [pos: number]: string } = {};
+  for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+    const pos = Number(k);
+    if (pos >= 1 && pos <= 4 && typeof v === 'string' && v.trim()) out[pos] = v.trim();
+  }
+  return out;
+}
+
+/**
+ * Generate scenario summaries for SEVERAL positions of one team in a SINGLE
+ * Claude call. Batching collapses the per-position fan-out (was up to 4
+ * calls/team, 16/group) to one call/team — the big system prompt is sent once
+ * instead of per position, which was the dominant scenario-input cost.
+ */
+async function generateAiSummariesBatch(
+  shared: BatchSharedContext,
+  tasks: PositionTask[],
+): Promise<BatchResult> {
+  const matchList = shared.remainingMatches
+    .map((m, i) => `  Match ${i}: ${m.homeTeam} vs ${m.awayTeam}${m.isTeamMatch ? ' (team\'s own match)' : ''}`)
+    .join('\n');
+
+  const standingsContext = shared.currentStandings
+    .map(s => `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}`)
+    .join('\n');
+
+  const probLines = [1, 2, 3, 4]
+    .filter(p => (shared.allProbabilities[p] ?? 0) > 0)
+    .map(p => `  ${p}${posLabel(p)}: ${(shared.allProbabilities[p] ?? 0).toFixed(1)}%`)
+    .join('\n');
+
+  const positionBlocks = tasks
+    .map(t => buildPositionBlock(t, shared.teamName, shared.remainingMatches))
+    .join('\n\n');
+
+  const requested = tasks.map(t => t.position).join(', ');
+
+  const userPrompt = `Team: ${shared.teamName} (Group ${shared.groupId})
+
+All position probabilities for ${shared.teamName}:
 ${probLines}
 
 Current standings:
@@ -190,19 +197,14 @@ ${standingsContext}
 Remaining matches in the group:
 ${matchList}
 
-There are ${reducedCount} distinct outcome combinations (reduced from ${input.outcomePatterns.length} goal-difference variants) that lead to ${input.teamName} finishing ${input.position}${posLabel(input.position)}.
+Write a scenario summary for EACH of these finishing positions: ${requested}. Return one JSON object keyed by position number.
 
-All outcome combinations (with minimum required goal differences where relevant):
-${patternExplanation}
-${preComputedPaths}
-
-Write the scenario summary for this position. Start with a probability assessment — is this likely, possible, or a long shot? How does it compare to the other positions?`;
+${positionBlocks}`;
 
   const modelId = await getAiPredictionModelId();
-
   const response = await withClaudeSlot(() => withTimeout(client.messages.create({
     model: modelId,
-    max_tokens: 512,
+    max_tokens: Math.min(640 * tasks.length, 2048),
     system: [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
@@ -211,7 +213,7 @@ Write the scenario summary for this position. Start with a probability assessmen
 
   const textBlock = response.content.find(b => b.type === 'text');
   return {
-    text: textBlock?.text ?? '',
+    byPosition: parseBatchResponse(textBlock?.text ?? ''),
     inputTokens: response.usage?.input_tokens ?? 0,
     outputTokens: response.usage?.output_tokens ?? 0,
   };
@@ -347,7 +349,9 @@ function hashPatterns(patterns: string[]): string {
   // Version salt — bump to invalidate all cached summaries after prompt changes
   const sorted = [...patterns].sort();
   let hash = 0;
-  const str = 'v5:' + sorted.join('|');
+  // v6: prompt trimmed + positions now generated in one batched call (output
+  // is a JSON map). Bump regenerates cached summaries under the new prompt.
+  const str = 'v6:' + sorted.join('|');
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
@@ -522,42 +526,47 @@ export async function generateAiScenarioSummaries(
     if (!aiEnabled) return result;
   }
 
-  // Run all uncached API calls in parallel with timeout
-  const promises = tasks.map(async ({ pos, patterns, pHash }) => {
-    try {
-      const summary = await generateAiSummary({
+  // One batched call for ALL uncached positions of this team (instead of one
+  // call per position) — the system prompt is sent once, not per position.
+  try {
+    const batch = await generateAiSummariesBatch(
+      {
         teamId: ctx.teamId,
         teamName: ctx.teamName,
         groupId: ctx.groupId,
-        position: pos,
-        probability: ctx.probabilities[pos] ?? 0,
         allProbabilities: ctx.probabilities,
         remainingMatches: remainingMatchesForPrompt,
-        outcomePatterns: patterns,
         currentStandings: ctx.currentStandings,
-      });
+      },
+      tasks.map(t => ({
+        position: t.pos,
+        probability: ctx.probabilities[t.pos] ?? 0,
+        outcomePatterns: t.patterns,
+      })),
+    );
 
-      if (options.usage) {
-        options.usage.calls += 1;
-        options.usage.inputTokens += summary.inputTokens;
-        options.usage.outputTokens += summary.outputTokens;
-      }
+    if (options.usage) {
+      options.usage.calls += 1;
+      options.usage.inputTokens += batch.inputTokens;
+      options.usage.outputTokens += batch.outputTokens;
+    }
 
-      if (summary.text) {
-        result[pos] = summary.text;
-        // Save to cache (best-effort)
+    // Distribute results back per position and cache each (best-effort), so the
+    // per-position cache granularity is preserved.
+    for (const task of tasks) {
+      const text = batch.byPosition[task.pos];
+      if (text) {
+        result[task.pos] = text;
         try {
-          await saveAiSummary(ctx.groupId, ctx.teamId, pos, summary.text, pHash);
+          await saveAiSummary(ctx.groupId, ctx.teamId, task.pos, text, task.pHash);
         } catch {
           // Cache write failure is non-fatal
         }
       }
-    } catch (err) {
-      console.error(`AI summary failed for ${ctx.teamName} pos ${pos}:`, err);
     }
-  });
-
-  await Promise.allSettled(promises);
+  } catch (err) {
+    console.error(`AI scenario summaries batch failed for ${ctx.teamName}:`, err);
+  }
 
   return result;
 }

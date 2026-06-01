@@ -176,6 +176,18 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * The opening verdict sentence of a scenario summary, HTML stripped. The team
+ * prompt only needs the one-line verdict per position, not the full
+ * multi-paragraph prose — the prose was a large chunk of the input. The
+ * scenario generator always leads with the shortest possible verdict.
+ */
+function firstSentence(html: string): string {
+  const text = stripHtml(html);
+  const m = text.match(/^(.*?[.!?])(?:\s|$)/);
+  return (m ? m[1] : text).trim();
+}
+
 function posLabel(pos: number): string {
   switch (pos) {
     case 1: return 'st';
@@ -219,7 +231,7 @@ function buildUserPrompt(ctx: TeamArticleContext): string {
 
   const summaryLines = [1, 2, 3, 4]
     .filter(p => (ctx.probabilities[p] ?? 0) > 0 && ctx.granularSummariesByPosition[p])
-    .map(p => `  ${p}${posLabel(p)}: ${stripHtml(ctx.granularSummariesByPosition[p])}`)
+    .map(p => `  ${p}${posLabel(p)}: ${firstSentence(ctx.granularSummariesByPosition[p])}`)
     .join('\n');
 
   const bestThirdLine = (ctx.probabilities[3] ?? 0) > 0
@@ -370,9 +382,9 @@ function hashContext(ctx: TeamArticleContext): string {
   // system prompt forbids "guaranteed best-third" claims while the snapshot
   // is PROVISIONAL. Bump invalidates older articles so the next admin save
   // regenerates against the new rule.
-  // v8: system prompt consolidated (deduplicated rules, ~45% shorter). Bump
-  // forces regeneration so cached articles reflect the new prompt.
-  const str = `v8:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}|bts:${snapshot}`;
+  // v9: scenario prose in the prompt reduced to the one-line verdict per
+  // position (like the group prompt). Bump forces regeneration.
+  const str = `v9:${ctx.groupId}:${ctx.teamId}:${ctx.teamName}|${standings}|played:${played}|rem:${remaining}|${probs}|bt=${ctx.bestThirdQualProb.toFixed(1)}|<${summaries}>|tb:${tiebreaker}|bts:${snapshot}`;
 
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
