@@ -288,7 +288,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
         teamId: team.id,
         teamName: team.name,
         groupId: groupId,
-        outcomePatternsByPosition: teamSummary.outcomePatternsByPosition,
+        edgeScenariosByPosition: teamSummary.edgeScenariosByPosition,
         probabilities: probs,
         remainingMatches: remainingMatchesInfo,
         currentStandings,

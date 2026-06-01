@@ -12,6 +12,7 @@ import { withClaudeSlot } from '../lib/claude-concurrency';
 import { isFeatureEnabled, isAiGenerationEnabledByEnv } from '../lib/feature-flags';
 import { getAiPredictionModelId } from '../lib/ai-model-server';
 import { RemainingMatchInfo } from './scenario-summary';
+import type { MatchCombination } from './scenarios';
 
 // maxRetries lets the SDK ride through 429s honoring the retry-after header.
 // A 429 is rejected BEFORE generation, so retrying it bills nothing.
@@ -349,9 +350,9 @@ function hashPatterns(patterns: string[]): string {
   // Version salt — bump to invalidate all cached summaries after prompt changes
   const sorted = [...patterns].sort();
   let hash = 0;
-  // v6: prompt trimmed + positions now generated in one batched call (output
-  // is a JSON map). Bump regenerates cached summaries under the new prompt.
-  const str = 'v6:' + sorted.join('|');
+  // v7: the model now receives the capped edge-scenario set (≤50) instead of
+  // the full enumeration. Bump regenerates cached summaries under the new input.
+  const str = 'v7:' + sorted.join('|');
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
@@ -403,10 +404,22 @@ export interface AiSummaryContext {
   teamId: number;
   teamName: string;
   groupId: string;
-  outcomePatternsByPosition: { [pos: number]: string[] };
+  /** The deduplicated, capped edge scenarios per position — the SAME reduced
+   *  set shown on the site (≤50), NOT the full combinatorial enumeration. We
+   *  feed the model only these; the full enumeration could run to ~10k patterns
+   *  per position and overflow the context window. */
+  edgeScenariosByPosition: { [pos: number]: MatchCombination[] };
   probabilities: { [pos: number]: number };
   remainingMatches: RemainingMatchInfo[];
   currentStandings: { teamName: string; points: number; gd: number; position: number }[];
+}
+
+/** Convert edge scenarios into the outcome+GD pattern strings the summariser
+ *  consumes ("H3|D0|A2"), preserving the remaining-match order. */
+function edgePatterns(edges: MatchCombination[]): string[] {
+  return edges.map(e =>
+    e.matchResults.map(r => `${r.shortResult}${Math.abs(r.homeGoals - r.awayGoals)}`).join('|'),
+  );
 }
 
 /**
@@ -447,7 +460,7 @@ export async function getCachedAiScenarioSummaries(
       continue;
     }
 
-    const patterns = ctx.outcomePatternsByPosition[pos] ?? [];
+    const patterns = edgePatterns(ctx.edgeScenariosByPosition[pos] ?? []);
     if (patterns.length === 0) continue;
 
     const pHash = hashPatterns(patterns);
@@ -494,7 +507,7 @@ export async function generateAiScenarioSummaries(
       continue;
     }
 
-    const patterns = ctx.outcomePatternsByPosition[pos] ?? [];
+    const patterns = edgePatterns(ctx.edgeScenariosByPosition[pos] ?? []);
     if (patterns.length === 0) continue;
 
     const pHash = hashPatterns(patterns);

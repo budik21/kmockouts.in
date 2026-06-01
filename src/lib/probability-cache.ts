@@ -438,7 +438,7 @@ export async function pregenerateTeamScenarioSummaries(
             teamId: team.id,
             teamName: team.name,
             groupId: groupId,
-            outcomePatternsByPosition: teamSummary.outcomePatternsByPosition,
+            edgeScenariosByPosition: teamSummary.edgeScenariosByPosition,
             probabilities: teamSummary.positionProbabilities,
             remainingMatches: remainingMatchesInfo,
             currentStandings,
@@ -456,7 +456,7 @@ export async function pregenerateTeamScenarioSummaries(
           const missingPositions = [1, 2, 3, 4].filter(p => {
             const prob = teamSummary.positionProbabilities[p] ?? 0;
             if (prob <= 0 || prob >= 100) return false;
-            if ((teamSummary.outcomePatternsByPosition[p] ?? []).length === 0) return false;
+            if ((teamSummary.edgeScenariosByPosition[p] ?? []).length === 0) return false;
             return !result[p];
           });
           if (missingPositions.length > 0) {
@@ -836,7 +836,7 @@ async function regenerateOtherGroupArticlesAgainstSnapshot(
               teamId: t.id,
               teamName: t.name,
               groupId: g.groupId,
-              outcomePatternsByPosition: ts.outcomePatternsByPosition,
+              edgeScenariosByPosition: ts.edgeScenariosByPosition,
               probabilities: ts.positionProbabilities,
               remainingMatches: remainingMatchesInfo,
               currentStandings,
