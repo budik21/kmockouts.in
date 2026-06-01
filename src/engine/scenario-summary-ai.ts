@@ -71,6 +71,9 @@ interface PositionTask {
 
 interface BatchResult {
   byPosition: { [pos: number]: string };
+  /** The model's raw text output, kept for diagnostics when parsing comes up
+   *  short (e.g. a malformed delimiter or truncated response). */
+  raw: string;
   inputTokens: number;
   outputTokens: number;
 }
@@ -215,12 +218,27 @@ ${positionBlocks}`;
     messages: [{ role: 'user', content: userPrompt }],
   }), AI_CALL_TIMEOUT_MS));
 
-  const textBlock = response.content.find(b => b.type === 'text');
-  return {
-    byPosition: parseBatchResponse(textBlock?.text ?? ''),
-    inputTokens: response.usage?.input_tokens ?? 0,
-    outputTokens: response.usage?.output_tokens ?? 0,
-  };
+  const raw = response.content.find(b => b.type === 'text')?.text ?? '';
+  const byPosition = parseBatchResponse(raw);
+  const inputTokens = response.usage?.input_tokens ?? 0;
+  const outputTokens = response.usage?.output_tokens ?? 0;
+
+  // Make parse outcomes visible in the log — a silent partial/empty parse was
+  // exactly what hid the JSON-escaping bug. On a shortfall, dump the raw output.
+  const requestedPositions = tasks.map(t => t.position);
+  const got = Object.keys(byPosition).map(Number).sort((a, b) => a - b);
+  const missing = requestedPositions.filter(p => !got.includes(p));
+  const stopReason = response.stop_reason ?? 'unknown';
+  if (missing.length > 0) {
+    console.error(
+      `[scenario-batch] ${shared.teamName}: requested [${requestedPositions.join(',')}] but parsed only [${got.join(',')}] — MISSING [${missing.join(',')}] · stop=${stopReason} · ${inputTokens} in / ${outputTokens} out\n` +
+      `[scenario-batch] raw model output (first 1000 chars):\n${raw.slice(0, 1000)}`,
+    );
+  } else {
+    console.log(`[scenario-batch] ${shared.teamName}: ok [${got.join(',')}] · stop=${stopReason} · ${inputTokens} in / ${outputTokens} out`);
+  }
+
+  return { byPosition, raw, inputTokens, outputTokens };
 }
 
 function posLabel(pos: number): string {
@@ -478,6 +496,18 @@ export async function getCachedAiScenarioSummaries(
   return result;
 }
 
+/** Per-batched-call diagnostics, so callers can surface generation shortfalls
+ *  (which positions the model returned vs were requested, plus a raw snippet)
+ *  in the admin diagnostic e-mail — not just the scraper log. */
+export interface ScenarioBatchDiagnostic {
+  teamName: string;
+  requested: number[];
+  parsed: number[];
+  missing: number[];
+  stopReason: string;
+  rawSnippet: string;
+}
+
 export interface GenerateAiSummariesOptions {
   /** When true, skip cache lookup and regenerate every position. */
   force?: boolean;
@@ -485,6 +515,8 @@ export interface GenerateAiSummariesOptions {
   ignoreFlags?: boolean;
   /** Usage accumulator — totals are added to this object across all calls. */
   usage?: AiUsageStats;
+  /** When provided, each batched call appends its parse outcome here. */
+  diagnostics?: ScenarioBatchDiagnostic[];
 }
 
 export async function generateAiScenarioSummaries(
@@ -596,6 +628,20 @@ export async function generateAiScenarioSummaries(
         options.usage.calls += 1;
         options.usage.inputTokens += batch.inputTokens;
         options.usage.outputTokens += batch.outputTokens;
+      }
+
+      if (options.diagnostics) {
+        const requested = chunk.map(t => t.pos);
+        const parsed = Object.keys(batch.byPosition).map(Number).sort((a, b) => a - b);
+        const missing = requested.filter(p => !parsed.includes(p));
+        options.diagnostics.push({
+          teamName: ctx.teamName,
+          requested,
+          parsed,
+          missing,
+          stopReason: '', // (the per-call stop reason is in the log)
+          rawSnippet: missing.length > 0 ? batch.raw.slice(0, 1200) : '',
+        });
       }
 
       // Distribute results back per position and cache each (best-effort) so the

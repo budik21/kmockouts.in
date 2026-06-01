@@ -434,6 +434,7 @@ export async function pregenerateTeamScenarioSummaries(
         const teamSummary = summaries.find(s => s.teamId === team.id);
         if (!teamSummary) return;
         try {
+          const scenarioDiagnostics: import('../engine/scenario-summary-ai').ScenarioBatchDiagnostic[] = [];
           const result = await generateAiScenarioSummaries({
             teamId: team.id,
             teamName: team.name,
@@ -446,13 +447,15 @@ export async function pregenerateTeamScenarioSummaries(
             force: options.force,
             ignoreFlags: options.ignoreFlags,
             usage: options.usage,
+            diagnostics: scenarioDiagnostics,
           });
           freshGranularByTeam.set(team.id, result);
 
           // Detect positions that SHOULD have produced an AI summary but didn't
-          // (timed out / rate-limited inside generateAiScenarioSummaries, where
-          // the failure is swallowed). Surface to the trace so the slow-lane
-          // drainer re-queues the job and retries just the missing ones.
+          // (parse shortfall / timeout inside generateAiScenarioSummaries, where
+          // the failure is swallowed). Surface to the trace — with the raw model
+          // output when available — so the cause is visible in the e-mail and the
+          // slow-lane drainer re-queues the job to retry just the missing ones.
           const missingPositions = [1, 2, 3, 4].filter(p => {
             const prob = teamSummary.positionProbabilities[p] ?? 0;
             if (prob <= 0 || prob >= 100) return false;
@@ -460,9 +463,13 @@ export async function pregenerateTeamScenarioSummaries(
             return !result[p];
           });
           if (missingPositions.length > 0) {
+            const withRaw = scenarioDiagnostics.find(d => d.rawSnippet);
             options.trace?.errors.push({
               step: `scenario-summaries-incomplete:${team.name}`,
-              message: `${missingPositions.length} position(s) failed to generate: ${missingPositions.join(', ')}`,
+              message: `${missingPositions.length} position(s) failed to generate: ${missingPositions.join(', ')}.`
+                + (withRaw
+                  ? ` Model returned [${withRaw.parsed.join(',')}] for requested [${withRaw.requested.join(',')}]. Raw output (first 1200 chars): ${withRaw.rawSnippet}`
+                  : ''),
             });
           }
 
