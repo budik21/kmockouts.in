@@ -526,46 +526,78 @@ export async function generateAiScenarioSummaries(
     if (!aiEnabled) return result;
   }
 
-  // One batched call for ALL uncached positions of this team (instead of one
-  // call per position) — the system prompt is sent once, not per position.
-  try {
-    const batch = await generateAiSummariesBatch(
-      {
-        teamId: ctx.teamId,
-        teamName: ctx.teamName,
-        groupId: ctx.groupId,
-        allProbabilities: ctx.probabilities,
-        remainingMatches: remainingMatchesForPrompt,
-        currentStandings: ctx.currentStandings,
-      },
-      tasks.map(t => ({
-        position: t.pos,
-        probability: ctx.probabilities[t.pos] ?? 0,
-        outcomePatterns: t.patterns,
-      })),
-    );
+  const shared: BatchSharedContext = {
+    teamId: ctx.teamId,
+    teamName: ctx.teamName,
+    groupId: ctx.groupId,
+    allProbabilities: ctx.probabilities,
+    remainingMatches: remainingMatchesForPrompt,
+    currentStandings: ctx.currentStandings,
+  };
 
-    if (options.usage) {
-      options.usage.calls += 1;
-      options.usage.inputTokens += batch.inputTokens;
-      options.usage.outputTokens += batch.outputTokens;
+  // Group the uncached positions into size-bounded chunks. Batching the system
+  // prompt across positions is the cost win, BUT early in a group a single
+  // position (especially 3rd) can carry a huge number of outcome combinations —
+  // packing all four into one prompt blew past the 200k-token context window.
+  // So we greedily pack positions into chunks under a char budget: small
+  // positions batch together; an oversized one goes alone (same as the old
+  // per-position call, which always fit).
+  const MAX_CHUNK_CHARS = 250_000;
+  const sized = tasks.map(t => ({
+    task: t,
+    blockLen: buildPositionBlock(
+      { position: t.pos, probability: ctx.probabilities[t.pos] ?? 0, outcomePatterns: t.patterns },
+      ctx.teamName,
+      remainingMatchesForPrompt,
+    ).length,
+  }));
+  const chunks: typeof tasks[] = [];
+  let current: typeof tasks = [];
+  let currentLen = 0;
+  for (const { task, blockLen } of sized) {
+    if (current.length > 0 && currentLen + blockLen > MAX_CHUNK_CHARS) {
+      chunks.push(current);
+      current = [];
+      currentLen = 0;
     }
+    current.push(task);
+    currentLen += blockLen;
+  }
+  if (current.length > 0) chunks.push(current);
 
-    // Distribute results back per position and cache each (best-effort), so the
-    // per-position cache granularity is preserved.
-    for (const task of tasks) {
-      const text = batch.byPosition[task.pos];
-      if (text) {
-        result[task.pos] = text;
-        try {
-          await saveAiSummary(ctx.groupId, ctx.teamId, task.pos, text, task.pHash);
-        } catch {
-          // Cache write failure is non-fatal
+  for (const chunk of chunks) {
+    try {
+      const batch = await generateAiSummariesBatch(
+        shared,
+        chunk.map(t => ({
+          position: t.pos,
+          probability: ctx.probabilities[t.pos] ?? 0,
+          outcomePatterns: t.patterns,
+        })),
+      );
+
+      if (options.usage) {
+        options.usage.calls += 1;
+        options.usage.inputTokens += batch.inputTokens;
+        options.usage.outputTokens += batch.outputTokens;
+      }
+
+      // Distribute results back per position and cache each (best-effort) so the
+      // per-position cache granularity is preserved.
+      for (const task of chunk) {
+        const text = batch.byPosition[task.pos];
+        if (text) {
+          result[task.pos] = text;
+          try {
+            await saveAiSummary(ctx.groupId, ctx.teamId, task.pos, text, task.pHash);
+          } catch {
+            // Cache write failure is non-fatal
+          }
         }
       }
+    } catch (err) {
+      console.error(`AI scenario summaries batch failed for ${ctx.teamName} (positions ${chunk.map(t => t.pos).join(',')}):`, err);
     }
-  } catch (err) {
-    console.error(`AI scenario summaries batch failed for ${ctx.teamName}:`, err);
   }
 
   return result;
