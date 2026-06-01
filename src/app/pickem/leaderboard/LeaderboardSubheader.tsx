@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import TeamFlag from '@/app/components/TeamFlag';
+import LocalKickOff from '@/app/components/LocalKickOff';
 import LeaderboardMeWidget from './LeaderboardMeWidget';
 import { teamLabel } from '@/lib/team-label';
 
@@ -24,14 +25,6 @@ interface Props {
   description: string;
   lastScored: LastScoredMatch | null;
   currentUserEntry?: { rank: number; totalPoints: number; shareToken: string } | null;
-}
-
-function formatKickOff(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'short',
-    });
-  } catch { return ''; }
 }
 
 export default function LeaderboardSubheader({ description, lastScored, currentUserEntry }: Props) {
@@ -64,7 +57,7 @@ export default function LeaderboardSubheader({ description, lastScored, currentU
               <span className="leaderboard-last-scored-team-full">{teamLabel(lastScored.awayName, lastScored.awayFifa)}</span>
               <span className="leaderboard-last-scored-team-short">{teamLabel(lastScored.awayShort, lastScored.awayFifa)}</span>
               <TeamFlag countryCode={lastScored.awayCode} />
-              <span className="leaderboard-last-scored-date">· {formatKickOff(lastScored.kickOff)}</span>
+              <span className="leaderboard-last-scored-date">· <LocalKickOff iso={lastScored.kickOff} dateOptions={{ day: 'numeric', month: 'short' }} /></span>
             </span>
           </div>
         )}

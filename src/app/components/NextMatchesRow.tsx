@@ -1,3 +1,5 @@
+import LocalKickOff from './LocalKickOff';
+
 export interface NextMatchDisplay {
   id: number;
   homeShort: string;
@@ -5,7 +7,8 @@ export interface NextMatchDisplay {
   awayShort: string;
   awayCc: string;
   venue: string;
-  dateTimeText: string;
+  /** ISO 8601 kickoff (UTC). Formatted into the visitor's local zone client-side. */
+  kickOff: string;
   countdownText: string;
 }
 
@@ -39,7 +42,11 @@ export default function NextMatchesRow({ matches, large = false }: Props) {
           </div>
           <div className="next-match-meta">
             {m.venue && <span>{m.venue}</span>}
-            <span>{m.dateTimeText}</span>
+            <LocalKickOff
+              iso={m.kickOff}
+              dateOptions={{ weekday: 'short', day: 'numeric', month: 'short' }}
+              timeOptions={{ hour: '2-digit', minute: '2-digit' }}
+            />
             {m.countdownText && <span className="next-match-countdown">{m.countdownText}</span>}
           </div>
         </div>

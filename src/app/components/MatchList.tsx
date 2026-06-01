@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { slugify } from '@/lib/slugify';
 import TeamFlag from './TeamFlag';
+import LocalKickOff from './LocalKickOff';
 import { YellowCardIcon, SecondYellowIcon, RedCardIcon, YellowAndRedCardIcon } from './CardIcons';
 import {
   FAIR_PLAY_YELLOW_CARD,
@@ -64,11 +65,6 @@ function TeamName({
       {inner}
     </Link>
   );
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Calculate fair-play deduction points for a set of cards */
@@ -166,7 +162,13 @@ export default function MatchList({ matches, compact = false, groupId }: MatchLi
                   <div className={`match-score ${m.status === 'SCHEDULED' ? 'scheduled' : ''}`}>
                     {isPlayed
                       ? `${m.homeGoals} - ${m.awayGoals}`
-                      : formatDate(m.kickOff)}
+                      : (
+                        <LocalKickOff
+                          iso={m.kickOff}
+                          dateOptions={{ day: 'numeric', month: 'short' }}
+                          timeOptions={{ hour: '2-digit', minute: '2-digit' }}
+                        />
+                      )}
                   </div>
                   <div className="match-team away">
                     <TeamFlag countryCode={m.awayTeam.countryCode} className="me-2" />

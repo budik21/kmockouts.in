@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { TipMatch } from '../tips/page';
 import { teamLabel } from '@/lib/team-label';
 import { slugify } from '@/lib/slugify';
+import LocalKickOff from '@/app/components/LocalKickOff';
 
 interface TipData {
   homeGoals: number;
@@ -73,25 +74,6 @@ function FlagIcon({ code }: { code: string }) {
     ? `fi fi-${code.slice(0, 2).toLowerCase()} fis fi-${code.toLowerCase()}`
     : `fi fi-${code.toLowerCase()}`;
   return <span className={`${cls} flag-sm`} />;
-}
-
-function formatDate(kickOff: string): string {
-  try {
-    return new Date(kickOff).toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
-  } catch { return ''; }
-}
-
-function formatTime(kickOff: string): string {
-  try {
-    return new Date(kickOff).toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch { return ''; }
 }
 
 export default function PublicTipsView({ matches, tips, userName, shareToken }: Props) {
@@ -262,7 +244,12 @@ export default function PublicTipsView({ matches, tips, userName, shareToken }: 
               </div>
               <div className="tipovacka-match-meta">
                 {m.venue && <span>{m.venue}</span>}
-                <span>{formatDate(m.kickOff)}, {formatTime(m.kickOff)}</span>
+                <LocalKickOff
+                  iso={m.kickOff}
+                  dateOptions={{ weekday: 'short', day: 'numeric', month: 'short' }}
+                  timeOptions={{ hour: '2-digit', minute: '2-digit' }}
+                />
+
               </div>
 
               {/* Eval strip with leading icon */}

@@ -1,8 +1,10 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import TeamFlag from './TeamFlag';
+import LocalKickOff from './LocalKickOff';
+import { useHasMounted } from '@/lib/use-has-mounted';
 
 interface FixtureTeam {
   name: string;
@@ -10,13 +12,15 @@ interface FixtureTeam {
   countryCode: string;
 }
 
-interface FixtureItem {
+export interface FixtureItem {
   id: number;
   groupId: string;
   homeGoals: number | null;
   awayGoals: number | null;
   venue: string;
-  time: string;
+  /** ISO 8601 kickoff (UTC). Grouping by day and the time label are both
+   *  derived from this in the visitor's local zone, client-side. */
+  kickOff: string;
   status: string;
   homeTeam: FixtureTeam;
   awayTeam: FixtureTeam;
@@ -30,10 +34,56 @@ interface FixtureDay {
 }
 
 interface Props {
-  days: FixtureDay[];
+  fixtures: FixtureItem[];
 }
 
-export default function FixturesCalendar({ days }: Props) {
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/** YYYY-MM-DD calendar-day key for an ISO kickoff. Before mount we use the UTC
+ *  date (matching the SSR markup); after mount the visitor's local date, so a
+ *  late-night match lands on the correct local day. */
+function dayKey(iso: string, mounted: boolean): string {
+  const d = new Date(iso);
+  if (!mounted) return iso.slice(0, 10);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** "Thursday, June 11, 2026" from a YYYY-MM-DD key (zone-independent). */
+function formatHeading(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  return `${WEEKDAYS[date.getDay()]}, ${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+/** "Jun 11" from a YYYY-MM-DD key. */
+function formatPill(dateStr: string): string {
+  const [, m, d] = dateStr.split('-').map(Number);
+  return `${MONTHS_SHORT[m - 1]} ${d}`;
+}
+
+export default function FixturesCalendar({ fixtures }: Props) {
+  const mounted = useHasMounted();
+
+  // Group fixtures into day sections. Re-runs once on mount to regroup from UTC
+  // (SSR) into the visitor's local zone. Fixtures arrive sorted by kickoff, and
+  // absolute time ascending implies local-date ascending, so Map insertion
+  // order yields chronological day sections.
+  const days = useMemo<FixtureDay[]>(() => {
+    const map = new Map<string, FixtureDay>();
+    for (const f of fixtures) {
+      const dk = dayKey(f.kickOff, mounted);
+      if (!map.has(dk)) {
+        map.set(dk, { dateKey: dk, heading: formatHeading(dk), pill: formatPill(dk), fixtures: [] });
+      }
+      map.get(dk)!.fixtures.push(f);
+    }
+    return Array.from(map.values());
+  }, [fixtures, mounted]);
+
   const [activeDate, setActiveDate] = useState<string>(days[0]?.dateKey ?? '');
   const [todayKey, setTodayKey] = useState<string>('');
   const dateNavRef = useRef<HTMLDivElement>(null);
@@ -150,7 +200,11 @@ function FixtureCard({ fixture: f }: { fixture: FixtureItem }) {
         <Link href={`/worldcup2026/group-${f.groupId.toLowerCase()}`} className="fixture-group-link">Group {f.groupId}</Link>
         <span className="fixture-venue-time">
           <span className="fixture-venue">{f.venue}</span>
-          <span className="fixture-kickoff">{f.time}</span>
+          <LocalKickOff
+            iso={f.kickOff}
+            className="fixture-kickoff"
+            timeOptions={{ hour: '2-digit', minute: '2-digit' }}
+          />
         </span>
       </div>
       <div className="fixture-card-main">

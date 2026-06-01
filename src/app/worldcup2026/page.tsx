@@ -28,13 +28,6 @@ interface ScheduledMatchRow {
   away_cc: string;
 }
 
-function formatMatchDateTime(iso: string): string {
-  const d = new Date(iso);
-  const date = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
-  return `${date}, ${time} UTC`;
-}
-
 function formatMatchCountdown(iso: string, nowMs: number): string {
   const diff = new Date(iso).getTime() - nowMs;
   if (diff <= 0) return '';
@@ -209,7 +202,7 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
             awayShort: r.away_short,
             awayCc: r.away_cc,
             venue: r.venue,
-            dateTimeText: formatMatchDateTime(r.kick_off),
+            kickOff: r.kick_off,
             countdownText: formatMatchCountdown(r.kick_off, nowMs),
           }));
       })(),

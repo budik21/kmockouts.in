@@ -1,6 +1,7 @@
 'use client';
 
 import TeamFlag from './TeamFlag';
+import LocalKickOff from './LocalKickOff';
 
 interface ResolvedTeamData {
   team: {
@@ -26,15 +27,6 @@ interface KnockoutMatchCardProps {
   pulse?: boolean;
   kickOff?: string | null;
   venue?: string | null;
-}
-
-function formatKickOff(iso: string): string {
-  const d = new Date(iso);
-  const mon = d.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
-  const day = d.getUTCDate();
-  const hh = String(d.getUTCHours()).padStart(2, '0');
-  const mm = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${mon}, ${day} ${hh}:${mm}`;
 }
 
 function SlotRow({ slot }: { slot: SlotData }) {
@@ -76,7 +68,14 @@ export default function KnockoutMatchCard({ matchNumber, home, away, highlight, 
     >
       <div className="ko-match-header">
         <span className="ko-match-number">M{matchNumber}</span>
-        {kickOff && <span className="ko-match-kickoff">{formatKickOff(kickOff)}</span>}
+        {kickOff && (
+          <LocalKickOff
+            iso={kickOff}
+            className="ko-match-kickoff"
+            dateOptions={{ day: 'numeric', month: 'short' }}
+            timeOptions={{ hour: '2-digit', minute: '2-digit' }}
+          />
+        )}
       </div>
       <div className="ko-match-teams">
         <SlotRow slot={home} />

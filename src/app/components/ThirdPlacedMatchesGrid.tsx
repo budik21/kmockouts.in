@@ -1,6 +1,7 @@
 'use client';
 
 import TeamFlag from './TeamFlag';
+import LocalKickOff from './LocalKickOff';
 
 interface MatchInfo {
   opponentName: string;
@@ -28,12 +29,6 @@ interface TeamWithMatches {
 
 interface ThirdPlacedMatchesGridProps {
   teams: TeamWithMatches[];
-}
-
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
-    + ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function ThirdPlacedMatchesGrid({ teams }: ThirdPlacedMatchesGridProps) {
@@ -84,7 +79,11 @@ export default function ThirdPlacedMatchesGrid({ teams }: ThirdPlacedMatchesGrid
                       </div>
                       {!finished && (
                         <div className="text-muted" style={{ fontSize: '0.75rem', marginLeft: '1.1rem' }}>
-                          {formatDateTime(m.kickOff)} · {m.venue}
+                          <LocalKickOff
+                            iso={m.kickOff}
+                            dateOptions={{ day: 'numeric', month: 'short' }}
+                            timeOptions={{ hour: '2-digit', minute: '2-digit' }}
+                          /> · {m.venue}
                         </div>
                       )}
                     </div>

@@ -6,6 +6,7 @@ import type { TipMatch } from '../tips/page';
 import ArrowStepper from '@/app/components/ArrowStepper';
 import { teamLabel } from '@/lib/team-label';
 import { slugify } from '@/lib/slugify';
+import { useHasMounted } from '@/lib/use-has-mounted';
 
 interface TipData {
   homeGoals: number;
@@ -125,21 +126,27 @@ function FlagIcon({ code }: { code: string }) {
   return <span className={`${cls} flag-sm`} />;
 }
 
-function formatDate(kickOff: string): string {
+// `mounted` is false during SSR and the first client render — format in UTC
+// then so server/client markup match — and true after mount, when we format in
+// the visitor's local timezone. See useHasMounted. Date doubles as the
+// section grouping key, so it has to be a plain string, not a component.
+function formatDate(kickOff: string, mounted: boolean): string {
   try {
     return new Date(kickOff).toLocaleDateString('en-GB', {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
+      ...(mounted ? {} : { timeZone: 'UTC' }),
     });
   } catch { return ''; }
 }
 
-function formatTime(kickOff: string): string {
+function formatTime(kickOff: string, mounted: boolean): string {
   try {
     return new Date(kickOff).toLocaleTimeString('en-GB', {
       hour: '2-digit',
       minute: '2-digit',
+      ...(mounted ? {} : { timeZone: 'UTC' }),
     });
   } catch { return ''; }
 }
@@ -155,6 +162,7 @@ export default function TipEditor({
 }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
   const [copied, setCopied] = useState(false);
+  const mounted = useHasMounted();
 
   // Read initial group from URL hash, listen for hashchange (back/forward)
   useEffect(() => {
@@ -225,12 +233,12 @@ export default function TipEditor({
   const matchesByDate = useMemo(() => {
     const map = new Map<string, TipMatch[]>();
     for (const m of filteredMatches) {
-      const date = formatDate(m.kickOff);
+      const date = formatDate(m.kickOff, mounted);
       if (!map.has(date)) map.set(date, []);
       map.get(date)!.push(m);
     }
     return map;
-  }, [filteredMatches]);
+  }, [filteredMatches, mounted]);
 
   const isMatchLocked = (m: TipMatch) => {
     return m.status !== 'SCHEDULED' || new Date(m.kickOff) <= new Date();
@@ -327,7 +335,7 @@ export default function TipEditor({
                       <span className="tipovacka-team-short">{teamLabel(match.awayTeam.shortName, match.awayTeam.fifaRanking)}</span>
                       <FlagIcon code={match.awayTeam.countryCode} />
                     </span>
-                    <span className="tipovacka-match-time">{formatTime(match.kickOff)}</span>
+                    <span className="tipovacka-match-time" suppressHydrationWarning>{formatTime(match.kickOff, mounted)}</span>
                   </div>
 
                   {/* Editable match — not locked yet */}
