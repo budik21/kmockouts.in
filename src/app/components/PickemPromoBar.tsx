@@ -34,7 +34,7 @@ export default function PickemPromoBar() {
           <span className="pickem-promo-icon" aria-hidden="true">🏆</span>
           <span className="pickem-promo-title">Pick&apos;em is live</span>
           <span className="pickem-promo-text">
-            — predict all 48 group matches and climb the leaderboard
+            — predict all 72 group matches and climb the leaderboard
           </span>
           <span className="pickem-promo-cta">Play now →</span>
         </Link>

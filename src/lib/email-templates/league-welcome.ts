@@ -98,7 +98,7 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
                           <div style="font-weight:700;color:#111827;">Predict the scores</div>
                           <div style="color:#374151;font-size:13px;">
                             <a href="${tipsUrl}" style="color:#6f003c;font-weight:600;text-decoration:none;">Fill in your tips</a>
-                            for the 48 group-stage matches. Each tip locks at kick-off. Earn
+                            for the 72 group-stage matches. Each tip locks at kick-off. Earn
                             <strong>4 pts</strong> for the exact score, <strong>1 pt</strong> for the right winner, <strong>0 pts</strong> otherwise.
                           </div>
                         </td>
@@ -133,7 +133,7 @@ export function buildLeagueWelcomeEmail(data: LeagueWelcomeEmailData): TemplateO
                   <td style="padding:18px 24px;">
                     <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:10px;">Good to know</div>
                     <ul style="margin:0;padding-left:20px;color:#1f2937;font-size:13px;line-height:1.6;">
-                      <li style="margin-bottom:8px;">It&rsquo;s just the group stage &mdash; once those 48 games are done, the knockout bracket plays itself out.</li>
+                      <li style="margin-bottom:8px;">It&rsquo;s just the group stage &mdash; once those 72 games are done, the knockout bracket plays itself out.</li>
                       <li style="margin-bottom:8px;">Turn on <a href="${notificationsUrl}" style="color:#6f003c;font-weight:600;text-decoration:none;">e-mail notifications</a> to get your result after every match you tipped.</li>
                       <li style="margin-bottom:8px;">Your name shows on the public leaderboard by default &mdash; you can hide it from your profile.</li>
                       <li style="margin-bottom:8px;">Playing in several leagues? Each tip counts once and scores in every league you&rsquo;re part of.</li>
