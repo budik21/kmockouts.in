@@ -335,7 +335,10 @@ export default function TipEditor({
                       <span className="tipovacka-team-short">{teamLabel(match.awayTeam.shortName, match.awayTeam.fifaRanking)}</span>
                       <FlagIcon code={match.awayTeam.countryCode} />
                     </span>
-                    <span className="tipovacka-match-time" suppressHydrationWarning>{formatTime(match.kickOff, mounted)}</span>
+                    <span className="tipovacka-match-meta-right">
+                      <span className="tipovacka-match-time" suppressHydrationWarning>{formatTime(match.kickOff, mounted)}</span>
+                      {match.venue && <span className="tipovacka-match-venue">{match.venue}</span>}
+                    </span>
                   </div>
 
                   {/* Editable match — not locked yet */}
