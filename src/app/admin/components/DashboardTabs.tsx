@@ -7,6 +7,7 @@ import type { PickemStatsRow } from '../dashboard/page';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 import MatchEditor from './MatchEditor';
 import PickemActions from './PickemActions';
+import TipstersTab, { type TipsterRow } from './TipstersTab';
 import UsersClient from '../users/UsersClient';
 import FeatureFlagsClient from './FeatureFlagsClient';
 import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
@@ -18,6 +19,7 @@ import type { AiPredictionModelKey } from '@/lib/ai-model';
 interface DashboardTabsProps {
   initialMatches: AdminMatch[];
   pickemsStats: PickemStatsRow;
+  tipsters: TipsterRow[];
   isSuperadmin: boolean;
   adminEmails: string[];
   superadminEmail: string;
@@ -35,11 +37,12 @@ interface DashboardTabsProps {
   initialTab?: TabKey;
 }
 
-type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'tipsters' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
 
 export default function DashboardTabs({
   initialMatches,
   pickemsStats,
+  tipsters,
   isSuperadmin,
   adminEmails,
   superadminEmail,
@@ -121,6 +124,9 @@ export default function DashboardTabs({
         </button>
         <button onClick={() => setActiveTab('pickem')} style={tabButtonStyle(activeTab === 'pickem')}>
           Pick&apos;em
+        </button>
+        <button onClick={() => setActiveTab('tipsters')} style={tabButtonStyle(activeTab === 'tipsters')}>
+          Tipsters
         </button>
         <button onClick={() => setActiveTab('users')} style={tabButtonStyle(activeTab === 'users')}>
           User Management
@@ -220,6 +226,20 @@ export default function DashboardTabs({
 
             {/* Management Actions */}
             <PickemActions isSuperadmin={isSuperadmin} />
+          </div>
+        )}
+
+        {/* Tipsters tab — sign-ups grouped by day */}
+        {activeTab === 'tipsters' && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '0.5rem' }}>
+              Tipsters
+            </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Everyone signed up to the prediction game, grouped by the day they joined (newest first).
+              Click a day to expand it.
+            </p>
+            <TipstersTab tipsters={tipsters} />
           </div>
         )}
 

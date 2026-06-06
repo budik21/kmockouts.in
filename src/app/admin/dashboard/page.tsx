@@ -10,6 +10,7 @@ import { listFeatureFlags, isAiGenerationEnabledByEnv } from '@/lib/feature-flag
 import { getAiPredictionModelKey } from '@/lib/ai-model-server';
 import { ALL_GROUPS } from '@/lib/constants';
 import DashboardTabs from '../components/DashboardTabs';
+import type { TipsterRow } from '../components/TipstersTab';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
 interface AdminMatchRow {
@@ -103,8 +104,8 @@ function readScenarios(): { scenarios: ScenarioMeta[]; active: number | null } {
   return { scenarios, active };
 }
 
-type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
-const VALID_TABS: TabKey[] = ['matches', 'scenarios', 'pickem', 'users', 'flags', 'ai', 'twitter', 'env'];
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'tipsters' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
+const VALID_TABS: TabKey[] = ['matches', 'scenarios', 'pickem', 'tipsters', 'users', 'flags', 'ai', 'twitter', 'env'];
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -168,7 +169,7 @@ export default async function AdminDashboardPage({
     : false;
   const aiModel = isSuperadmin ? await getAiPredictionModelKey() : 'haiku';
 
-  const [matchRows, statsRows, adminUserRows] = await Promise.all([
+  const [matchRows, statsRows, adminUserRows, tipsterRows] = await Promise.all([
     query<AdminMatchRow>(`
       SELECT m.*,
         ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
@@ -187,6 +188,12 @@ export default async function AdminDashboardPage({
     `),
     query<{ email: string }>(`
       SELECT email FROM admin_user ORDER BY email
+    `),
+    query<{ id: number; name: string; email: string; created_at: string }>(`
+      SELECT id, name, email,
+        to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+      FROM tipster_user
+      ORDER BY created_at DESC
     `),
   ]);
 
@@ -215,6 +222,12 @@ export default async function AdminDashboardPage({
 
   const stats = statsRows[0] ?? { total: '0', with_consent: '0', without_consent: '0' };
   const adminEmails = adminUserRows.map((r) => r.email);
+  const tipsters: TipsterRow[] = tipsterRows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    createdAt: r.created_at,
+  }));
 
   return (
     <div className="container py-3">
@@ -245,6 +258,7 @@ export default async function AdminDashboardPage({
       <DashboardTabs
         initialMatches={matches}
         pickemsStats={stats}
+        tipsters={tipsters}
         isSuperadmin={isSuperadmin}
         adminEmails={adminEmails}
         superadminEmail={SUPERADMIN_EMAIL}
