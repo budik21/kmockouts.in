@@ -337,7 +337,6 @@ export default function TipEditor({
                     </span>
                     <span className="tipovacka-match-meta-right">
                       <span className="tipovacka-match-time" suppressHydrationWarning>{formatTime(match.kickOff, mounted)}</span>
-                      {match.venue && <span className="tipovacka-match-venue">{match.venue}</span>}
                     </span>
                   </div>
 
@@ -433,6 +432,15 @@ export default function TipEditor({
                       </div>
                     </div>
                   )}
+
+                  {/* Mobile-only footer: group (left) + kick-off time & venue (right) */}
+                  <div className="tipovacka-match-footer">
+                    <span className="tipovacka-match-group">{match.groupId}</span>
+                    <span className="tipovacka-match-footer-meta">
+                      <span className="tipovacka-match-time" suppressHydrationWarning>{formatTime(match.kickOff, mounted)}</span>
+                      {match.venue && <span className="tipovacka-match-venue">{match.venue}</span>}
+                    </span>
+                  </div>
                 </div>
               );
             })}

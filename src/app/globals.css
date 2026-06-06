@@ -4794,11 +4794,16 @@ a.ranking-team-name:hover {
   flex-shrink: 0;
 }
 
-/* Venue only shows on mobile (bottom-right, after the kick-off time) */
+/* Venue only shows on mobile (in the footer, after the kick-off time) */
 .tipovacka-match-venue {
   display: none;
   font-size: 0.7rem;
   color: var(--wc-text-muted);
+}
+
+/* Footer line (group + kick-off time + venue) — mobile only */
+.tipovacka-match-footer {
+  display: none;
 }
 
 /* Edit row (unlocked matches) */
@@ -5608,30 +5613,31 @@ a.ranking-team-name:hover {
     font-size: 0.75rem;
   }
 
-  /* Mobile match header: full team names on a dedicated centered top row,
-     with group (left) + kick-off time and venue (right) on the row below. */
-  .tipovacka-match-header-row {
-    flex-wrap: wrap;
-    column-gap: 0.5rem;
-    row-gap: 0.25rem;
-  }
-
+  /* Mobile match header keeps only the team names — full names, centered.
+     Group, kick-off time and venue move to the footer line below the score. */
   .tipovacka-match-team-labels {
-    order: 1;
-    flex: 0 0 100%;
     justify-content: center;
     flex-wrap: wrap;
     font-size: 0.85rem;
   }
 
-  .tipovacka-match-group {
-    order: 2;
+  .tipovacka-match-header-row > .tipovacka-match-group,
+  .tipovacka-match-header-row > .tipovacka-match-meta-right {
+    display: none;
   }
 
-  .tipovacka-match-meta-right {
-    order: 3;
+  /* Footer line: group (left) · kick-off time + venue (right) */
+  .tipovacka-match-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .tipovacka-match-footer-meta {
+    display: flex;
+    align-items: center;
     margin-left: auto;
-    gap: 0.35rem;
   }
 
   .tipovacka-match-venue {
