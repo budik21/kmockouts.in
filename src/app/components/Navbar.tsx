@@ -23,6 +23,7 @@ export default async function Navbar() {
     ? {
         name: session.user.name ?? '',
         email: session.user.email,
+        image: session.user.image ?? '',
         initials: computeInitials(session.user.name ?? '', session.user.email),
       }
     : null;

@@ -12,6 +12,7 @@ import { logoutAction } from './auth-actions';
 interface NavbarUser {
   name: string;
   email: string;
+  image: string;
   initials: string;
 }
 
@@ -88,7 +89,17 @@ export default function NavbarClient({ user }: Props) {
                 aria-label="Open user menu"
                 title={user.name || user.email}
               >
-                <span className="navbar-avatar-circle">{user.initials}</span>
+                {user.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.image}
+                    alt={user.name || user.email}
+                    className="navbar-avatar-img"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="navbar-avatar-circle">{user.initials}</span>
+                )}
               </button>
             ) : (
               <button
