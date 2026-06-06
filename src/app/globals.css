@@ -5596,10 +5596,13 @@ a.ranking-team-name:hover {
   }
 
   .tipovacka-match-team-labels {
-    flex-wrap: wrap;
-    row-gap: 0.15rem;
+    flex-wrap: nowrap;
     font-size: 0.8rem;
   }
+
+  /* Use short team names on mobile so the match header stays on one line */
+  .tipovacka-team-full { display: none; }
+  .tipovacka-team-short { display: inline; }
 
   .tipovacka-title {
     font-size: 1.8rem;

@@ -2,7 +2,38 @@
 
 import { signIn } from 'next-auth/react';
 
+type Gtag = (command: 'event', name: string, params?: Record<string, unknown>) => void;
+
 export default function LandingPage() {
+  // Fire the Google Ads conversion event for the "Sign in" click, then start
+  // the OAuth flow. We delay the redirect until the event is reported (or a
+  // short timeout elapses) so the conversion isn't lost when the page
+  // navigates to Google. gtag only exists once cookie consent is granted, so
+  // when it's missing we just sign in straight away.
+  function handleSignIn() {
+    const startSignIn = () => signIn('google', { callbackUrl: '/pickem/tips' });
+    const gtag = (window as unknown as { gtag?: Gtag }).gtag;
+
+    if (typeof gtag !== 'function') {
+      startSignIn();
+      return;
+    }
+
+    let navigated = false;
+    const proceed = () => {
+      if (navigated) return;
+      navigated = true;
+      startSignIn();
+    };
+
+    gtag('event', 'conversion_event_subscribe_paid', {
+      event_callback: proceed,
+      event_timeout: 2000,
+    });
+    // Fallback in case the callback never fires (e.g. gtag is blocked).
+    setTimeout(proceed, 2000);
+  }
+
   return (
     <div className="tipovacka-landing">
       <div className="container py-5">
@@ -43,7 +74,7 @@ export default function LandingPage() {
             <div className="tipovacka-auth-buttons">
               <button
                 className="tipovacka-btn tipovacka-btn-google"
-                onClick={() => signIn('google', { callbackUrl: '/pickem/tips' })}
+                onClick={handleSignIn}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
