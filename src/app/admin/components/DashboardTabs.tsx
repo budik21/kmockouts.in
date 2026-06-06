@@ -37,7 +37,8 @@ interface DashboardTabsProps {
   initialTab?: TabKey;
 }
 
-type TabKey = 'matches' | 'scenarios' | 'pickem' | 'tipsters' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
+type PickemSubTab = 'management' | 'tipsters';
 
 export default function DashboardTabs({
   initialMatches,
@@ -60,6 +61,20 @@ export default function DashboardTabs({
   initialTab,
 }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? 'matches');
+  const [pickemSubTab, setPickemSubTab] = useState<PickemSubTab>('management');
+
+  const subTabButtonStyle = (isActive: boolean): React.CSSProperties => ({
+    background: 'none',
+    border: 'none',
+    color: isActive ? 'var(--wc-text)' : 'var(--wc-text-muted)',
+    fontSize: '0.9rem',
+    fontWeight: 500,
+    cursor: 'pointer',
+    padding: '0.4rem 0',
+    marginRight: '1.25rem',
+    borderBottom: isActive ? '2px solid var(--wc-accent)' : '2px solid transparent',
+    transition: 'color 0.2s, border-color 0.2s',
+  });
 
   const tabButtonStyle = (isActive: boolean) => ({
     background: 'none',
@@ -125,9 +140,6 @@ export default function DashboardTabs({
         <button onClick={() => setActiveTab('pickem')} style={tabButtonStyle(activeTab === 'pickem')}>
           Pick&apos;em
         </button>
-        <button onClick={() => setActiveTab('tipsters')} style={tabButtonStyle(activeTab === 'tipsters')}>
-          Tipsters
-        </button>
         <button onClick={() => setActiveTab('users')} style={tabButtonStyle(activeTab === 'users')}>
           User Management
         </button>
@@ -182,64 +194,89 @@ export default function DashboardTabs({
         {/* Pick'em tab */}
         {activeTab === 'pickem' && (
           <div>
-            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1.5rem' }}>
-              Pick&apos;em Management
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
+              Pick&apos;em
             </h2>
 
-            {/* Stats widget */}
-            <div
-              className="p-3 rounded mb-4"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid var(--wc-border)',
-              }}
-            >
-              <div className="d-flex align-items-baseline justify-content-between mb-2">
-                <h3 style={{ color: 'var(--wc-text)', fontSize: '1.05rem', margin: 0 }}>
-                  Current tipsters
-                </h3>
-                <Link href="/pickem/leaderboard" style={{ fontSize: '0.85rem' }}>
-                  View public leaderboard →
-                </Link>
-              </div>
-              <div className="row g-3">
-                <div className="col-4">
-                  <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>Total</div>
-                  <div style={{ color: 'var(--wc-text)', fontSize: '1.6rem', fontWeight: 600 }}>
-                    {pickemsStats.total}
-                  </div>
-                </div>
-                <div className="col-4">
-                  <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>With consent</div>
-                  <div style={{ color: 'var(--wc-accent)', fontSize: '1.6rem', fontWeight: 600 }}>
-                    {pickemsStats.with_consent}
-                  </div>
-                </div>
-                <div className="col-4">
-                  <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>Without consent</div>
-                  <div style={{ color: 'var(--wc-text)', fontSize: '1.6rem', fontWeight: 600, opacity: 0.6 }}>
-                    {pickemsStats.without_consent}
-                  </div>
-                </div>
-              </div>
+            {/* Sub-tab navigation */}
+            <div style={{ borderBottom: '1px solid var(--wc-border)', marginBottom: '1.5rem', display: 'flex' }}>
+              <button
+                onClick={() => setPickemSubTab('management')}
+                style={subTabButtonStyle(pickemSubTab === 'management')}
+              >
+                Management
+              </button>
+              <button
+                onClick={() => setPickemSubTab('tipsters')}
+                style={subTabButtonStyle(pickemSubTab === 'tipsters')}
+              >
+                Tipsters
+              </button>
             </div>
 
-            {/* Management Actions */}
-            <PickemActions isSuperadmin={isSuperadmin} />
-          </div>
-        )}
+            {/* Management sub-tab */}
+            {pickemSubTab === 'management' && (
+              <div>
+                {/* Stats widget */}
+                <div
+                  className="p-3 rounded mb-4"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid var(--wc-border)',
+                  }}
+                >
+                  <div className="d-flex align-items-baseline justify-content-between mb-2">
+                    <h3 style={{ color: 'var(--wc-text)', fontSize: '1.05rem', margin: 0 }}>
+                      Current tipsters
+                    </h3>
+                    <Link href="/pickem/leaderboard" style={{ fontSize: '0.85rem' }}>
+                      View public leaderboard →
+                    </Link>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-4">
+                      <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>Total</div>
+                      <div style={{ color: 'var(--wc-text)', fontSize: '1.6rem', fontWeight: 600 }}>
+                        {pickemsStats.total}
+                      </div>
+                    </div>
+                    <div className="col-4">
+                      <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>With consent</div>
+                      <div style={{ color: 'var(--wc-accent)', fontSize: '1.6rem', fontWeight: 600 }}>
+                        {pickemsStats.with_consent}
+                      </div>
+                    </div>
+                    <div className="col-4">
+                      <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>Without consent</div>
+                      <div style={{ color: 'var(--wc-text)', fontSize: '1.6rem', fontWeight: 600, opacity: 0.6 }}>
+                        {pickemsStats.without_consent}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-        {/* Tipsters tab — sign-ups grouped by day */}
-        {activeTab === 'tipsters' && (
-          <div>
-            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '0.5rem' }}>
-              Tipsters
-            </h2>
-            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
-              Everyone signed up to the prediction game, grouped by the day they joined (newest first).
-              Click a day to expand it.
-            </p>
-            <TipstersTab tipsters={tipsters} />
+                {/* Management Actions */}
+                <PickemActions isSuperadmin={isSuperadmin} />
+              </div>
+            )}
+
+            {/* Tipsters sub-tab — sign-ups grouped by day */}
+            {pickemSubTab === 'tipsters' && (
+              <div>
+                <div className="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-2">
+                  <p style={{ color: 'var(--wc-text-muted)', margin: 0 }}>
+                    Everyone signed up to the prediction game, grouped by the day they joined
+                    (newest first). Click a day to expand it.
+                  </p>
+                  <span style={{ color: 'var(--wc-text)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                    Total:{' '}
+                    <strong style={{ color: 'var(--wc-accent)' }}>{tipsters.length}</strong>{' '}
+                    {tipsters.length === 1 ? 'tipster' : 'tipsters'}
+                  </span>
+                </div>
+                <TipstersTab tipsters={tipsters} />
+              </div>
+            )}
           </div>
         )}
 

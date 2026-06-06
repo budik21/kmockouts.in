@@ -104,8 +104,8 @@ function readScenarios(): { scenarios: ScenarioMeta[]; active: number | null } {
   return { scenarios, active };
 }
 
-type TabKey = 'matches' | 'scenarios' | 'pickem' | 'tipsters' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
-const VALID_TABS: TabKey[] = ['matches', 'scenarios', 'pickem', 'tipsters', 'users', 'flags', 'ai', 'twitter', 'env'];
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
+const VALID_TABS: TabKey[] = ['matches', 'scenarios', 'pickem', 'users', 'flags', 'ai', 'twitter', 'env'];
 
 export default async function AdminDashboardPage({
   searchParams,
