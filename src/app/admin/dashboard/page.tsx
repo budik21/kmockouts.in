@@ -12,6 +12,7 @@ import { ALL_GROUPS } from '@/lib/constants';
 import DashboardTabs from '../components/DashboardTabs';
 import type { TipsterRow } from '../components/TipstersTab';
 import type { LeagueRow } from '../components/LeaguesTab';
+import type { TipRow } from '../components/TipsTab';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
 interface AdminMatchRow {
@@ -170,7 +171,7 @@ export default async function AdminDashboardPage({
     : false;
   const aiModel = isSuperadmin ? await getAiPredictionModelKey() : 'haiku';
 
-  const [matchRows, statsRows, adminUserRows, tipsterRows, leagueRows] = await Promise.all([
+  const [matchRows, statsRows, adminUserRows, tipsterRows, leagueRows, tipRows] = await Promise.all([
     query<AdminMatchRow>(`
       SELECT m.*,
         ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
@@ -212,6 +213,36 @@ export default async function AdminDashboardPage({
       FROM pickem_league l
       JOIN tipster_user ou ON l.owner_user_id = ou.id
       ORDER BY l.created_at DESC
+    `),
+    query<{
+      id: number;
+      tipster_name: string;
+      home_short: string;
+      home_cc: string;
+      away_short: string;
+      away_cc: string;
+      tip_home: number;
+      tip_away: number;
+      result_home: number | null;
+      result_away: number | null;
+      status: string;
+      points: number | null;
+      created_at: string;
+    }>(`
+      SELECT t.id,
+        tu.name AS tipster_name,
+        ht.short_name AS home_short, ht.country_code AS home_cc,
+        at2.short_name AS away_short, at2.country_code AS away_cc,
+        t.home_goals AS tip_home, t.away_goals AS tip_away,
+        m.home_goals AS result_home, m.away_goals AS result_away,
+        m.status, t.points,
+        to_char(t.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+      FROM tip t
+      JOIN tipster_user tu ON t.user_id = tu.id
+      JOIN match m ON t.match_id = m.id
+      JOIN team ht ON m.home_team_id = ht.id
+      JOIN team at2 ON m.away_team_id = at2.id
+      ORDER BY t.created_at DESC
     `),
   ]);
 
@@ -255,6 +286,21 @@ export default async function AdminDashboardPage({
     memberCount: r.member_count,
     createdAt: r.created_at,
   }));
+  const tips: TipRow[] = tipRows.map((r) => ({
+    id: r.id,
+    tipsterName: r.tipster_name,
+    homeShort: r.home_short,
+    homeCc: r.home_cc,
+    awayShort: r.away_short,
+    awayCc: r.away_cc,
+    tipHome: r.tip_home,
+    tipAway: r.tip_away,
+    resultHome: r.result_home,
+    resultAway: r.result_away,
+    finished: r.status === 'FINISHED' && r.result_home !== null && r.result_away !== null,
+    points: r.points,
+    createdAt: r.created_at,
+  }));
 
   return (
     <div className="container py-3">
@@ -287,6 +333,7 @@ export default async function AdminDashboardPage({
         pickemsStats={stats}
         tipsters={tipsters}
         leagues={leagues}
+        tips={tips}
         isSuperadmin={isSuperadmin}
         adminEmails={adminEmails}
         superadminEmail={SUPERADMIN_EMAIL}

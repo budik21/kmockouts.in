@@ -9,6 +9,7 @@ import MatchEditor from './MatchEditor';
 import PickemActions from './PickemActions';
 import TipstersTab, { type TipsterRow } from './TipstersTab';
 import LeaguesTab, { type LeagueRow } from './LeaguesTab';
+import TipsTab, { type TipRow } from './TipsTab';
 import UsersClient from '../users/UsersClient';
 import FeatureFlagsClient from './FeatureFlagsClient';
 import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
@@ -22,6 +23,7 @@ interface DashboardTabsProps {
   pickemsStats: PickemStatsRow;
   tipsters: TipsterRow[];
   leagues: LeagueRow[];
+  tips: TipRow[];
   isSuperadmin: boolean;
   adminEmails: string[];
   superadminEmail: string;
@@ -40,13 +42,14 @@ interface DashboardTabsProps {
 }
 
 type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
-type PickemSubTab = 'management' | 'tipsters' | 'leagues';
+type PickemSubTab = 'management' | 'tipsters' | 'leagues' | 'tips';
 
 export default function DashboardTabs({
   initialMatches,
   pickemsStats,
   tipsters,
   leagues,
+  tips,
   isSuperadmin,
   adminEmails,
   superadminEmail,
@@ -221,6 +224,12 @@ export default function DashboardTabs({
               >
                 Leagues
               </button>
+              <button
+                onClick={() => setPickemSubTab('tips')}
+                style={subTabButtonStyle(pickemSubTab === 'tips')}
+              >
+                Tips
+              </button>
             </div>
 
             {/* Management sub-tab */}
@@ -302,6 +311,25 @@ export default function DashboardTabs({
                   </span>
                 </div>
                 <LeaguesTab leagues={leagues} />
+              </div>
+            )}
+
+            {/* Tips sub-tab — placed tips grouped by day */}
+            {pickemSubTab === 'tips' && (
+              <div>
+                <div className="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-2">
+                  <p style={{ color: 'var(--wc-text-muted)', margin: 0 }}>
+                    Every tip placed in the prediction game, grouped by the day it was
+                    submitted (newest first). Finished matches show the points earned.
+                    Click a day to expand it.
+                  </p>
+                  <span style={{ color: 'var(--wc-text)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                    Total:{' '}
+                    <strong style={{ color: 'var(--wc-accent)' }}>{tips.length}</strong>{' '}
+                    {tips.length === 1 ? 'tip' : 'tips'}
+                  </span>
+                </div>
+                <TipsTab tips={tips} />
               </div>
             )}
           </div>
