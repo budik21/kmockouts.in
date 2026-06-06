@@ -2539,6 +2539,21 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 .me-hero {
   padding: 1rem 0 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.me-hero-text {
+  min-width: 0;
+}
+.me-hero-avatar {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--wc-border);
 }
 .me-hero-title {
   font-size: 1.8rem;

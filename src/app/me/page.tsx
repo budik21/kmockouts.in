@@ -23,16 +23,28 @@ export default async function MePage() {
   }
 
   const name = session.user.name || session.user.email;
+  const image = session.user.image;
 
   return (
     <main className="container py-4">
       <div className="me-hero">
-        <h1 className="me-hero-title">Hi, {name}!</h1>
-        <p className="me-hero-subtitle">Manage your Knockouts.in profile.</p>
-        <div className="me-hero-email" aria-label="Signed-in e-mail address">
-          <span className="me-hero-email-label">Signed in as</span>
-          <span className="me-hero-email-value">{session.user.email}</span>
+        <div className="me-hero-text">
+          <h1 className="me-hero-title">Hi, {name}!</h1>
+          <p className="me-hero-subtitle">Manage your Knockouts.in profile.</p>
+          <div className="me-hero-email" aria-label="Signed-in e-mail address">
+            <span className="me-hero-email-label">Signed in as</span>
+            <span className="me-hero-email-value">{session.user.email}</span>
+          </div>
         </div>
+        {image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={name}
+            className="me-hero-avatar"
+            referrerPolicy="no-referrer"
+          />
+        )}
       </div>
 
       <div className="me-danger-zone">
