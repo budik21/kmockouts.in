@@ -4788,22 +4788,35 @@ a.ranking-team-name:hover {
   color: var(--wc-text-muted);
 }
 
-.tipovacka-match-meta-right {
+/* Footer line: group (left) · kick-off time + venue (right), below the score */
+.tipovacka-match-footer {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
 }
 
-/* Venue only shows on mobile (in the footer, after the kick-off time) */
+.tipovacka-match-footer-meta {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
 .tipovacka-match-venue {
-  display: none;
+  display: inline;
   font-size: 0.7rem;
   color: var(--wc-text-muted);
 }
 
-/* Footer line (group + kick-off time + venue) — mobile only */
-.tipovacka-match-footer {
-  display: none;
+.tipovacka-match-venue::before {
+  content: '·';
+  margin-right: 0.35rem;
+}
+
+/* Center the team names in the prediction widget (rows that carry a footer) */
+.tipovacka-match-row:has(.tipovacka-match-footer) .tipovacka-match-team-labels {
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* Edit row (unlocked matches) */
@@ -5613,40 +5626,11 @@ a.ranking-team-name:hover {
     font-size: 0.75rem;
   }
 
-  /* Mobile match header keeps only the team names — full names, centered.
-     Group, kick-off time and venue move to the footer line below the score. */
+  /* Center team names on mobile (shared match header, incl. public tips view) */
   .tipovacka-match-team-labels {
     justify-content: center;
     flex-wrap: wrap;
     font-size: 0.85rem;
-  }
-
-  .tipovacka-match-header-row > .tipovacka-match-group,
-  .tipovacka-match-header-row > .tipovacka-match-meta-right {
-    display: none;
-  }
-
-  /* Footer line: group (left) · kick-off time + venue (right) */
-  .tipovacka-match-footer {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.75rem;
-  }
-
-  .tipovacka-match-footer-meta {
-    display: flex;
-    align-items: center;
-    margin-left: auto;
-  }
-
-  .tipovacka-match-venue {
-    display: inline;
-  }
-
-  .tipovacka-match-venue::before {
-    content: '·';
-    margin-right: 0.35rem;
   }
 
   .tipovacka-title {

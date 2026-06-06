@@ -323,9 +323,8 @@ export default function TipEditor({
                   key={match.id}
                   className={`tipovacka-match-row ${locked ? 'locked' : ''} ${hasTip ? 'has-tip' : 'no-tip'} ${hasScore ? `scored scored-${tip.points}` : ''} ${isFinished && !hasTip ? 'missed' : ''}`}
                 >
-                  {/* Header: group + teams + time */}
+                  {/* Header: centered team names (group/time/venue live in the footer) */}
                   <div className="tipovacka-match-header-row">
-                    <span className="tipovacka-match-group">{match.groupId}</span>
                     <span className="tipovacka-match-team-labels">
                       <FlagIcon code={match.homeTeam.countryCode} />
                       <span className="tipovacka-team-full">{teamLabel(match.homeTeam.name, match.homeTeam.fifaRanking)}</span>
@@ -334,9 +333,6 @@ export default function TipEditor({
                       <span className="tipovacka-team-full">{teamLabel(match.awayTeam.name, match.awayTeam.fifaRanking)}</span>
                       <span className="tipovacka-team-short">{teamLabel(match.awayTeam.shortName, match.awayTeam.fifaRanking)}</span>
                       <FlagIcon code={match.awayTeam.countryCode} />
-                    </span>
-                    <span className="tipovacka-match-meta-right">
-                      <span className="tipovacka-match-time" suppressHydrationWarning>{formatTime(match.kickOff, mounted)}</span>
                     </span>
                   </div>
 
