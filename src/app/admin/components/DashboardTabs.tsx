@@ -8,6 +8,7 @@ import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 import MatchEditor from './MatchEditor';
 import PickemActions from './PickemActions';
 import TipstersTab, { type TipsterRow } from './TipstersTab';
+import LeaguesTab, { type LeagueRow } from './LeaguesTab';
 import UsersClient from '../users/UsersClient';
 import FeatureFlagsClient from './FeatureFlagsClient';
 import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
@@ -20,6 +21,7 @@ interface DashboardTabsProps {
   initialMatches: AdminMatch[];
   pickemsStats: PickemStatsRow;
   tipsters: TipsterRow[];
+  leagues: LeagueRow[];
   isSuperadmin: boolean;
   adminEmails: string[];
   superadminEmail: string;
@@ -38,12 +40,13 @@ interface DashboardTabsProps {
 }
 
 type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
-type PickemSubTab = 'management' | 'tipsters';
+type PickemSubTab = 'management' | 'tipsters' | 'leagues';
 
 export default function DashboardTabs({
   initialMatches,
   pickemsStats,
   tipsters,
+  leagues,
   isSuperadmin,
   adminEmails,
   superadminEmail,
@@ -212,6 +215,12 @@ export default function DashboardTabs({
               >
                 Tipsters
               </button>
+              <button
+                onClick={() => setPickemSubTab('leagues')}
+                style={subTabButtonStyle(pickemSubTab === 'leagues')}
+              >
+                Leagues
+              </button>
             </div>
 
             {/* Management sub-tab */}
@@ -275,6 +284,24 @@ export default function DashboardTabs({
                   </span>
                 </div>
                 <TipstersTab tipsters={tipsters} />
+              </div>
+            )}
+
+            {/* Leagues sub-tab — created leagues grouped by day */}
+            {pickemSubTab === 'leagues' && (
+              <div>
+                <div className="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-2">
+                  <p style={{ color: 'var(--wc-text-muted)', margin: 0 }}>
+                    Every league created in the prediction game, grouped by the day it was
+                    created (newest first). Click a day to expand it.
+                  </p>
+                  <span style={{ color: 'var(--wc-text)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                    Total:{' '}
+                    <strong style={{ color: 'var(--wc-accent)' }}>{leagues.length}</strong>{' '}
+                    {leagues.length === 1 ? 'league' : 'leagues'}
+                  </span>
+                </div>
+                <LeaguesTab leagues={leagues} />
               </div>
             )}
           </div>

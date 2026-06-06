@@ -11,6 +11,7 @@ import { getAiPredictionModelKey } from '@/lib/ai-model-server';
 import { ALL_GROUPS } from '@/lib/constants';
 import DashboardTabs from '../components/DashboardTabs';
 import type { TipsterRow } from '../components/TipstersTab';
+import type { LeagueRow } from '../components/LeaguesTab';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
 interface AdminMatchRow {
@@ -169,7 +170,7 @@ export default async function AdminDashboardPage({
     : false;
   const aiModel = isSuperadmin ? await getAiPredictionModelKey() : 'haiku';
 
-  const [matchRows, statsRows, adminUserRows, tipsterRows] = await Promise.all([
+  const [matchRows, statsRows, adminUserRows, tipsterRows, leagueRows] = await Promise.all([
     query<AdminMatchRow>(`
       SELECT m.*,
         ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
@@ -194,6 +195,23 @@ export default async function AdminDashboardPage({
         to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
       FROM tipster_user
       ORDER BY created_at DESC
+    `),
+    query<{
+      id: number;
+      code: string;
+      name: string;
+      owner_name: string;
+      owner_email: string;
+      member_count: number;
+      created_at: string;
+    }>(`
+      SELECT l.id, l.code, l.name,
+        ou.name AS owner_name, ou.email AS owner_email,
+        (SELECT COUNT(*) FROM pickem_league_member m WHERE m.league_id = l.id)::int AS member_count,
+        to_char(l.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at
+      FROM pickem_league l
+      JOIN tipster_user ou ON l.owner_user_id = ou.id
+      ORDER BY l.created_at DESC
     `),
   ]);
 
@@ -228,6 +246,15 @@ export default async function AdminDashboardPage({
     email: r.email,
     createdAt: r.created_at,
   }));
+  const leagues: LeagueRow[] = leagueRows.map((r) => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    ownerName: r.owner_name,
+    ownerEmail: r.owner_email,
+    memberCount: r.member_count,
+    createdAt: r.created_at,
+  }));
 
   return (
     <div className="container py-3">
@@ -259,6 +286,7 @@ export default async function AdminDashboardPage({
         initialMatches={matches}
         pickemsStats={stats}
         tipsters={tipsters}
+        leagues={leagues}
         isSuperadmin={isSuperadmin}
         adminEmails={adminEmails}
         superadminEmail={SUPERADMIN_EMAIL}
