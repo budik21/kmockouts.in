@@ -1,6 +1,7 @@
 'use client';
 
 import AdminActionWidget from './AdminActionWidget';
+import LeagueRecalcWidget from './LeagueRecalcWidget';
 
 interface PickemActionsProps {
   isSuperadmin: boolean;
@@ -82,6 +83,8 @@ export default function PickemActions({ isSuperadmin }: PickemActionsProps) {
           return data.message;
         }}
       />
+
+      <LeagueRecalcWidget />
 
       <AdminActionWidget
         hidden={!isSuperadmin}
