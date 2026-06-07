@@ -27,6 +27,10 @@ export default function InviteConfirm({ code, hash, leagueName, ownerName }: Pro
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Failed to join league.');
       router.push(`/pickem/leagues/${code}`);
+      // Bust the client router cache so the league page renders the fresh
+      // standings (with this user's new row) instead of a prefetched snapshot
+      // captured before the join.
+      router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setPending(false);

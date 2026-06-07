@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 
@@ -76,6 +77,9 @@ export default function LeagueMembershipActions({
       )}
       {signedIn && isMember && (
         <>
+          <Link href="/pickem/tips" className="btn btn-primary">
+            Enter your tips
+          </Link>
           {isOwner && (
             <span className="badge text-bg-secondary align-self-center">You own this league</span>
           )}
