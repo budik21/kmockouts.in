@@ -1,9 +1,9 @@
 /**
  * Daily summary e-mail for the superadmin.
  * Runs once a day from the scraper cron and reports activity in the last 24h:
+ *   - headline metrics (new vs total users, tips, leagues; engagement gaps)
+ *   - tip distribution for matches kicking off in the next 24h
  *   - new pick'em leagues created
- *   - total league joins
- *   - all-time totals (leagues + unique members)
  *   - detailed list of newly registered users
  *
  * Fire-and-forget: never throws. A missing RESEND_API_KEY just logs and skips.
@@ -16,6 +16,7 @@ import {
   buildDailySummaryEmail,
   type NewLeagueSummary,
   type NewUserSummary,
+  type UpcomingMatchTips,
 } from '../lib/email-templates/daily-summary';
 
 interface NewLeagueRow {
@@ -34,6 +35,34 @@ interface NewUserRow {
 }
 
 interface CountRow {
+  cnt: string;
+}
+
+interface ReadinessRow {
+  upcoming_count: string;
+  ready_users: string;
+  not_ready_users: string;
+}
+
+interface UpcomingMatchRow {
+  id: number;
+  kick_off: string;
+  home_name: string;
+  home_short: string;
+  home_cc: string;
+  away_name: string;
+  away_short: string;
+  away_cc: string;
+  total_tips: string;
+  home_wins: string;
+  draws: string;
+  away_wins: string;
+}
+
+interface TopScoreRow {
+  match_id: number;
+  home_goals: number;
+  away_goals: number;
   cnt: string;
 }
 
@@ -62,19 +91,114 @@ export async function sendDailySummaryEmail(): Promise<void> {
     [String(WINDOW_HOURS)],
   );
 
-  const joinsRow = await queryOne<CountRow>(
-    `SELECT COUNT(*)::text AS cnt
-       FROM pickem_league_member
-      WHERE joined_at >= NOW() - ($1 || ' hours')::INTERVAL`,
-    [String(WINDOW_HOURS)],
-  );
-
   const totalLeaguesRow = await queryOne<CountRow>(
     `SELECT COUNT(*)::text AS cnt FROM pickem_league`,
   );
 
-  const uniqueMembersRow = await queryOne<CountRow>(
-    `SELECT COUNT(DISTINCT user_id)::text AS cnt FROM pickem_league_member`,
+  // --- Headline counts: users and tips, new-in-window vs all-time ----------
+  const newUsersRow = await queryOne<CountRow>(
+    `SELECT COUNT(*)::text AS cnt
+       FROM tipster_user
+      WHERE created_at >= NOW() - ($1 || ' hours')::INTERVAL`,
+    [String(WINDOW_HOURS)],
+  );
+
+  const totalUsersRow = await queryOne<CountRow>(
+    `SELECT COUNT(*)::text AS cnt FROM tipster_user`,
+  );
+
+  const newTipsRow = await queryOne<CountRow>(
+    `SELECT COUNT(*)::text AS cnt
+       FROM tip
+      WHERE created_at >= NOW() - ($1 || ' hours')::INTERVAL`,
+    [String(WINDOW_HOURS)],
+  );
+
+  const totalTipsRow = await queryOne<CountRow>(
+    `SELECT COUNT(*)::text AS cnt FROM tip`,
+  );
+
+  // Registered users who have never placed a tip.
+  const usersWithoutTipRow = await queryOne<CountRow>(
+    `SELECT COUNT(*)::text AS cnt
+       FROM tipster_user u
+      WHERE NOT EXISTS (SELECT 1 FROM tip t WHERE t.user_id = u.id)`,
+  );
+
+  // Readiness for the next 24h: a user is "ready" only when they have a tip for
+  // every match kicking off within the window; otherwise they are "not ready".
+  const readinessRow = await queryOne<ReadinessRow>(
+    `WITH upcoming AS (
+       SELECT id FROM match
+        WHERE status = 'SCHEDULED'
+          AND kick_off::timestamptz >= NOW()
+          AND kick_off::timestamptz < NOW() + ($1 || ' hours')::INTERVAL
+     ),
+     n AS (SELECT COUNT(*)::int AS total FROM upcoming),
+     per_user AS (
+       SELECT u.id,
+              COUNT(t.match_id) FILTER (WHERE t.match_id IN (SELECT id FROM upcoming)) AS tipped
+         FROM tipster_user u
+         LEFT JOIN tip t ON t.user_id = u.id
+        GROUP BY u.id
+     )
+     SELECT (SELECT total FROM n)::text AS upcoming_count,
+            COUNT(*) FILTER (WHERE (SELECT total FROM n) > 0 AND tipped >= (SELECT total FROM n))::text AS ready_users,
+            COUNT(*) FILTER (WHERE (SELECT total FROM n) > 0 AND tipped <  (SELECT total FROM n))::text AS not_ready_users
+       FROM per_user`,
+    [String(WINDOW_HOURS)],
+  );
+
+  // Per-match tip distribution for matches kicking off in the next 24h.
+  const upcomingMatchRows = await query<UpcomingMatchRow>(
+    `SELECT m.id,
+            m.kick_off,
+            ht.name         AS home_name,
+            ht.short_name   AS home_short,
+            ht.country_code AS home_cc,
+            at.name         AS away_name,
+            at.short_name   AS away_short,
+            at.country_code AS away_cc,
+            COUNT(t.id)::text AS total_tips,
+            COUNT(t.id) FILTER (WHERE t.home_goals > t.away_goals)::text AS home_wins,
+            COUNT(t.id) FILTER (WHERE t.home_goals = t.away_goals)::text AS draws,
+            COUNT(t.id) FILTER (WHERE t.home_goals < t.away_goals)::text AS away_wins
+       FROM match m
+       JOIN team ht ON ht.id = m.home_team_id
+       JOIN team at ON at.id = m.away_team_id
+       LEFT JOIN tip t ON t.match_id = m.id
+      WHERE m.status = 'SCHEDULED'
+        AND m.kick_off::timestamptz >= NOW()
+        AND m.kick_off::timestamptz < NOW() + ($1 || ' hours')::INTERVAL
+      GROUP BY m.id, m.kick_off, ht.name, ht.short_name, ht.country_code,
+               at.name, at.short_name, at.country_code
+      ORDER BY m.kick_off::timestamptz`,
+    [String(WINDOW_HOURS)],
+  );
+
+  // Most frequently tipped exact scoreline per upcoming match (ties broken by
+  // the lower home then away goals, so the result is deterministic).
+  const topScoreRows = upcomingMatchRows.length === 0
+    ? []
+    : await query<TopScoreRow>(
+        `SELECT match_id, home_goals, away_goals, cnt::text AS cnt
+           FROM (
+             SELECT t.match_id, t.home_goals, t.away_goals,
+                    COUNT(*) AS cnt,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY t.match_id
+                      ORDER BY COUNT(*) DESC, t.home_goals ASC, t.away_goals ASC
+                    ) AS rn
+               FROM tip t
+              WHERE t.match_id = ANY($1::int[])
+              GROUP BY t.match_id, t.home_goals, t.away_goals
+           ) s
+          WHERE rn = 1`,
+        [upcomingMatchRows.map((m) => m.id)],
+      );
+
+  const topScoreByMatch = new Map(
+    topScoreRows.map((r) => [r.match_id, r]),
   );
 
   const newUserRows = await query<NewUserRow>(
@@ -108,13 +232,43 @@ export async function sendDailySummaryEmail(): Promise<void> {
     joinedLeagueCount: parseInt(r.joined_league_count, 10) || 0,
   }));
 
+  const num = (v: string | undefined | null) => parseInt(v ?? '0', 10) || 0;
+
+  const upcomingMatches: UpcomingMatchTips[] = upcomingMatchRows.map((r) => {
+    const top = topScoreByMatch.get(r.id);
+    return {
+      homeName: r.home_name,
+      homeShort: r.home_short,
+      homeCc: r.home_cc,
+      awayName: r.away_name,
+      awayShort: r.away_short,
+      awayCc: r.away_cc,
+      kickOff: new Date(r.kick_off),
+      totalTips: num(r.total_tips),
+      homeWins: num(r.home_wins),
+      draws: num(r.draws),
+      awayWins: num(r.away_wins),
+      topScore: top
+        ? { homeGoals: top.home_goals, awayGoals: top.away_goals, count: num(top.cnt) }
+        : null,
+    };
+  });
+
   const { subject, html } = buildDailySummaryEmail({
     windowStart,
     windowEnd,
+    newUsers24h: num(newUsersRow?.cnt),
+    totalUsers: num(totalUsersRow?.cnt),
+    newTips24h: num(newTipsRow?.cnt),
+    totalTips: num(totalTipsRow?.cnt),
+    usersWithoutTip: num(usersWithoutTipRow?.cnt),
+    upcomingMatchCount: num(readinessRow?.upcoming_count),
+    usersNotReady: num(readinessRow?.not_ready_users),
+    usersReady: num(readinessRow?.ready_users),
+    newLeaguesCount: newLeagues.length,
+    totalLeagues: num(totalLeaguesRow?.cnt),
+    upcomingMatches,
     newLeagues,
-    joinsLast24h: parseInt(joinsRow?.cnt ?? '0', 10) || 0,
-    totalLeagues: parseInt(totalLeaguesRow?.cnt ?? '0', 10) || 0,
-    totalUniqueMembers: parseInt(uniqueMembersRow?.cnt ?? '0', 10) || 0,
     newUsers,
   });
 
@@ -129,7 +283,8 @@ export async function sendDailySummaryEmail(): Promise<void> {
   });
 
   console.log(
-    `  [daily-summary] sent: ${newLeagues.length} new leagues, ` +
-    `${joinsRow?.cnt ?? 0} joins, ${newUsers.length} new users`,
+    `  [daily-summary] sent: ${newUsers.length} new users, ` +
+    `${num(newTipsRow?.cnt)} new tips, ${newLeagues.length} new leagues, ` +
+    `${upcomingMatches.length} upcoming matches`,
   );
 }
