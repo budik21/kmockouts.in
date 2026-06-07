@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { auth } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { calculateTipPoints } from '@/lib/tip-scoring';
+import { recalculateLeagueStandings } from '@/lib/league-standings';
+import { LEADERBOARD_TAG } from '@/lib/cache-tags';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +53,22 @@ export async function POST(req: NextRequest) {
       [session.tipsterId, tip.matchId, tip.homeGoals, tip.awayGoals, now],
     );
     saved++;
+  }
+
+  // Placing/editing tips changes each league member's total_tips / pending_count,
+  // but those live in the materialized pickem_league_standings table. Refresh the
+  // standings for every league this user belongs to (which also busts their
+  // per-league cache tags), and invalidate the global leaderboard cache so the
+  // live count there re-renders. Only when something actually changed.
+  if (saved > 0) {
+    const leagues = await query<{ league_id: number }>(
+      'SELECT league_id FROM pickem_league_member WHERE user_id = $1',
+      [session.tipsterId],
+    );
+    for (const { league_id } of leagues) {
+      await recalculateLeagueStandings(league_id);
+    }
+    revalidateTag(LEADERBOARD_TAG, 'max');
   }
 
   return NextResponse.json({ saved });
