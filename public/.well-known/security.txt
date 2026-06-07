@@ -1,0 +1,4 @@
+Contact: mailto:support@knockouts.in
+Expires: 2027-06-07T00:00:00.000Z
+Preferred-Languages: en, cs
+Canonical: https://knockouts.in/.well-known/security.txt
