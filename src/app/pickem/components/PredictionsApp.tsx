@@ -183,6 +183,12 @@ export default function PredictionsApp({
   const totalTipped = Object.keys(tips).length;
   const totalMatches = matches.length;
   const progress = totalMatches > 0 ? Math.round((totalTipped / totalMatches) * 100) : 0;
+  const tipsColor =
+    totalTipped === 0
+      ? '#dc2626'
+      : totalTipped >= totalMatches
+        ? '#15803d'
+        : 'darkgoldenrod';
   const scored = stats.exact + stats.outcome + stats.wrong;
   const pct = (n: number) => (scored > 0 ? Math.round((n / scored) * 100) : 0);
 
@@ -265,7 +271,9 @@ export default function PredictionsApp({
             <div className="tipovacka-dashboard-row mb-4">
               <div className="tipovacka-score-cards tipovacka-score-cards-wide">
                 <div className="tipovacka-score-card tipovacka-score-matches">
-                  <div className="tipovacka-score-card-value">{totalMatches}</div>
+                  <div className="tipovacka-score-card-value" style={{ color: tipsColor }}>
+                    {totalTipped}/{totalMatches}
+                  </div>
                   <div className="tipovacka-score-card-label">Tips Total</div>
                 </div>
                 <div className="tipovacka-score-card tipovacka-score-exact">
