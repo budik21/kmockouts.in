@@ -16,7 +16,7 @@ export interface NewUserSummary {
   joinedLeagueCount: number;
 }
 
-/** Aggregated tip distribution for a single match kicking off within 24h. */
+/** Aggregated tip distribution for a single match kicking off within 72h. */
 export interface UpcomingMatchTips {
   homeName: string;
   homeShort: string;
@@ -42,7 +42,7 @@ export interface DailySummaryEmailData {
   newTips24h: number;
   totalTips: number;
   usersWithoutTip: number;
-  // "ready for the next 24h" split — only meaningful when upcomingMatchCount > 0.
+  // "ready for the next 72h" split — only meaningful when upcomingMatchCount > 0.
   upcomingMatchCount: number;
   usersNotReady: number;
   usersReady: number;
@@ -204,14 +204,14 @@ export function buildDailySummaryEmail(data: DailySummaryEmailData): TemplateOut
     ),
     data.upcomingMatchCount > 0
       ? widget(
-          'Not ready for next 24h / ready',
+          'Not ready for next 72h / ready',
           `${data.usersNotReady} / ${data.usersReady}`,
-          `Users missing at least one tip for the ${data.upcomingMatchCount} match${data.upcomingMatchCount === 1 ? '' : 'es'} kicking off within the next 24 hours, against users who have tipped them all.`,
+          `Users missing at least one tip for the ${data.upcomingMatchCount} match${data.upcomingMatchCount === 1 ? '' : 'es'} kicking off within the next 72 hours, against users who have tipped them all.`,
         )
       : widget(
-          'Not ready for next 24h / ready',
+          'Not ready for next 72h / ready',
           '—',
-          'No matches kick off within the next 24 hours.',
+          'No matches kick off within the next 72 hours.',
         ),
     widget(
       'New leagues (24h) / total',
@@ -221,7 +221,7 @@ export function buildDailySummaryEmail(data: DailySummaryEmailData): TemplateOut
   ].join('');
 
   const upcomingSection = data.upcomingMatches.length === 0
-    ? `<div style="padding:14px 16px;color:#6b7280;font-size:13px;font-style:italic;">No matches kick off within the next 24 hours.</div>`
+    ? `<div style="padding:14px 16px;color:#6b7280;font-size:13px;font-style:italic;">No matches kick off within the next 72 hours.</div>`
     : data.upcomingMatches.map(upcomingMatchBlock).join('');
 
   const newLeaguesRows = data.newLeagues.length === 0
@@ -288,7 +288,7 @@ export function buildDailySummaryEmail(data: DailySummaryEmailData): TemplateOut
 
           <tr>
             <td style="padding:14px 22px 4px;">
-              <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Tip distribution — matches in the next 24h</div>
+              <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Tip distribution — matches in the next 72h</div>
               <div style="font-size:12px;color:#9ca3af;margin-bottom:10px;line-height:1.45;">Share of tips predicting a home win, draw or away win, plus the most popular exact score.</div>
               ${upcomingSection}
             </td>

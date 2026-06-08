@@ -67,6 +67,8 @@ interface TopScoreRow {
 }
 
 const WINDOW_HOURS = 24;
+// Forward-looking window for upcoming matches and tip readiness/distribution.
+const UPCOMING_WINDOW_HOURS = 72;
 
 export async function sendDailySummaryEmail(): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
@@ -125,7 +127,7 @@ export async function sendDailySummaryEmail(): Promise<void> {
       WHERE NOT EXISTS (SELECT 1 FROM tip t WHERE t.user_id = u.id)`,
   );
 
-  // Readiness for the next 24h: a user is "ready" only when they have a tip for
+  // Readiness for the next 72h: a user is "ready" only when they have a tip for
   // every match kicking off within the window; otherwise they are "not ready".
   const readinessRow = await queryOne<ReadinessRow>(
     `WITH upcoming AS (
@@ -146,10 +148,10 @@ export async function sendDailySummaryEmail(): Promise<void> {
             COUNT(*) FILTER (WHERE (SELECT total FROM n) > 0 AND tipped >= (SELECT total FROM n))::text AS ready_users,
             COUNT(*) FILTER (WHERE (SELECT total FROM n) > 0 AND tipped <  (SELECT total FROM n))::text AS not_ready_users
        FROM per_user`,
-    [String(WINDOW_HOURS)],
+    [String(UPCOMING_WINDOW_HOURS)],
   );
 
-  // Per-match tip distribution for matches kicking off in the next 24h.
+  // Per-match tip distribution for matches kicking off in the next 72h.
   const upcomingMatchRows = await query<UpcomingMatchRow>(
     `SELECT m.id,
             m.kick_off,
@@ -173,7 +175,7 @@ export async function sendDailySummaryEmail(): Promise<void> {
       GROUP BY m.id, m.kick_off, ht.name, ht.short_name, ht.country_code,
                at.name, at.short_name, at.country_code
       ORDER BY m.kick_off::timestamptz`,
-    [String(WINDOW_HOURS)],
+    [String(UPCOMING_WINDOW_HOURS)],
   );
 
   // Most frequently tipped exact scoreline per upcoming match (ties broken by
