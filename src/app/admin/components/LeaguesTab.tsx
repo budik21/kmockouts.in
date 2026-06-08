@@ -158,6 +158,14 @@ export default function LeaguesTab({ leagues }: { leagues: LeagueRow[] }) {
                       <span style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>
                         {formatTime(l.createdAt)}
                       </span>
+                      <a
+                        href={`/pickem/leagues/${l.code}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--wc-accent)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                      >
+                        Leaderboard ↗
+                      </a>
                     </div>
                   </div>
                 ))}
