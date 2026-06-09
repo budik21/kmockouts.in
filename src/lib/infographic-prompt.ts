@@ -102,13 +102,14 @@ RIGHT SIDE — the away nation (${m.awayName})
 
 CENTRE — prediction card (a clean card floating in the central strip; crisp and clearly legible)
 - A badge at the top reading "PREDICTION".
-- Below it, the single most-tipped final score in large, bold numerals, written as "${m.homeShort} [home]–[away] ${m.awayShort}".
+- Below it, the single most-tipped final score in very large, bold numerals, written as "${m.homeShort} [home]–[away] ${m.awayShort}". This score is the dominant element of the card — make it at least 25% larger than any other text on the card.
 - Directly below the score, a small pill badge reading "MOST-TIPPED RESULT · [count] OF [total] TIPS" (use most_tipped_score.count and predictions.total_tips).
-- Below that, a horizontal stacked bar split into three labelled segments — HOME WIN / DRAW / AWAY WIN — sized to the three percentages. Fill each segment with a SOLID FLAT colour: a representative colour of each nation for the win segments, neutral grey for the draw. Print each percentage on its own segment.
+- Below that, a horizontal stacked bar split into three segments sized to the three percentages. Fill each segment with a SOLID FLAT colour: a representative colour of each nation for the win segments, neutral grey for the draw. Put NO text, labels or percentages on or above the bar itself.
+- Directly below the bar, a single CENTRED caption line in smaller text giving the breakdown with three-letter team abbreviations: "${m.homeShort} Wins: [home]%  ·  Draw: [draw]%  ·  ${m.awayShort} Wins: [away]%".
 - Keep the card compact. Do NOT add a metadata footer strip (no separate total-tips / competition / date row) — that information already appears in the badge above.
 
 LEGIBILITY
-- The bar segments must stay readable: solid flat fills only. Do NOT fill them with flags, photos, textures or patterns.
+- The bar segments must stay readable: solid flat fills only. Do NOT fill them with flags, photos, textures or patterns, and do not print any text inside the bar.
 
 DATA — build every textual and numeric element STRICTLY from this JSON. Do not invent scores, dates or numbers; use exactly these values. If "most_tipped_score" is null, omit the central score and the "most-tipped result" badge, and write "No clear favourite" instead.
 
