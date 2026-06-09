@@ -86,21 +86,31 @@ OUTPUT FORMAT
 - A single cohesive, high-detail, photorealistic collage — not a flat vector graphic and not a cartoon.
 
 CONCEPT
-The image celebrates an upcoming FIFA World Cup 2026 group-stage match and visualises how fans predict it will end. It is split vertically into a HOME side on the LEFT and an AWAY side on the RIGHT, with a prediction infographic floating in the centre.
+The image celebrates an upcoming FIFA World Cup 2026 group-stage match and visualises how fans predict it will end. The home nation occupies the LEFT side, the away nation the RIGHT side, and a prediction infographic card sits in the CENTRE.
+
+COMPOSITION — keep the centre open for the card
+- The collage imagery hugs the left and right edges and flows from top to bottom along each side. Leave a clear vertical strip down the middle for the prediction card — do NOT fill the whole left/right halves edge to edge.
+- Keep each side clean and uncluttered: pick only ONE famous landmark or monument plus AT MOST one more iconic element (a national animal/symbol OR a typical national dish). Do not pile up many objects — two strong elements per side, not everything at once.
 
 LEFT SIDE — the home nation (${m.homeName})
-- Background: a famous national landmark or monument of ${m.homeName}, combined with an iconic national symbol and a typical national dish, blended naturally into one realistic scene.
-- A large, realistic waving flag of ${m.homeName} across the upper area.
+- A large, realistic flag of ${m.homeName} waving INWARD FROM THE LEFT edge, in the upper-left area.
+- One famous ${m.homeName} landmark and at most one more iconic ${m.homeName} element, arranged down the left side.
 
 RIGHT SIDE — the away nation (${m.awayName})
-- Mirror the left side for ${m.awayName}: a famous national landmark or monument, an iconic national symbol and a typical national dish, with a large, realistic waving flag of ${m.awayName} above.
+- A large, realistic flag of ${m.awayName} waving INWARD FROM THE RIGHT edge, in the upper-right area.
+- One famous ${m.awayName} landmark and at most one more iconic ${m.awayName} element, arranged down the right side.
 
-CENTER — prediction infographic (must be crisp and clearly legible)
+CENTRE — prediction card (a clean card floating in the central strip; crisp and clearly legible)
 - A badge at the top reading "PREDICTION".
-- Beneath the badge, the single most-tipped final score in large, bold numerals, written as "${m.homeShort} [home]–[away] ${m.awayShort}".
-- Beneath the score, a horizontal stacked bar split into three labelled segments — home win / draw / away win — sized to the three percentages and coloured to each side (home colour, neutral grey for the draw, away colour). Print each percentage on its own segment.
+- Below it, the single most-tipped final score in large, bold numerals, written as "${m.homeShort} [home]–[away] ${m.awayShort}".
+- Directly below the score, a small pill badge reading "MOST-TIPPED RESULT · [count] OF [total] TIPS" (use most_tipped_score.count and predictions.total_tips).
+- Below that, a horizontal stacked bar split into three labelled segments — HOME WIN / DRAW / AWAY WIN — sized to the three percentages. Fill each segment with a SOLID FLAT colour: a representative colour of each nation for the win segments, neutral grey for the draw. Print each percentage on its own segment.
+- Keep the card compact. Do NOT add a metadata footer strip (no separate total-tips / competition / date row) — that information already appears in the badge above.
 
-DATA — build every textual and numeric element STRICTLY from this JSON. Do not invent scores, dates or numbers; use exactly these values. If "most_tipped_score" is null, omit the central score and write "No clear favourite" instead.
+LEGIBILITY
+- The bar segments must stay readable: solid flat fills only. Do NOT fill them with flags, photos, textures or patterns.
+
+DATA — build every textual and numeric element STRICTLY from this JSON. Do not invent scores, dates or numbers; use exactly these values. If "most_tipped_score" is null, omit the central score and the "most-tipped result" badge, and write "No clear favourite" instead.
 
 \`\`\`json
 ${json}
@@ -108,6 +118,8 @@ ${json}
 
 DO NOT
 - Do not use any official FIFA or FIFA World Cup logo, emblem, trophy, mascot, wordmark or other branded/trademarked element.
+- Do not fill the prediction bar with flags, photos or patterns — solid flat colours only.
+- Do not overcrowd the sides; at most one landmark plus one other element per nation.
 - Do not add any score, statistic, sponsor logo or text that is not present in the JSON.
 - Do not change the 3:2 aspect ratio.`;
 }
