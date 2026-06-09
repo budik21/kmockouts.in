@@ -13,6 +13,7 @@ import DashboardTabs from '../components/DashboardTabs';
 import type { TipsterRow } from '../components/TipstersTab';
 import type { LeagueRow } from '../components/LeaguesTab';
 import type { TipRow } from '../components/TipsTab';
+import type { MatchTipStats } from '../components/PickemMatchesTab';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
 interface AdminMatchRow {
@@ -246,6 +247,91 @@ export default async function AdminDashboardPage({
     `),
   ]);
 
+  // Per-match tip distribution for every group-stage fixture, mirroring the
+  // daily-summary aggregation. Feeds the Pick'em → Matches sub-tab (tip counts,
+  // home/draw/away share, most-tipped score) and the AI infographic prompt.
+  const matchStatsRows = await query<{
+    id: number;
+    group_id: string;
+    round: number;
+    kick_off: string;
+    home_name: string;
+    home_short: string;
+    home_cc: string;
+    away_name: string;
+    away_short: string;
+    away_cc: string;
+    total_tips: string;
+    home_wins: string;
+    draws: string;
+    away_wins: string;
+  }>(
+    `SELECT m.id, m.group_id, m.round, m.kick_off,
+        ht.name AS home_name, ht.short_name AS home_short, ht.country_code AS home_cc,
+        at2.name AS away_name, at2.short_name AS away_short, at2.country_code AS away_cc,
+        COUNT(t.id)::text AS total_tips,
+        COUNT(t.id) FILTER (WHERE t.home_goals > t.away_goals)::text AS home_wins,
+        COUNT(t.id) FILTER (WHERE t.home_goals = t.away_goals)::text AS draws,
+        COUNT(t.id) FILTER (WHERE t.home_goals < t.away_goals)::text AS away_wins
+      FROM match m
+      JOIN team ht ON m.home_team_id = ht.id
+      JOIN team at2 ON m.away_team_id = at2.id
+      LEFT JOIN tip t ON t.match_id = m.id
+      WHERE m.group_id = ANY($1)
+      GROUP BY m.id, m.group_id, m.round, m.kick_off,
+        ht.name, ht.short_name, ht.country_code,
+        at2.name, at2.short_name, at2.country_code
+      ORDER BY m.kick_off, m.group_id, m.id`,
+    [[...ALL_GROUPS]],
+  );
+
+  // Most frequently tipped exact scoreline per match (ties broken by the lower
+  // home then away goals, so the result is deterministic). Mirrors daily-summary.
+  const matchTopScoreRows = matchStatsRows.length === 0
+    ? []
+    : await query<{ match_id: number; home_goals: number; away_goals: number; cnt: string }>(
+        `SELECT match_id, home_goals, away_goals, cnt::text AS cnt
+           FROM (
+             SELECT t.match_id, t.home_goals, t.away_goals,
+                    COUNT(*) AS cnt,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY t.match_id
+                      ORDER BY COUNT(*) DESC, t.home_goals ASC, t.away_goals ASC
+                    ) AS rn
+               FROM tip t
+              WHERE t.match_id = ANY($1::int[])
+              GROUP BY t.match_id, t.home_goals, t.away_goals
+           ) s
+          WHERE rn = 1`,
+        [matchStatsRows.map((m) => m.id)],
+      );
+
+  const topScoreByMatch = new Map(matchTopScoreRows.map((r) => [r.match_id, r]));
+  const toInt = (v: string | null | undefined) => parseInt(v ?? '0', 10) || 0;
+
+  const matchTipStats: MatchTipStats[] = matchStatsRows.map((r) => {
+    const top = topScoreByMatch.get(r.id);
+    return {
+      id: r.id,
+      groupId: r.group_id,
+      round: r.round,
+      kickOff: r.kick_off,
+      homeName: r.home_name,
+      homeShort: r.home_short,
+      homeCc: r.home_cc,
+      awayName: r.away_name,
+      awayShort: r.away_short,
+      awayCc: r.away_cc,
+      totalTips: toInt(r.total_tips),
+      homeWins: toInt(r.home_wins),
+      draws: toInt(r.draws),
+      awayWins: toInt(r.away_wins),
+      topScore: top
+        ? { homeGoals: top.home_goals, awayGoals: top.away_goals, count: toInt(top.cnt) }
+        : null,
+    };
+  });
+
   const matches: AdminMatch[] = matchRows.map((r) => ({
     id: r.id,
     groupId: r.group_id,
@@ -334,6 +420,7 @@ export default async function AdminDashboardPage({
         tipsters={tipsters}
         leagues={leagues}
         tips={tips}
+        matchTipStats={matchTipStats}
         isSuperadmin={isSuperadmin}
         adminEmails={adminEmails}
         superadminEmail={SUPERADMIN_EMAIL}

@@ -10,6 +10,7 @@ import PickemActions from './PickemActions';
 import TipstersTab, { type TipsterRow } from './TipstersTab';
 import LeaguesTab, { type LeagueRow } from './LeaguesTab';
 import TipsTab, { type TipRow } from './TipsTab';
+import PickemMatchesTab, { type MatchTipStats } from './PickemMatchesTab';
 import UsersClient from '../users/UsersClient';
 import FeatureFlagsClient from './FeatureFlagsClient';
 import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
@@ -24,6 +25,7 @@ interface DashboardTabsProps {
   tipsters: TipsterRow[];
   leagues: LeagueRow[];
   tips: TipRow[];
+  matchTipStats: MatchTipStats[];
   isSuperadmin: boolean;
   adminEmails: string[];
   superadminEmail: string;
@@ -42,7 +44,7 @@ interface DashboardTabsProps {
 }
 
 type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
-type PickemSubTab = 'management' | 'tipsters' | 'leagues' | 'tips';
+type PickemSubTab = 'management' | 'matches' | 'tipsters' | 'leagues' | 'tips';
 
 export default function DashboardTabs({
   initialMatches,
@@ -50,6 +52,7 @@ export default function DashboardTabs({
   tipsters,
   leagues,
   tips,
+  matchTipStats,
   isSuperadmin,
   adminEmails,
   superadminEmail,
@@ -213,6 +216,12 @@ export default function DashboardTabs({
                 Management
               </button>
               <button
+                onClick={() => setPickemSubTab('matches')}
+                style={subTabButtonStyle(pickemSubTab === 'matches')}
+              >
+                Matches
+              </button>
+              <button
                 onClick={() => setPickemSubTab('tipsters')}
                 style={subTabButtonStyle(pickemSubTab === 'tipsters')}
               >
@@ -275,6 +284,19 @@ export default function DashboardTabs({
 
                 {/* Management Actions */}
                 <PickemActions isSuperadmin={isSuperadmin} />
+              </div>
+            )}
+
+            {/* Matches sub-tab — group-stage fixtures with tip distribution */}
+            {pickemSubTab === 'matches' && (
+              <div>
+                <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+                  Every group-stage fixture with its tip distribution — how many tips were placed,
+                  the share predicting a home win, draw or away win, and the most-tipped exact score.
+                  Use <strong>Copy AI prompt</strong> to grab a ready-made image-generation prompt
+                  (filled with this match&apos;s data) for a social-media infographic collage.
+                </p>
+                <PickemMatchesTab matches={matchTipStats} />
               </div>
             )}
 
