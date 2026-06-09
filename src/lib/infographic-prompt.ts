@@ -104,7 +104,7 @@ RIGHT SIDE — the away nation (${m.awayName})
 CENTRE — prediction card (a clean card floating in the central strip; crisp and clearly legible)
 - A badge at the top reading "PREDICTION".
 - Below it, the single most-tipped final score in very large, bold numerals, written as "${m.homeShort} [home]–[away] ${m.awayShort}". This score is the dominant element of the card — make it at least 25% larger than any other text on the card.
-- Directly below the score, a small pill badge reading "MOST-TIPPED RESULT · [count] OF [total] TIPS" (use most_tipped_score.count and predictions.total_tips).
+- Directly below the score, a small pill badge reading "MOST-TIPPED RESULT · [count] OUT OF [total] TIPS" (use most_tipped_score.count and predictions.total_tips).
 - Below that, a horizontal stacked bar split into three segments sized to the three percentages. Fill each segment with a SOLID FLAT colour: a representative colour of each nation for the win segments, neutral grey for the draw. Put NO text, labels or percentages on or above the bar itself.
 - Directly below the bar, a single CENTRED caption line in smaller text giving the breakdown with three-letter team abbreviations: "${m.homeShort} Wins: [home]%  ·  Draw: [draw]%  ·  ${m.awayShort} Wins: [away]%".
 - Keep the card compact. Do NOT add a metadata footer strip (no separate total-tips / competition / date row) — that information already appears in the badge above.
