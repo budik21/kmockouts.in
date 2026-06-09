@@ -9,7 +9,9 @@ import type { Metadata } from 'next';
 import { SITE_URL } from '@/lib/seo';
 import LeagueLeaderboardTable, { type LeagueRow } from './LeagueLeaderboardTable';
 import LeagueMembershipActions from './LeagueMembershipActions';
+import CopyInviteButton from './CopyInviteButton';
 import { disambiguateNames } from '@/lib/name-disambiguate';
+import { createInviteHash } from '@/lib/league-hash';
 
 // League pages are public but per-league dynamic — never pre-rendered with
 // stale data; data still cached via tag-based unstable_cache and busted
@@ -165,6 +167,10 @@ export default async function LeaguePage({ params }: Props) {
         signedIn={myUserId !== null}
         isMember={isMember}
         isOwner={isOwner}
+      />
+
+      <CopyInviteButton
+        invitePath={`/pickem/leagues/invite/${code}/${createInviteHash(code, league.name)}`}
       />
 
       <LeagueLeaderboardTable rows={rows} myUserId={myUserId} />

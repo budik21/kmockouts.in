@@ -6758,6 +6758,33 @@ a.ranking-team-name:hover {
   margin-bottom: 1.5rem;
 }
 
+/* Copy-invite bar above the league leaderboard table */
+.league-invite-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.6rem;
+}
+.league-invite-copy-btn {
+  background: var(--wc-accent);
+  color: #2a1a00;
+  border: 1px solid var(--wc-accent);
+  font-weight: 700;
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+.league-invite-copy-btn:hover {
+  background: color-mix(in srgb, var(--wc-accent) 85%, #fff);
+  color: #2a1a00;
+}
+.league-invite-copy-btn:active {
+  transform: scale(0.99);
+}
+[data-bs-theme="dark"] .league-invite-copy-btn {
+  color: #1a0b00;
+}
+
 /* Invite landing */
 .invite-card {
   max-width: 560px;
