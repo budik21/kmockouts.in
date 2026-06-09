@@ -90,15 +90,15 @@ The image celebrates an upcoming FIFA World Cup 2026 group-stage match and visua
 
 COMPOSITION — keep the centre open for the card
 - The collage imagery hugs the left and right edges and flows from top to bottom along each side. Leave a clear vertical strip down the middle for the prediction card — do NOT fill the whole left/right halves edge to edge.
-- Keep each side clean and uncluttered: pick only ONE famous landmark or monument plus AT MOST one more iconic element (a national animal/symbol OR a typical national dish). Do not pile up many objects — two strong elements per side, not everything at once.
+- Keep each side clean and uncluttered: pick only ONE famous landmark or monument plus AT MOST one more element — a striking natural scenery of that country, or (only if it is truly iconic for that nation) an animal. Do NOT include any national dish or food. Two strong elements per side at most, not everything at once.
 
 LEFT SIDE — the home nation (${m.homeName})
-- A large, realistic flag of ${m.homeName} waving INWARD FROM THE LEFT edge, in the upper-left area.
-- One famous ${m.homeName} landmark and at most one more iconic ${m.homeName} element, arranged down the left side.
+- A large, realistic flag of ${m.homeName} waving INWARD FROM THE LEFT edge (hoisted on the left, flowing toward the centre), in the upper-left area.
+- One famous ${m.homeName} landmark and, at most, one striking ${m.homeName} natural scenery (or an animal only if truly iconic for ${m.homeName}), arranged down the left side. No food.
 
 RIGHT SIDE — the away nation (${m.awayName})
-- A large, realistic flag of ${m.awayName} waving INWARD FROM THE RIGHT edge, in the upper-right area.
-- One famous ${m.awayName} landmark and at most one more iconic ${m.awayName} element, arranged down the right side.
+- A large, realistic flag of ${m.awayName} in the upper-right area, anchored at the RIGHT edge and waving inward toward the centre. Mirror the flag horizontally so it is hoisted on the RIGHT and flows left — keep the flag's design/colours correct, just flipped; it must NOT look like a normal left-hoisted flag merely shoved to the right.
+- One famous ${m.awayName} landmark and, at most, one striking ${m.awayName} natural scenery (or an animal only if truly iconic for ${m.awayName}), arranged down the right side. No food.
 
 CENTRE — prediction card (a clean card floating in the central strip; crisp and clearly legible)
 - A badge at the top reading "PREDICTION".
@@ -121,6 +121,8 @@ DO NOT
 - Do not use any official FIFA or FIFA World Cup logo, emblem, trophy, mascot, wordmark or other branded/trademarked element.
 - Do not fill the prediction bar with flags, photos or patterns — solid flat colours only.
 - Do not overcrowd the sides; at most one landmark plus one other element per nation.
+- Do not include any food, dishes or meals.
+- For the away (right-side) flag, do not show a normal left-hoisted flag — it must be mirrored to hoist from the right.
 - Do not add any score, statistic, sponsor logo or text that is not present in the JSON.
 - Do not change the 3:2 aspect ratio.`;
 }
