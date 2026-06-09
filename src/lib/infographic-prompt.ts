@@ -89,6 +89,7 @@ CONCEPT
 The image celebrates an upcoming FIFA World Cup 2026 group-stage match and visualises how fans predict it will end. The home nation occupies the LEFT side, the away nation the RIGHT side, and a prediction infographic card sits in the CENTRE.
 
 COMPOSITION — keep the centre open for the card
+- This is a genuine blended collage: the flag, the landmark and the scenery on each side melt and bleed into one another and into a shared background with soft transitions, gradients and overlaps. It must NOT look like flat rectangular photos placed side by side or hard-edged cut-outs — no visible photo boxes or seams.
 - The collage imagery hugs the left and right edges and flows from top to bottom along each side. Leave a clear vertical strip down the middle for the prediction card — do NOT fill the whole left/right halves edge to edge.
 - Keep each side clean and uncluttered: pick only ONE famous landmark or monument plus AT MOST one more element — a striking natural scenery of that country, or (only if it is truly iconic for that nation) an animal. Do NOT include any national dish or food. Two strong elements per side at most, not everything at once.
 
@@ -122,6 +123,7 @@ DO NOT
 - Do not fill the prediction bar with flags, photos or patterns — solid flat colours only.
 - Do not overcrowd the sides; at most one landmark plus one other element per nation.
 - Do not include any food, dishes or meals.
+- Do not arrange the imagery as flat rectangular photos, hard-edged cut-outs or a boxed photo montage — the flag must blend into the background as one seamless collage.
 - For the away (right-side) flag, do not show a normal left-hoisted flag — it must be mirrored to hoist from the right.
 - Do not add any score, statistic, sponsor logo or text that is not present in the JSON.
 - Do not change the 3:2 aspect ratio.`;
