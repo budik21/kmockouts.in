@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
@@ -16,14 +16,55 @@ interface NavbarUser {
   initials: string;
 }
 
-interface Props {
-  user: NavbarUser | null;
+function computeInitials(name: string, email: string): string {
+  const source = name.trim() || email.trim();
+  if (!source) return '?';
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return source.slice(0, 2).toUpperCase();
 }
 
-export default function NavbarClient({ user }: Props) {
+export default function NavbarClient() {
   const router = useRouter();
   const offcanvasRef = useRef<HTMLDivElement>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+
+  // The signed-in user is resolved CLIENT-SIDE, never server-rendered into the
+  // HTML. The whole site sits behind a Cloudflare "Cache Everything" rule that
+  // serves one visitor's cached HTML to others; baking the avatar/identity into
+  // the markup would leak user A's photo to user B. Fetching the session from
+  // the per-request, no-store /api/auth/session endpoint keeps the cached HTML
+  // identical (and safe) for everyone, and each browser fills in its own user.
+  // (Primary defence is the Cloudflare cookie-bypass rule; this is belt-and-braces.)
+  const [user, setUser] = useState<NavbarUser | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/auth/session', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active) return;
+        const su = data?.user;
+        if (su?.email) {
+          setUser({
+            name: su.name ?? '',
+            email: su.email,
+            image: su.image ?? '',
+            initials: computeInitials(su.name ?? '', su.email),
+          });
+        } else {
+          setUser(null);
+        }
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const closeOffcanvas = useCallback(() => {
     const el = offcanvasRef.current;

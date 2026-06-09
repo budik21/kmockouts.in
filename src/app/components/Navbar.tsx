@@ -1,32 +1,12 @@
-import { auth } from '@/lib/auth';
 import NavbarClient from './NavbarClient';
 
-function computeInitials(name: string, email: string): string {
-  const source = name.trim() || email.trim();
-  if (!source) return '?';
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return source.slice(0, 2).toUpperCase();
-}
-
-export default async function Navbar() {
-  let session;
-  try {
-    session = await auth();
-  } catch {
-    session = null;
-  }
-
-  const user = session?.user?.email
-    ? {
-        name: session.user.name ?? '',
-        email: session.user.email,
-        image: session.user.image ?? '',
-        initials: computeInitials(session.user.name ?? '', session.user.email),
-      }
-    : null;
-
-  return <NavbarClient user={user} />;
+// IMPORTANT: do NOT read the signed-in user (`auth()`) here. The navbar lives
+// in the root layout, whose HTML is cached at the Cloudflare edge ("Cache
+// Everything"). Anything user-specific rendered on the server would be baked
+// into that shared HTML and served to other visitors — that is how user A's
+// avatar showed up for user B. NavbarClient resolves the user client-side from
+// /api/auth/session instead, keeping the server HTML user-agnostic and safe to
+// cache. See NavbarClient.tsx for details.
+export default function Navbar() {
+  return <NavbarClient />;
 }

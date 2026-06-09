@@ -85,10 +85,14 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-// Navbar reads the signed-in user via `auth()` (cookies). Without this the
-// layout could be served from cache populated by a previous user's request,
-// leading to the navbar avatar showing one user while the page body shows
-// another.
+// Render the layout dynamically (no Next.js Full Route Cache for the shell).
+// NOTE: this does NOT protect against cross-user leaks at the Cloudflare edge —
+// CF "Cache Everything" ignores the no-store headers Next emits here. The
+// navbar therefore renders zero user-specific data on the server (see
+// Navbar.tsx / NavbarClient.tsx); the real cross-user fix is the Cloudflare
+// cache rule that bypasses the edge cache when the auth session cookie is
+// present, so authenticated page bodies (/me, /pickem/tips, …) are never
+// served from a shared cache.
 export const dynamic = "force-dynamic";
 
 /**
