@@ -104,43 +104,61 @@ export async function scrapeFifaRankings(): Promise<void> {
   const dateLabel = getScheduleLabel(scheduleId);
   console.log(`  Using ranking schedule: ${scheduleId} (${dateLabel})`);
 
-  const results = await fetchFromFifaApi(scheduleId);
-  console.log(`  Fetched ${results.length} rankings from FIFA API`);
+  try {
+    const results = await fetchFromFifaApi(scheduleId);
+    console.log(`  Fetched ${results.length} rankings from FIFA API`);
 
-  // Get our teams from DB
-  const pool = getPool();
-  const { rows: teams } = await pool.query<{ id: number; short_name: string; name: string }>(
-    'SELECT id, short_name, name FROM team'
-  );
+    // Get our teams from DB
+    const pool = getPool();
+    const { rows: teams } = await pool.query<{ id: number; short_name: string; name: string }>(
+      'SELECT id, short_name, name FROM team'
+    );
 
-  let updated = 0;
-  const missing: string[] = [];
+    let updated = 0;
+    const missing: string[] = [];
 
-  for (const team of teams) {
-    // IdCountry in FIFA API matches our short_name directly
-    const entry = results.find((r) => r.IdCountry === team.short_name);
-    if (!entry) {
-      missing.push(`${team.name} (${team.short_name})`);
-      continue;
+    for (const team of teams) {
+      // IdCountry in FIFA API matches our short_name directly
+      const entry = results.find((r) => r.IdCountry === team.short_name);
+      if (!entry) {
+        missing.push(`${team.name} (${team.short_name})`);
+        continue;
+      }
+
+      await pool.query(
+        'UPDATE team SET fifa_ranking = $1 WHERE id = $2',
+        [entry.Rank, team.id]
+      );
+      updated++;
     }
 
+    if (missing.length > 0) {
+      console.warn(`  Could not match rankings for: ${missing.join(', ')}`);
+    }
+
+    console.log(`  Updated FIFA ranking for ${updated}/${teams.length} teams`);
+
+    // Log to scrape_log with source_date
     await pool.query(
-      'UPDATE team SET fifa_ranking = $1 WHERE id = $2',
-      [entry.Rank, team.id]
+      `INSERT INTO scrape_log (source, matches_updated, status, source_date)
+       VALUES ('fifa-ranking', $1, 'OK', $2)`,
+      [updated, dateLabel]
     );
-    updated++;
+  } catch (error) {
+    // FIFA often returns 400 for a schedule it hasn't published yet (e.g. the
+    // ranking date is today). Log it and swallow — a failed ranking fetch must
+    // never crash the scraper process.
+    console.error('  FIFA ranking scrape failed:', error);
+
+    try {
+      const pool = getPool();
+      await pool.query(
+        `INSERT INTO scrape_log (source, matches_updated, status, error_message, source_date)
+         VALUES ('fifa-ranking', 0, 'ERROR', $1, $2)`,
+        [String(error), dateLabel]
+      );
+    } catch {
+      // Ignore logging errors
+    }
   }
-
-  if (missing.length > 0) {
-    console.warn(`  Could not match rankings for: ${missing.join(', ')}`);
-  }
-
-  console.log(`  Updated FIFA ranking for ${updated}/${teams.length} teams`);
-
-  // Log to scrape_log with source_date
-  await pool.query(
-    `INSERT INTO scrape_log (source, matches_updated, status, source_date)
-     VALUES ('fifa-ranking', $1, 'OK', $2)`,
-    [updated, dateLabel]
-  );
 }

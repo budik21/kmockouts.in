@@ -108,8 +108,15 @@ const jobs: ScraperJob[] = [
 async function runJob(job: ScraperJob): Promise<void> {
   const start = Date.now();
   console.log(`[${new Date().toISOString()}] ▶ ${job.name}`);
-  await job.run();
-  console.log(`  ✓ ${job.name} done in ${Date.now() - start}ms\n`);
+  try {
+    await job.run();
+    console.log(`  ✓ ${job.name} done in ${Date.now() - start}ms\n`);
+  } catch (error) {
+    // A single job failing must never crash the whole scraper process
+    // (otherwise Railway sees a non-zero exit on the startup run and
+    // restarts into a crash loop). Log and move on.
+    console.error(`  ✗ ${job.name} failed after ${Date.now() - start}ms:`, error);
+  }
 }
 
 async function main() {
