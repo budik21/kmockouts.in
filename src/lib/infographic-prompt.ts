@@ -57,6 +57,19 @@ function isoUtc(kickOff: string): string {
 export function buildInfographicPrompt(m: InfographicPromptInput): string {
   const { homePct, drawPct, awayPct } = tipShares(m);
 
+  // Unanimous case: everyone tipped the same outcome (one share is 100%). In
+  // that case the bar is meaningless, so we replace it with a single sentence.
+  const unanimousText =
+    homePct === 100 ? `All tipsters believe in ${m.homeName}` :
+    awayPct === 100 ? `All tipsters believe in ${m.awayName}` :
+    drawPct === 100 ? `All tipsters believe in a draw` :
+    null;
+
+  const distributionBlock = unanimousText
+    ? `- The predictions are unanimous, so do NOT draw any bar chart or percentage breakdown. Instead show a single CENTRED line of text reading "${unanimousText}".`
+    : `- Below that, a horizontal stacked bar split into three segments sized to the three percentages. Fill each segment with a SOLID FLAT colour: a representative colour of each nation for the win segments, and a LIGHT / pale grey for the draw (clearly lighter than a mid grey). Put NO text, labels or percentages on or above the bar itself.
+- Directly below the bar, a single CENTRED caption line in smaller text with three-letter team abbreviations: "${m.homeShort} Wins: [home]%  ·  Draw: [draw]%  ·  ${m.awayShort} Wins: [away]%".`;
+
   const data = {
     competition: 'FIFA World Cup 2026',
     stage: 'Group stage',
@@ -105,11 +118,10 @@ RIGHT SIDE — the away nation (${m.awayName})
 CENTRE — prediction card (clean, crisp and clearly legible)
 - Position & size: horizontally centred and attached to the BOTTOM edge of the image — the card must physically protrude UP out of the bottom edge (its lower portion runs off the bottom of the frame), NOT float freely in the middle. It spans about TWO THIRDS of the image width. Give it a three-dimensional "plastic" relief — real depth and a soft shadow — so it reads as a solid widget emerging from the bottom edge.
 - Edges: toward its LEFT and RIGHT ends the card gradually dissolves and blends into the collage beneath it — soft, feathered, fading edges that merge with the image, NOT a hard rectangular border. Its core (score, text, bar) stays solid and fully legible.
-- A badge at the top reading "PREDICTION", styled in elegant GOLD — a refined gold (metallic) badge with a fine gold border and a soft drop shadow, for a premium, lightly embossed look.
-- The score row is the dominant element: the two teams as SMALL three-letter abbreviations flanking a large central score — "${m.homeShort}" on the left, the score "[home]–[away]" big in the middle, "${m.awayShort}" on the right. Directly ABOVE each abbreviation, centred over it, place a tiny flat-style (simplified) national flag icon. Render the central score numerals as the dominant focal element of the whole image — extremely large, roughly one third larger again than a already-big score and far bigger than any other text on the card — and in a DISTINCT accent colour — clearly different from the team-abbreviation colour, and NOT any of the three colours used in the distribution bar below (not the home-win colour, not the draw grey, not the away-win colour).
+- A badge at the top reading "PREDICTION", styled in elegant GOLD — a refined gold (metallic) badge with ROUNDED corners (not angular or ribbon-shaped), a fine gold border and a soft drop shadow, for a premium, lightly embossed look.
+- The score row is the dominant element: the two teams as SMALL three-letter abbreviations flanking a large central score — "${m.homeShort}" on the left, the score "[home]–[away]" big in the middle, "${m.awayShort}" on the right. Directly ABOVE each abbreviation, centred over it, place a tiny flat-style (simplified) national flag icon. Render the central score numerals as the dominant focal element of the whole image — extremely large, roughly one third larger again than an already-large score and far bigger than any other text on the card — and in a DISTINCT accent colour — clearly different from the team-abbreviation colour, and NOT any of the three colours used in the distribution bar below (not the home-win colour, not the draw grey, not the away-win colour).
 - Directly below the score row, a single line of PLAIN TEXT (no pill, badge or box around it) reading "MOST-TIPPED RESULT · [count] OUT OF [total] TIPS" (use most_tipped_score.count and predictions.total_tips).
-- Below that, a horizontal stacked bar split into three segments sized to the three percentages. Fill each segment with a SOLID FLAT colour: a representative colour of each nation for the win segments, and a LIGHT / pale grey for the draw (clearly lighter than a mid grey). Put NO text, labels or percentages on or above the bar itself.
-- Directly below the bar, a single CENTRED caption line in smaller text with three-letter team abbreviations: "${m.homeShort} Wins: [home]%  ·  Draw: [draw]%  ·  ${m.awayShort} Wins: [away]%".
+${distributionBlock}
 - Otherwise keep the card tidy. Do NOT add a metadata footer strip (no separate total-tips / competition / date row) — that information already appears in the badge above.
 
 LEGIBILITY
