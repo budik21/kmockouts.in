@@ -5,6 +5,7 @@ import { query, queryOne } from '@/lib/db';
 import { calculateTipPoints } from '@/lib/tip-scoring';
 import { recalculateLeagueStandings } from '@/lib/league-standings';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { isTipLocked } from '@/lib/tip-lock';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,19 +30,26 @@ export async function POST(req: NextRequest) {
 
   const now = new Date().toISOString();
   let saved = 0;
+  // Tips that were dropped because the match locked (within the lead window
+  // before kick-off, or no longer SCHEDULED). The client surfaces these as an
+  // inline error on the affected match — covers the case where someone had the
+  // page open with active steppers and edited a tip after the lock passed.
+  const rejected: number[] = [];
 
   for (const tip of body.tips) {
     if (tip.homeGoals < 0 || tip.awayGoals < 0 || tip.homeGoals > 20 || tip.awayGoals > 20) continue;
 
-    // Check match hasn't started yet
+    // Check the match is still open for tipping
     const match = await queryOne<{ kick_off: string; status: string; home_goals: number | null; away_goals: number | null }>(
       'SELECT kick_off, status, home_goals, away_goals FROM match WHERE id = $1',
       [tip.matchId],
     );
     if (!match) continue;
 
-    const kickOff = new Date(match.kick_off);
-    if (kickOff <= new Date() || match.status !== 'SCHEDULED') continue;
+    if (isTipLocked(match.kick_off, match.status)) {
+      rejected.push(tip.matchId);
+      continue;
+    }
 
     await query(
       `INSERT INTO tip (user_id, match_id, home_goals, away_goals, updated_at)
@@ -71,5 +79,5 @@ export async function POST(req: NextRequest) {
     revalidateTag(LEADERBOARD_TAG, 'max');
   }
 
-  return NextResponse.json({ saved });
+  return NextResponse.json({ saved, rejected });
 }

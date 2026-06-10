@@ -4743,10 +4743,63 @@ a.ranking-team-name:hover {
 }
 
 .tipovacka-match-row {
+  position: relative;
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);
   border-radius: 0.5rem;
   overflow: hidden;
+}
+
+/* Small padlock shown on a locked-but-not-yet-finished match. */
+.tipovacka-lock-badge {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--wc-text-muted);
+  opacity: 0.65;
+  z-index: 2;
+  cursor: default;
+}
+
+/* "Last call" warning: still editable, lock imminent — blinking, coloured. */
+.tipovacka-lastcall-badge {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #facc15; /* Last Call text — yellow */
+  z-index: 2;
+  cursor: default;
+  animation: tipovacka-lastcall-blink 1s ease-in-out infinite;
+}
+
+.tipovacka-lastcall-badge svg {
+  color: #f59e0b; /* padlock — coloured (amber) */
+}
+
+@keyframes tipovacka-lastcall-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tipovacka-lastcall-badge {
+    animation: none;
+  }
+}
+
+/* Transient warning when a save was rejected because the match locked. */
+.tipovacka-tip-warning {
+  padding: 0 0.75rem 0.4rem;
+  color: #facc15;
+  font-weight: 600;
 }
 
 .tipovacka-match-row.has-tip {

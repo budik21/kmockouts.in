@@ -7,6 +7,7 @@ import ArrowStepper from '@/app/components/ArrowStepper';
 import { teamLabel } from '@/lib/team-label';
 import { slugify } from '@/lib/slugify';
 import { useHasMounted } from '@/lib/use-has-mounted';
+import { isTipLocked, isTipLastCall, TIP_LOCK_LEAD_MINUTES } from '@/lib/tip-lock';
 
 interface TipData {
   homeGoals: number;
@@ -22,6 +23,7 @@ interface Props {
   shareToken: string;
   untippedOnly: boolean;
   untippedSnapshot: Set<number> | null;
+  saveErrors: Set<number>;
 }
 
 interface StandingRow {
@@ -159,10 +161,21 @@ export default function TipEditor({
   shareToken,
   untippedOnly,
   untippedSnapshot,
+  saveErrors,
 }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('ALL');
   const [copied, setCopied] = useState(false);
   const mounted = useHasMounted();
+
+  // Live clock so matches lock by themselves as kick-off approaches — without it
+  // a page left open before kick-off would keep showing editable steppers. We
+  // tick every 15s; the exact second doesn't matter because the server enforces
+  // the same lock as a backstop.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 5_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Read initial group from URL hash, listen for hashchange (back/forward)
   useEffect(() => {
@@ -240,9 +253,7 @@ export default function TipEditor({
     return map;
   }, [filteredMatches, mounted]);
 
-  const isMatchLocked = (m: TipMatch) => {
-    return m.status !== 'SCHEDULED' || new Date(m.kickOff) <= new Date();
-  };
+  const isMatchLocked = (m: TipMatch) => isTipLocked(m.kickOff, m.status, now);
 
   return (
     <div>
@@ -311,6 +322,8 @@ export default function TipEditor({
           <div className="tipovacka-matches-list">
             {dateMatches.map((match) => {
               const locked = isMatchLocked(match);
+              const lastCall = isTipLastCall(match.kickOff, match.status, now);
+              const saveError = saveErrors.has(match.id);
               const tip = tips[match.id];
               const homeGoals = tip ? tip.homeGoals : null;
               const awayGoals = tip ? tip.awayGoals : null;
@@ -323,6 +336,32 @@ export default function TipEditor({
                   key={match.id}
                   className={`tipovacka-match-row ${locked ? 'locked' : ''} ${hasTip ? 'has-tip' : 'no-tip'} ${hasScore ? `scored scored-${tip.points}` : ''} ${isFinished && !hasTip ? 'missed' : ''}`}
                 >
+                  {/* Last-call: still editable, but lock is imminent — blinking
+                      coloured padlock + yellow "Last Call". */}
+                  {lastCall && (
+                    <span className="tipovacka-lastcall-badge" role="status">
+                      <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
+                        <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                      </svg>
+                      Last Call
+                    </span>
+                  )}
+
+                  {/* Lock badge: shown once tipping is closed (within the lead
+                      window / in play) but the result isn't known yet. Disappears
+                      when the match is FINISHED and the result strip takes over. */}
+                  {locked && !isFinished && (
+                    <span
+                      className="tipovacka-lock-badge"
+                      title="Locked for changes"
+                      aria-label="Locked for changes"
+                    >
+                      <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
+                        <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                      </svg>
+                    </span>
+                  )}
+
                   {/* Header: centered team names (group/time/venue live in the footer) */}
                   <div className="tipovacka-match-header-row">
                     <span className="tipovacka-match-team-labels">
@@ -426,6 +465,14 @@ export default function TipEditor({
                       <div className="tipovacka-eval-cell" style={{ flex: 1 }}>
                         <div className="tipovacka-eval-value" style={{ color: 'var(--wc-text-muted)' }}>No prediction</div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Tip rejected by the server because the match locked before
+                      the save landed (e.g. edited inside the final window). */}
+                  {saveError && (
+                    <div className="tipovacka-tip-warning small mt-1" role="alert">
+                      <span aria-hidden="true">⚠️</span> Tip not saved — this match locked (tips close {TIP_LOCK_LEAD_MINUTES} minutes before kick-off).
                     </div>
                   )}
 

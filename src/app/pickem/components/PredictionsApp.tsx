@@ -74,22 +74,65 @@ export default function PredictionsApp({
   const saveTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const dirtyMatches = useRef<Set<number>>(new Set());
   const [dirtyCount, setDirtyCount] = useState(0);
+  // Matches whose last save was rejected because the match had already locked.
+  // Each error auto-clears after a few seconds (timers tracked for cleanup).
+  const [saveErrors, setSaveErrors] = useState<Set<number>>(new Set());
+  const errorTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
+  const showSaveError = useCallback((matchId: number) => {
+    setSaveErrors((prev) => new Set(prev).add(matchId));
+    const existing = errorTimers.current.get(matchId);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      setSaveErrors((prev) => {
+        const next = new Set(prev);
+        next.delete(matchId);
+        return next;
+      });
+      errorTimers.current.delete(matchId);
+    }, 5000);
+    errorTimers.current.set(matchId, timer);
+  }, []);
 
   const flushDirtyCount = () => setDirtyCount(dirtyMatches.current.size);
 
+  // Pull a single match's tip back from the server so a rejected (locked) save
+  // doesn't leave the locked strip showing an unsaved prediction.
+  const resyncTip = useCallback(async (matchId: number) => {
+    try {
+      const data = await fetch('/api/tips/my').then((r) => r.json());
+      setTips((prev) => {
+        const next = { ...prev };
+        const fresh = data?.tips?.[matchId];
+        if (fresh) next[matchId] = fresh;
+        else delete next[matchId];
+        return next;
+      });
+    } catch {
+      /* leave local state as-is; the error message still informs the user */
+    }
+  }, []);
+
   const saveTip = useCallback(async (matchId: number, homeGoals: number, awayGoals: number) => {
     try {
-      await fetch('/api/tips/save', {
+      const res = await fetch('/api/tips/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tips: [{ matchId, homeGoals, awayGoals }] }),
       });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && Array.isArray(data.rejected) && data.rejected.includes(matchId)) {
+          showSaveError(matchId);
+          await resyncTip(matchId);
+        }
+      }
     } finally {
       saveTimers.current.delete(matchId);
       dirtyMatches.current.delete(matchId);
       flushDirtyCount();
     }
-  }, []);
+  }, [resyncTip, showSaveError]);
 
   const handleTipUpdate = useCallback((matchId: number, homeGoals: number, awayGoals: number) => {
     setTips((prev) => ({
@@ -116,8 +159,10 @@ export default function PredictionsApp({
 
   useEffect(() => {
     const timers = saveTimers.current;
+    const errTimers = errorTimers.current;
     return () => {
       timers.forEach((t) => clearTimeout(t));
+      errTimers.forEach((t) => clearTimeout(t));
     };
   }, []);
 
@@ -332,6 +377,7 @@ export default function PredictionsApp({
               shareToken={shareToken}
               untippedOnly={untippedOnly}
               untippedSnapshot={untippedSnapshot}
+              saveErrors={saveErrors}
             />
           </>
         )}
