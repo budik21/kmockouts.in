@@ -88,6 +88,7 @@ export default async function LeaderboardPage() {
     LEFT JOIN tip t ON t.user_id = u.id
     WHERE u.tips_public = true
     GROUP BY u.id, u.share_token, u.name, u.email
+    HAVING COUNT(t.id) > 0
   `,
     [],
     [LEADERBOARD_TAG],
