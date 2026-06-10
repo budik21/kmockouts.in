@@ -12,6 +12,7 @@ import LeaguesTab, { type LeagueRow } from './LeaguesTab';
 import TipsTab, { type TipRow } from './TipsTab';
 import PickemMatchesTab, { type MatchTipStats } from './PickemMatchesTab';
 import UsersClient from '../users/UsersClient';
+import EmailsTab from './EmailsTab';
 import FeatureFlagsClient from './FeatureFlagsClient';
 import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
 import TwitterTab from './TwitterTab';
@@ -43,7 +44,7 @@ interface DashboardTabsProps {
   initialTab?: TabKey;
 }
 
-type TabKey = 'matches' | 'scenarios' | 'pickem' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'emails' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
 type PickemSubTab = 'management' | 'matches' | 'tipsters' | 'leagues' | 'tips';
 
 export default function DashboardTabs({
@@ -148,6 +149,9 @@ export default function DashboardTabs({
         </button>
         <button onClick={() => setActiveTab('pickem')} style={tabButtonStyle(activeTab === 'pickem')}>
           Pick&apos;em
+        </button>
+        <button onClick={() => setActiveTab('emails')} style={tabButtonStyle(activeTab === 'emails')}>
+          Emails
         </button>
         <button onClick={() => setActiveTab('users')} style={tabButtonStyle(activeTab === 'users')}>
           User Management
@@ -354,6 +358,21 @@ export default function DashboardTabs({
                 <TipsTab tips={tips} />
               </div>
             )}
+          </div>
+        )}
+
+        {/* Emails tab */}
+        {activeTab === 'emails' && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
+              Emails
+            </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Send a templated e-mail campaign to selected tipsters. Pick a template, review and
+              adjust the pre-filled recipient list, then send. Every recipient gets an individually
+              addressed e-mail.
+            </p>
+            <EmailsTab />
           </div>
         )}
 
