@@ -22,11 +22,12 @@ export const REACTIVATION_SUBJECT =
 
 /**
  * "Reactivate sleeping users" campaign e-mail: sent to tipsters who signed up
- * for the Pick'em but have not placed a single tip yet. One big CTA pointing
- * to the tips page. Visual shell matches the tip-result e-mail.
+ * for the Pick'em but have placed at most one tip. One big CTA pointing to
+ * the tips page. Visual shell matches the tip-result e-mail.
  */
 export function buildReactivationEmail(data: ReactivationEmailData): TemplateOutput {
   const tipsUrl = `${SITE_URL}/pickem/tips`;
+  const leaderboardUrl = `${SITE_URL}/pickem/leaderboard`;
   const settingsUrl = `${SITE_URL}/pickem/tips?tab=settings`;
 
   const html = `
@@ -52,23 +53,21 @@ export function buildReactivationEmail(data: ReactivationEmailData): TemplateOut
           <tr>
             <td align="center" style="padding:36px 28px 8px;">
               <div style="font-size:84px;line-height:1;">⚽</div>
-              <h1 style="font-size:22px;margin:18px 0 0;color:#111827;">The whistle is about to blow &mdash; and your card is still blank.</h1>
+              <h1 style="font-size:22px;margin:18px 0 0;color:#111827;">The whistle is about to blow &mdash; and your card is nearly blank.</h1>
             </td>
           </tr>
 
           <tr>
             <td style="padding:24px 28px 4px;">
               <p style="margin:0 0 14px;color:#374151;font-size:15px;line-height:1.6;">
-                The 2026 FIFA World Cup kicks off any moment now. You&rsquo;ve already
-                signed up for the knockouts.in Pick&rsquo;em &mdash; the only thing missing
-                is your predictions. Don&rsquo;t let the opening matches pass you by while
-                everyone else is racking up points.
+                The 2026 FIFA World Cup kicks off any moment now &mdash; and your
+                Pick&rsquo;em predictions are still missing. Don&rsquo;t let the opening
+                games pass you by while everyone else is racking up points.
               </p>
               <p style="margin:0 0 14px;color:#374151;font-size:15px;line-height:1.6;">
-                It takes just a couple of minutes: pick your scores, hit save, and watch
-                the leaderboard as results roll in. An exact score is worth
-                <strong>4&nbsp;points</strong>, the correct winner still gets you
-                <strong>1&nbsp;point</strong> &mdash; every match is a fresh chance to climb.
+                It takes just a couple of minutes: pick your scores and hit save. An exact
+                score is worth <strong>4&nbsp;points</strong>, the correct winner gets you
+                <strong>1&nbsp;point</strong> &mdash; every match is a chance to climb.
               </p>
             </td>
           </tr>
@@ -76,6 +75,9 @@ export function buildReactivationEmail(data: ReactivationEmailData): TemplateOut
           <tr>
             <td align="center" style="padding:16px 28px 36px;">
               <a href="${tipsUrl}" style="display:inline-block;background:#6f003c;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:16px;">Place your tips now</a>
+              <div style="margin-top:14px;">
+                <a href="${leaderboardUrl}" style="color:#6f003c;text-decoration:none;font-weight:600;font-size:13px;">See the Leaderboard &rarr;</a>
+              </div>
             </td>
           </tr>
 

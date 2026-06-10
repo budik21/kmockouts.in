@@ -22,6 +22,7 @@ interface EmailsData {
   templateId: string;
   defaultRecipients: Recipient[];
   allUsers: Recipient[];
+  previewHtml: string;
 }
 
 interface SendResponse {
@@ -72,6 +73,7 @@ export default function EmailsTab() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [search, setSearch] = useState('');
   const [sendState, setSendState] = useState<SendState>({ kind: 'idle' });
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,6 +204,22 @@ export default function EmailsTab() {
         </p>
         <div style={{ ...labelStyle, marginTop: '1rem' }}>Subject</div>
         <div style={{ color: 'var(--wc-text)', fontSize: '0.95rem' }}>{template.subject}</div>
+        <button
+          onClick={() => setPreviewOpen(true)}
+          style={{
+            marginTop: '1rem',
+            padding: '0.4rem 1rem',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            borderRadius: '0.25rem',
+            cursor: 'pointer',
+            backgroundColor: 'var(--wc-surface)',
+            color: 'var(--wc-text)',
+            border: '1px solid var(--wc-border)',
+          }}
+        >
+          Preview email
+        </button>
       </div>
 
       {/* Recipients */}
@@ -211,6 +229,24 @@ export default function EmailsTab() {
           <span style={{ color: 'var(--wc-text)', fontSize: '0.9rem' }}>
             <strong style={{ color: 'var(--wc-accent)' }}>{recipients.length}</strong>{' '}
             {recipients.length === 1 ? 'recipient' : 'recipients'}
+            {recipients.length > 0 && (
+              <button
+                onClick={() => setRecipients([])}
+                disabled={sending}
+                style={{
+                  marginLeft: '0.75rem',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--wc-text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  textDecoration: 'underline',
+                  padding: 0,
+                }}
+              >
+                Remove all
+              </button>
+            )}
           </span>
         </div>
 
@@ -362,6 +398,76 @@ export default function EmailsTab() {
           )}
         </div>
       </div>
+
+      {previewOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+          }}
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'var(--wc-surface)',
+              color: 'var(--wc-text)',
+              width: '90%',
+              maxWidth: '680px',
+              height: '85vh',
+              border: '1px solid var(--wc-border)',
+              borderRadius: '0.375rem',
+              padding: '1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="d-flex align-items-center justify-content-between gap-2">
+              <div>
+                <div style={{ fontWeight: 600 }}>Email preview</div>
+                <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.85rem' }}>
+                  {template.subject}
+                </div>
+              </div>
+              <button
+                onClick={() => setPreviewOpen(false)}
+                style={{
+                  padding: '0.4rem 1rem',
+                  fontWeight: 500,
+                  borderRadius: '0.25rem',
+                  cursor: 'pointer',
+                  backgroundColor: 'var(--wc-surface)',
+                  color: 'var(--wc-text)',
+                  border: '1px solid var(--wc-border)',
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              title="Email preview"
+              srcDoc={data.previewHtml}
+              sandbox=""
+              style={{
+                flex: 1,
+                width: '100%',
+                border: '1px solid var(--wc-border)',
+                borderRadius: '0.25rem',
+                backgroundColor: '#f4f4f7',
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {sendState.kind === 'confirming' && (
         <ConfirmModal

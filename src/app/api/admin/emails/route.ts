@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/admin/emails?template=<id>
  * Returns the campaign template list, the selected template's default
- * recipients, and all tipster users (so the admin can add anyone to the list).
+ * recipients, all tipster users (so the admin can add anyone to the list),
+ * and a preview of the e-mail body built for a sample recipient.
  */
 export async function GET(req: Request) {
   const unauthorized = await requireAdminApi();
@@ -44,6 +45,8 @@ export async function GET(req: Request) {
       templateId: campaign.id,
       defaultRecipients,
       allUsers,
+      previewHtml: campaign.build({ id: 0, email: 'preview@knockouts.in', name: 'Sample Tipster' })
+        .html,
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

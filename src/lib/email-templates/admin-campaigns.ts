@@ -28,7 +28,7 @@ export const ADMIN_EMAIL_CAMPAIGNS: AdminEmailCampaign[] = [
     id: 'reactivate-sleeping-users',
     label: 'Reactivate sleeping users',
     description:
-      'Nudge tipsters who signed up for the Pick’em but have not placed a single tip yet. ' +
+      'Nudge tipsters who signed up for the Pick’em but have placed at most one tip. ' +
       'The e-mail reminds them the World Cup is about to start, with one CTA leading to their tips page.',
     subject: REACTIVATION_SUBJECT,
     build: (recipient) => buildReactivationEmail({ userName: recipient.name }),
@@ -36,7 +36,9 @@ export const ADMIN_EMAIL_CAMPAIGNS: AdminEmailCampaign[] = [
       query<CampaignRecipient>(
         `SELECT u.id, u.email, u.name
          FROM tipster_user u
-         WHERE NOT EXISTS (SELECT 1 FROM tip t WHERE t.user_id = u.id)
+         LEFT JOIN tip t ON t.user_id = u.id
+         GROUP BY u.id, u.email, u.name
+         HAVING COUNT(t.id) <= 1
          ORDER BY u.name, u.email`,
       ),
   },
