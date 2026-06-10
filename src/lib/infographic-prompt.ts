@@ -116,7 +116,7 @@ RIGHT SIDE — the away nation (${m.awayName})
 - One famous ${m.awayName} landmark and, at most, one striking ${m.awayName} natural scenery (or an animal only if truly iconic for ${m.awayName}), arranged down the right side. No food.
 
 CENTRE — prediction card (clean, crisp and clearly legible)
-- Position & size: horizontally centred and attached to the BOTTOM edge of the image — the card must physically protrude UP out of the bottom edge (its lower portion runs off the bottom of the frame), NOT float freely in the middle. Make it LARGE and prominent: about THREE QUARTERS of the image width and tall enough that the badge, score, text and bar together fill a big share of the lower half of the image. Give it a three-dimensional "plastic" relief — real depth and a soft shadow — so it reads as a solid widget emerging from the bottom edge.
+- Position & size (HARD REQUIREMENT — MUST, non-negotiable): the card MUST sit on the BOTTOM line of the image — horizontally centred and attached to the bottom edge, with its lower portion running OFF the bottom of the frame so it protrudes UP out of the bottom edge. It MUST NOT float in the middle, the centre or the upper area, and there must be NO gap between the card and the bottom edge. Make it LARGE and prominent: about THREE QUARTERS of the image width and tall enough that the badge, score, text and bar together fill a big share of the lower half of the image. Give it a three-dimensional "plastic" relief — real depth and a soft shadow — so it reads as a solid widget emerging from the bottom edge.
 - Background: the card is SEMI-TRANSPARENT (translucent, lightly frosted) so the collage beneath it shows partially through, while the score and all text stay crisp and fully legible — use enough contrast / a gentle blur behind the text so nothing is lost.
 - Edges: toward its LEFT and RIGHT ends the card gradually dissolves and blends into the collage beneath it — soft, feathered, fading edges that merge with the image, NOT a hard rectangular border. Its core (score, text, bar) stays solid and fully legible.
 - A large badge at the top reading "PREDICTION", styled in elegant GOLD — a refined, sizeable gold (metallic) badge with ROUNDED corners (not angular or ribbon-shaped), a fine gold border and a soft drop shadow, for a premium, lightly embossed look. Make it big enough to read clearly at a glance.
@@ -142,5 +142,6 @@ DO NOT
 - Do not arrange the imagery as flat rectangular photos, hard-edged cut-outs or a boxed photo montage — the flag must blend into the background as one seamless collage.
 - For the away (right-side) flag, do not show a normal left-hoisted flag — it must be mirrored to hoist from the right.
 - Do not add any score, statistic, sponsor logo or text that is not present in the JSON.
-- Do not change the 3:2 aspect ratio.`;
+- Do not change the 3:2 aspect ratio.
+- Do not place the prediction card anywhere other than on the bottom edge — never floating in the centre, never with a gap below it. This is mandatory.`;
 }
