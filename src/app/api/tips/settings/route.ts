@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     [tipsPublic, session.tipsterId],
   );
 
-  revalidateTag(LEADERBOARD_TAG, 'max');
+  expireTags(LEADERBOARD_TAG);
   await purgeCloudflareCache();
 
   return NextResponse.json({ tipsPublic });

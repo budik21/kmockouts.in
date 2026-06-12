@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { query } from '@/lib/db';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
@@ -99,7 +99,7 @@ export async function POST() {
       }
     }
 
-    revalidateTag(LEADERBOARD_TAG, 'max');
+    expireTags(LEADERBOARD_TAG);
     await purgeCloudflareCache();
 
     const withConsent = Math.round(NAMES.length * 0.7);

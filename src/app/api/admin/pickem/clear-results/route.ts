@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { query } from '@/lib/db';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { LEADERBOARD_TAG, WC_TAG } from '@/lib/cache-tags';
@@ -64,8 +64,7 @@ export async function POST() {
     await query(`DELETE FROM ai_generation_queue WHERE status IN ('pending', 'processing')`);
 
     // Invalidate all related caches
-    revalidateTag(LEADERBOARD_TAG, 'max');
-    revalidateTag(WC_TAG, 'max');
+    expireTags(LEADERBOARD_TAG, WC_TAG);
     await purgeCloudflareCache();
 
     return NextResponse.json({

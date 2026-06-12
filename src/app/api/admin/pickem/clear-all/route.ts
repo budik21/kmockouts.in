@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { query } from '@/lib/db';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
@@ -20,7 +20,7 @@ export async function POST() {
   try {
     await query('DELETE FROM tip');
 
-    revalidateTag(LEADERBOARD_TAG, 'max');
+    expireTags(LEADERBOARD_TAG);
     await purgeCloudflareCache();
 
     return NextResponse.json({

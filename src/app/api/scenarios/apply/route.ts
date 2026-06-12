@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { applyScenario } from '@/lib/apply-scenario';
 import { recalculateAllProbabilities } from '@/lib/probability-cache';
@@ -40,8 +40,7 @@ export async function POST(request: NextRequest) {
     await recalculateAllTipPoints();
 
     // Purge tagged caches for all pages that show match results / probabilities / tips
-    revalidateTag(WC_TAG, 'max');
-    revalidateTag(LEADERBOARD_TAG, 'max');
+    expireTags(WC_TAG, LEADERBOARD_TAG);
     await purgeCloudflareCache();
 
     if (scenarioId === 0) {

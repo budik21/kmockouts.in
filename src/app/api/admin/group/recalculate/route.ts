@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { query } from '@/lib/db';
 import {
@@ -91,8 +91,7 @@ export async function POST(request: NextRequest) {
     ).catch(() => {});
 
     // Purge caches within this request context so callers see fresh data.
-    revalidateTag(WC_TAG, 'max');
-    revalidateTag(LEADERBOARD_TAG, 'max');
+    expireTags(WC_TAG, LEADERBOARD_TAG);
     await purgeCloudflareCache();
 
     const elapsed = Date.now() - start;

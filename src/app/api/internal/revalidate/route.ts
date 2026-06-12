@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
 import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 import { SITE_URL } from '@/lib/seo';
@@ -36,8 +36,7 @@ export async function POST(request: NextRequest) {
     // No/!invalid body → broad purge (backward compatible).
   }
 
-  revalidateTag(WC_TAG, 'max');
-  revalidateTag(LEADERBOARD_TAG, 'max');
+  expireTags(WC_TAG, LEADERBOARD_TAG);
 
   const urls = paths.map((p) => `${SITE_URL}${p.startsWith('/') ? p : `/${p}`}`);
   await purgeCloudflareCache(urls.length > 0 ? urls : undefined);

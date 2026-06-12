@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
 import { dispatchTipResultEmails } from '@/lib/tip-notifications';
@@ -26,7 +26,7 @@ export async function POST() {
     console.error('[tips/recalculate] email dispatch failed:', err),
   );
 
-  revalidateTag(LEADERBOARD_TAG, 'max');
+  expireTags(LEADERBOARD_TAG);
   await purgeCloudflareCache();
 
   return NextResponse.json({ updated });

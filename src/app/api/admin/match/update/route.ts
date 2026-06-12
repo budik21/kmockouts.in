@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { requireAdminApi } from '@/lib/admin-auth';
 import { query, queryOne } from '@/lib/db';
 import { recalculateAffectedProbabilities, pregenerateTeamScenarioSummaries } from '@/lib/probability-cache';
@@ -290,10 +290,10 @@ export async function POST(request: NextRequest) {
       trace.errors.push({ step: 'enqueue-ai-job', message: String(err) });
     }
 
-    // Invalidate caches. revalidateTag works inside the request scope; the
-    // Cloudflare purge is targeted to just this group's affected URLs.
-    revalidateTag(WC_TAG, 'max');
-    revalidateTag(LEADERBOARD_TAG, 'max');
+    // Invalidate caches: hard-expire the Next.js tags (see cache-expire.ts —
+    // the 'max' SWR profile would serve stale data to the first re-render);
+    // the Cloudflare purge is targeted to just this group's affected URLs.
+    expireTags(WC_TAG, LEADERBOARD_TAG);
     const affectedUrls = await buildAffectedUrls(groupId);
     let cloudflarePurged = true;
     let cloudflareError: string | undefined;

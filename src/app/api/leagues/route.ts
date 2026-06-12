@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { auth } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { generateUniqueLeagueCode } from '@/lib/league-code-server';
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     );
 
     await recalculateLeagueStandings(inserted.id);
-    revalidateTag(LEAGUES_TAG, 'max');
+    expireTags(LEAGUES_TAG);
 
     await sendLeagueWelcomeIfFirstJoin(session.tipsterId, {
       name: validation.display!,

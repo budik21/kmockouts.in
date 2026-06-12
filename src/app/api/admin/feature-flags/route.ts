@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { setFeatureFlag, listFeatureFlags } from '@/lib/feature-flags';
 import { WC_TAG } from '@/lib/cache-tags';
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // render. ai_predictions_display is the obvious case; we purge on every
     // flag change since toggles are rare and a blanket purge keeps the
     // handler simple.
-    revalidateTag(WC_TAG, 'max');
+    expireTags(WC_TAG);
     await purgeCloudflareCache();
 
     // Fire-and-forget warm-up so the first real visitor of each WC page

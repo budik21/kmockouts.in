@@ -1,4 +1,4 @@
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { query } from './db';
 import { leagueStandingsTag } from './cache-tags';
 
@@ -94,6 +94,6 @@ export async function recalculateLeagueStandings(leagueId: number | null = null)
     leagueId !== null ? [leagueId] : [],
   );
   for (const row of codeRows) {
-    revalidateTag(leagueStandingsTag(row.code), 'max');
+    expireTags(leagueStandingsTag(row.code));
   }
 }

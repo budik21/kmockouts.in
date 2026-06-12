@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { pregenerateTeamScenarioSummaries } from '@/lib/probability-cache';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
@@ -66,8 +66,7 @@ export async function POST(request: NextRequest) {
 
     // Purge caches in this request context so the very next render sees
     // freshly written summaries.
-    revalidateTag(WC_TAG, 'max');
-    revalidateTag(LEADERBOARD_TAG, 'max');
+    expireTags(WC_TAG, LEADERBOARD_TAG);
     await purgeCloudflareCache();
 
     // Warm Cloudflare so the next visitor doesn't pay for a cold edge.

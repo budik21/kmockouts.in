@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { requireSuperadminApi } from '@/lib/admin-auth';
 import { AI_PREDICTION_MODEL_KEYS, normalizeAiPredictionModel } from '@/lib/ai-model';
 import { getAiPredictionModelKey, setAiPredictionModel } from '@/lib/ai-model-server';
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // The model choice doesn't change what's already in cache, but downstream
     // generation will use the new model on the next call. Bust the WC tag
     // mostly to keep admin dashboard reads fresh.
-    revalidateTag(WC_TAG, 'max');
+    expireTags(WC_TAG);
 
     return NextResponse.json({ success: true, model: key });
   } catch (err) {

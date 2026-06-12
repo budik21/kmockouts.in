@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { LEADERBOARD_TAG, LEAGUES_TAG } from '@/lib/cache-tags';
@@ -29,8 +29,7 @@ export async function DELETE() {
 
   await recalculateLeagueStandings();
 
-  revalidateTag(LEADERBOARD_TAG, 'max');
-  revalidateTag(LEAGUES_TAG, 'max');
+  expireTags(LEADERBOARD_TAG, LEAGUES_TAG);
   await purgeCloudflareCache().catch(() => null);
 
   return NextResponse.json({ success: true });

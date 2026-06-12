@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidateTag } from 'next/cache';
+import { expireTags } from '@/lib/cache-expire';
 import { auth } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { calculateTipPoints } from '@/lib/tip-scoring';
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     for (const { league_id } of leagues) {
       await recalculateLeagueStandings(league_id);
     }
-    revalidateTag(LEADERBOARD_TAG, 'max');
+    expireTags(LEADERBOARD_TAG);
   }
 
   return NextResponse.json({ saved, rejected });
