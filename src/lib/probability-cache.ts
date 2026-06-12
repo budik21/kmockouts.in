@@ -593,7 +593,12 @@ export async function pregenerateTeamScenarioSummaries(
 
       // Skip the article for any team that is currently 3rd but has played
       // fewer than 2 of its matches — see shouldDeferThirdPlaceTeamArticle.
+      // Force regen (the explicit admin action) bypasses the deferral: the
+      // burst-trimming rationale doesn't apply to a deliberate one-off regen,
+      // and silently skipping the requested article would make the admin
+      // button look broken.
       const teamArticleTargets = allTeamArticleTargets.filter(t => {
+        if (options.force) return true;
         const position = currentStandings.find(s => s.teamName === t.name)?.position;
         const playedCount = played.filter(m => m.homeTeamId === t.id || m.awayTeamId === t.id).length;
         if (shouldDeferThirdPlaceTeamArticle(position, playedCount)) {

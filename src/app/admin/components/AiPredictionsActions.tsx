@@ -374,9 +374,10 @@ export default function AiPredictionsActions({
       <div style={cardStyle}>
         <div style={titleStyle}>Regenerate AI predictions for a group</div>
         <div style={descStyle}>
-          Regenerates scenario summaries for every team in the selected group.
-          Existing summaries in <code>ai_summary_cache</code> are overwritten
-          without asking. Best-third summaries are not touched.
+          Regenerates scenario summaries for every team in the selected group,
+          then the group article and all four team articles. Existing entries
+          in <code>ai_summary_cache</code> and the article caches are
+          overwritten without asking. Best-third summaries are not touched.
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
           <label
@@ -449,7 +450,8 @@ export default function AiPredictionsActions({
         <div style={titleStyle}>Regenerate AI predictions for a single team</div>
         <div style={descStyle}>
           Regenerates scenario summaries only for the selected team
-          (every position they could still finish in). Cheaper than running
+          (every position they could still finish in) plus the team&apos;s
+          article. The group article is left untouched. Cheaper than running
           the whole group — typically a handful of Claude calls.
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
