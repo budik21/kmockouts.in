@@ -447,6 +447,26 @@ export async function initializeSchema(): Promise<void> {
       END IF;
     END $$;
   `);
+
+  // Turn ALL tip-result notification channels (exact score, winner only,
+  // wrong tip) on for every existing account once. Users can still opt out
+  // afterwards in settings; the guard keeps those opt-outs intact on
+  // subsequent deploys. Column defaults for new signups are unchanged.
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM data_migration WHERE name = 'notify_all_channels_on_2026_06_12') THEN
+        UPDATE tipster_user
+           SET notify_exact_score = TRUE,
+               notify_winner_only = TRUE,
+               notify_wrong_tip   = TRUE
+         WHERE notify_exact_score = FALSE
+            OR notify_winner_only = FALSE
+            OR notify_wrong_tip   = FALSE;
+        INSERT INTO data_migration (name) VALUES ('notify_all_channels_on_2026_06_12');
+      END IF;
+    END $$;
+  `);
 }
 
 export async function closeDb(): Promise<void> {
