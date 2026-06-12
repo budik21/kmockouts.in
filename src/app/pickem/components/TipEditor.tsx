@@ -74,9 +74,12 @@ function buildStandings(
   return rows;
 }
 
+/** Link to a team's tournament page, e.g. /worldcup2026/group-a/team/czech-republic */
+function teamHref(groupId: string, teamName: string): string {
+  return `/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(teamName)}`;
+}
+
 function StandingsTable({ rows, label, groupId }: { rows: StandingRow[]; label: string; groupId: string }) {
-  const teamHref = (teamName: string) =>
-    `/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(teamName)}`;
   return (
     <div>
       <h6 className="tipovacka-table-label">{label}</h6>
@@ -99,7 +102,7 @@ function StandingsTable({ rows, label, groupId }: { rows: StandingRow[]; label: 
               <tr key={r.shortName} className={i < 2 ? 'tipovacka-qualified' : ''}>
                 <td>{i + 1}</td>
                 <td>
-                  <Link href={teamHref(r.teamName)} className="tipovacka-team-link">
+                  <Link href={teamHref(groupId, r.teamName)} className="tipovacka-team-link">
                     <FlagIcon code={r.countryCode} />{' '}
                     <span className="d-none d-sm-inline">{teamLabel(r.teamName, r.fifaRanking)}</span>
                     <span className="d-inline d-sm-none">{teamLabel(r.shortName, r.fifaRanking)}</span>
@@ -365,13 +368,17 @@ export default function TipEditor({
                   {/* Header: centered team names (group/time/venue live in the footer) */}
                   <div className="tipovacka-match-header-row">
                     <span className="tipovacka-match-team-labels">
-                      <FlagIcon code={match.homeTeam.countryCode} />
-                      <span className="tipovacka-team-full">{teamLabel(match.homeTeam.name, match.homeTeam.fifaRanking)}</span>
-                      <span className="tipovacka-team-short">{teamLabel(match.homeTeam.shortName, match.homeTeam.fifaRanking)}</span>
+                      <Link href={teamHref(match.groupId, match.homeTeam.name)} className="tipovacka-team-link">
+                        <FlagIcon code={match.homeTeam.countryCode} />
+                        <span className="tipovacka-team-full">{teamLabel(match.homeTeam.name, match.homeTeam.fifaRanking)}</span>
+                        <span className="tipovacka-team-short">{teamLabel(match.homeTeam.shortName, match.homeTeam.fifaRanking)}</span>
+                      </Link>
                       <span className="tipovacka-match-vs">vs</span>
-                      <span className="tipovacka-team-full">{teamLabel(match.awayTeam.name, match.awayTeam.fifaRanking)}</span>
-                      <span className="tipovacka-team-short">{teamLabel(match.awayTeam.shortName, match.awayTeam.fifaRanking)}</span>
-                      <FlagIcon code={match.awayTeam.countryCode} />
+                      <Link href={teamHref(match.groupId, match.awayTeam.name)} className="tipovacka-team-link">
+                        <span className="tipovacka-team-full">{teamLabel(match.awayTeam.name, match.awayTeam.fifaRanking)}</span>
+                        <span className="tipovacka-team-short">{teamLabel(match.awayTeam.shortName, match.awayTeam.fifaRanking)}</span>
+                        <FlagIcon code={match.awayTeam.countryCode} />
+                      </Link>
                     </span>
                   </div>
 
