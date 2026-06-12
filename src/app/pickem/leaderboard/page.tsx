@@ -115,8 +115,11 @@ export default async function LeaderboardPage() {
     };
   });
 
-  // Compute current user's rank server-side so the heading widget needs no client JS
-  const currentUserEntry: { rank: number; totalPoints: number; shareToken: string } | null = (() => {
+  // Compute current user's rank server-side so the heading widget needs no client JS.
+  // `totalRanked` = number of public predictors with at least one tip (the HAVING
+  // clause above already guarantees every row has > 0 tips), shown as "out of X".
+  const totalRanked = data.length;
+  const currentUserEntry: { rank: number; totalPoints: number; shareToken: string; totalRanked: number } | null = (() => {
     if (!currentUserToken) return null;
     const sorted = [...data].sort((a, b) => {
       if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
@@ -130,7 +133,7 @@ export default async function LeaderboardPage() {
     });
     const idx = sorted.findIndex((r) => r.shareToken === currentUserToken);
     if (idx === -1) return null;
-    return { rank: idx + 1, totalPoints: sorted[idx].totalPoints, shareToken: currentUserToken };
+    return { rank: idx + 1, totalPoints: sorted[idx].totalPoints, shareToken: currentUserToken, totalRanked };
   })();
 
   const lastScoredRows = await cachedQuery<LastScoredDbRow>(

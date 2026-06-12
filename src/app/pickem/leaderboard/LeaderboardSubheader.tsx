@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import TeamFlag from '@/app/components/TeamFlag';
 import LocalKickOff from '@/app/components/LocalKickOff';
 import LeaderboardMeWidget from './LeaderboardMeWidget';
+import LeaderboardMeActions from './LeaderboardMeActions';
 import { teamLabel } from '@/lib/team-label';
 
 export interface LastScoredMatch {
@@ -24,22 +23,10 @@ export interface LastScoredMatch {
 interface Props {
   description: string;
   lastScored: LastScoredMatch | null;
-  currentUserEntry?: { rank: number; totalPoints: number; shareToken: string } | null;
+  currentUserEntry?: { rank: number; totalPoints: number; shareToken: string; totalRanked: number } | null;
 }
 
 export default function LeaderboardSubheader({ description, lastScored, currentUserEntry }: Props) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [justRefreshed, setJustRefreshed] = useState(false);
-
-  const handleRefresh = () => {
-    startTransition(() => {
-      router.refresh();
-      setJustRefreshed(true);
-      setTimeout(() => setJustRefreshed(false), 1500);
-    });
-  };
-
   return (
     <div className="leaderboard-subheader mb-4">
       <div className="leaderboard-subheader-info">
@@ -62,38 +49,16 @@ export default function LeaderboardSubheader({ description, lastScored, currentU
           </div>
         )}
       </div>
-      <div className="leaderboard-subheader-right">
-        {currentUserEntry && (
+      {currentUserEntry && (
+        <div className="leaderboard-subheader-right">
           <LeaderboardMeWidget
             rank={currentUserEntry.rank}
+            totalRanked={currentUserEntry.totalRanked}
             totalPoints={currentUserEntry.totalPoints}
-            shareToken={currentUserEntry.shareToken}
           />
-        )}
-        <button
-          className="leaderboard-refresh-btn"
-          onClick={handleRefresh}
-          disabled={pending}
-          aria-label="Refresh leaderboard"
-        >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={pending ? 'spinning' : ''}
-          aria-hidden="true"
-        >
-          <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
-          <path d="M21 3v5h-5" />
-        </svg>
-        <span>{justRefreshed ? 'Refreshed' : pending ? 'Refreshing…' : 'Refresh leaderboard'}</span>
-        </button>
-      </div>
+          <LeaderboardMeActions shareToken={currentUserEntry.shareToken} />
+        </div>
+      )}
     </div>
   );
 }

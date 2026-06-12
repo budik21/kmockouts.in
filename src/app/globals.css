@@ -5763,9 +5763,12 @@ a.ranking-team-name:hover {
 .leaderboard-outcome { color: #4ade80; font-weight: 600; }
 .leaderboard-wrong { color: var(--prob-out); font-weight: 600; }
 
-/* Hide Exact Score, Winner, Bad Tips columns on mobile — keep only Tips Total + Points */
-@media (max-width: 575px) {
-  .leaderboard-col-hide-mobile { display: none; }
+/* Below the large breakpoint there isn't room for every stat column without a
+   horizontal scrollbar, so collapse to just Name + Points (Exact, Winner, Bad
+   Tips and Tips Total all drop out). The name column then gets the freed width. */
+@media (max-width: 991px) {
+  .leaderboard-col-hide-mobile,
+  .leaderboard-col-tips { display: none; }
 }
 
 /* Column widths — rank narrow, name flexible, stat cols equal, pts slightly wider, link tiny */
@@ -5782,6 +5785,16 @@ a.ranking-team-name:hover {
 .leaderboard-col-stat  { width: 9rem; }
 .leaderboard-col-pts   { width: 9rem; }
 .leaderboard-col-link  { width: 2.5rem; }
+
+/* Mobile: with only Name + Points left, shrink the fixed columns so the name
+   gets the full remaining viewport width instead of wrapping. */
+@media (max-width: 575px) {
+  .leaderboard-col-rank { width: 2.4rem; }
+  .leaderboard-col-pts  { width: 4.5rem; }
+  .leaderboard-col-link { width: 2rem; }
+  .leaderboard-table th,
+  .leaderboard-table td { padding-left: 0.4rem; padding-right: 0.4rem; }
+}
 
 /* Points column gold highlight — needs .leaderboard-table specificity to beat Bootstrap */
 .leaderboard-table th.leaderboard-col-pts,
@@ -5829,29 +5842,56 @@ a.ranking-team-name:hover {
   }
 }
 
-.leaderboard-me-widget-btn {
-  padding: 0.3rem 0.8rem;
+/* Medal emoji replaces the rank number for the podium places */
+.leaderboard-rank-medal {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* Top-3 rows get a "magnified" emphasis vs the rest: bigger, bolder text and a
+   medal-tinted background with a colored left accent. */
+.leaderboard-row-top3 td {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.leaderboard-row-top3 td:first-child {
+  border-left: 3px solid transparent;
+}
+.leaderboard-row-rank1 td { background: rgba(255, 215, 0, 0.10); }
+.leaderboard-row-rank1 td:first-child { border-left-color: #ffd700; }
+.leaderboard-row-rank2 td { background: rgba(192, 198, 205, 0.10); }
+.leaderboard-row-rank2 td:first-child { border-left-color: #c0c6cd; }
+.leaderboard-row-rank3 td { background: rgba(205, 127, 50, 0.12); }
+.leaderboard-row-rank3 td:first-child { border-left-color: #cd7f32; }
+
+/* Action buttons (Show my position / My predictions) — same pattern for both,
+   sitting next to the position widget rather than inside it. */
+.leaderboard-me-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.leaderboard-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.85rem;
   font-size: 0.82rem;
   font-weight: 600;
   background: rgba(37, 99, 235, 0.18);
   color: #93c5fd;
   border: 1px solid rgba(37, 99, 235, 0.45);
-  border-radius: 0.25rem;
+  border-radius: 0.35rem;
   cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-.leaderboard-me-widget-btn:hover {
-  background: rgba(37, 99, 235, 0.3);
-}
-.leaderboard-me-widget-link {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--wc-accent);
   text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
 }
-.leaderboard-me-widget-link:hover {
-  text-decoration: underline;
+.leaderboard-action-btn:hover {
+  background: rgba(37, 99, 235, 0.3);
+  text-decoration: none;
+  color: #bfdbfe;
 }
 
 /* Subheader: description + last scored match on the left, refresh button on the right */
@@ -5892,20 +5932,15 @@ a.ranking-team-name:hover {
 .leaderboard-me-widget-medal { font-size: 1.2rem; line-height: 1; }
 .leaderboard-me-widget-label { font-size: 0.8rem; color: var(--wc-text-muted); }
 .leaderboard-me-widget-rank { font-size: 1.1rem; font-weight: 800; color: #60a5fa; }
+.leaderboard-me-widget-outof { font-size: 0.8rem; color: var(--wc-text-muted); }
 .leaderboard-me-widget-pts {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--wc-accent);
-  margin-left: 0.1rem;
-}
-.leaderboard-me-widget-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   margin-left: auto;
 }
 
-/* On mobile: widget wraps below heading and below the refresh button */
+/* On mobile: widget + actions wrap below heading, stacked full-width */
 @media (max-width: 767px) {
   .leaderboard-subheader-right {
     width: 100%;
@@ -5916,7 +5951,12 @@ a.ranking-team-name:hover {
     width: 100%;
     min-width: 0;
   }
-  .leaderboard-me-widget-actions { margin-left: 0; }
+  .leaderboard-me-actions {
+    width: 100%;
+  }
+  .leaderboard-action-btn {
+    flex: 1 1 0;
+  }
 }
 
 .leaderboard-subheader-info {
@@ -5967,50 +6007,11 @@ a.ranking-team-name:hover {
 .leaderboard-last-scored-team-short { display: none; }
 .leaderboard-last-scored-team-full { display: inline; }
 
-.leaderboard-refresh-btn {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: transparent;
-  color: var(--wc-accent);
-  border: 1px solid var(--wc-accent);
-  border-radius: 0.5rem;
-  padding: 0.45rem 0.85rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.leaderboard-refresh-btn:hover:not(:disabled) {
-  background: var(--wc-accent);
-  color: #2a1a00;
-}
-
-.leaderboard-refresh-btn:disabled {
-  opacity: 0.7;
-  cursor: progress;
-}
-
-.leaderboard-refresh-btn svg.spinning {
-  animation: leaderboard-refresh-spin 0.9s linear infinite;
-}
-
-@keyframes leaderboard-refresh-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Mobile: stack vertically, use short team names, full-width refresh button */
+/* Mobile: stack vertically, use short team names */
 @media (max-width: 575.98px) {
   .leaderboard-subheader {
     flex-direction: column;
     align-items: stretch;
-  }
-  .leaderboard-refresh-btn {
-    width: 100%;
-    justify-content: center;
   }
   .leaderboard-last-scored-team-full { display: none; }
   .leaderboard-last-scored-team-short { display: inline; }

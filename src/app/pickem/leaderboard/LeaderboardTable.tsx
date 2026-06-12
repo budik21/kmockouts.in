@@ -29,12 +29,18 @@ function plainDisplayName(r: LeaderboardRow): string {
   return r.nameSuffix ? `${r.name} (${r.nameSuffix})` : r.name;
 }
 
+function medal(rank: number): string | null {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return null;
+}
+
 export default function LeaderboardTable({ rows, currentUserToken }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(0);
   const highlightRef = useRef<HTMLTableRowElement>(null);
-  const didAutoJump = useRef(false);
 
   const ranked = useMemo(() => {
     const sorted = [...rows].sort(defaultCompare);
@@ -91,14 +97,6 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
     setPage(Math.floor(idx / PAGE_SIZE));
   }, [currentUserRanked, sorted, currentUserToken]);
 
-  // Auto-jump to user's page on first render
-  useEffect(() => {
-    if (!didAutoJump.current && currentUserRanked) {
-      didAutoJump.current = true;
-      jumpToMe();
-    }
-  }, [currentUserRanked, jumpToMe]);
-
   // Listen for the "Show my position" button in the heading widget
   useEffect(() => {
     const handler = () => jumpToMe();
@@ -127,10 +125,10 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
           <colgroup>
             <col className="leaderboard-col-rank" />
             <col className="leaderboard-col-name" />
+            <col className="leaderboard-col-stat leaderboard-col-tips" />
             <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
             <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
             <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
-            <col className="leaderboard-col-stat" />
             <col className="leaderboard-col-pts" />
             <col className="leaderboard-col-link" />
           </colgroup>
@@ -142,7 +140,7 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
               <th className="leaderboard-sortable" onClick={() => handleSort('name')}>
                 Name {sortArrow('name')}
               </th>
-              <th className="text-center leaderboard-sortable" onClick={() => handleSort('totalTips')}>
+              <th className="text-center leaderboard-sortable leaderboard-col-tips" onClick={() => handleSort('totalTips')}>
                 Tips Total {sortArrow('totalTips')}
               </th>
               <th className="text-center leaderboard-sortable leaderboard-col-hide-mobile" onClick={() => handleSort('exact')}>
@@ -164,20 +162,29 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
             {pageRows.map((r, idx) => {
               const isMe = currentUserToken && r.shareToken === currentUserToken;
               const displayRank = page * PAGE_SIZE + idx + 1;
+              const medalEmoji = medal(r.rank);
+              const rowClass = [
+                isMe ? 'leaderboard-row-me' : '',
+                r.rank <= 3 ? `leaderboard-row-top3 leaderboard-row-rank${r.rank}` : '',
+              ].filter(Boolean).join(' ');
               return (
                 <tr
                   key={r.shareToken}
                   ref={isMe ? highlightRef : undefined}
-                  className={isMe ? 'leaderboard-row-me' : undefined}
+                  className={rowClass || undefined}
                 >
-                  <td className="fw-bold">{displayRank}</td>
+                  <td className="fw-bold">
+                    {medalEmoji
+                      ? <span className="leaderboard-rank-medal">{medalEmoji}</span>
+                      : displayRank}
+                  </td>
                   <td>
                     {r.name}
                     {r.nameSuffix && (
                       <span className="leaderboard-name-suffix"> ({r.nameSuffix})</span>
                     )}
                   </td>
-                  <td className="text-center">{r.totalTips}</td>
+                  <td className="text-center leaderboard-col-tips">{r.totalTips}</td>
                   <td className="text-center leaderboard-exact leaderboard-col-hide-mobile">{r.exact}</td>
                   <td className="text-center leaderboard-outcome leaderboard-col-hide-mobile">{r.outcome}</td>
                   <td className="text-center leaderboard-wrong leaderboard-col-hide-mobile">{r.wrong}</td>
@@ -203,6 +210,13 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
         <div className="leaderboard-pager">
           <button
             className="leaderboard-pager-btn"
+            onClick={() => setPage(0)}
+            disabled={page === 0}
+          >
+            « First
+          </button>
+          <button
+            className="leaderboard-pager-btn"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
           >
@@ -217,6 +231,13 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
             disabled={page >= pageCount - 1}
           >
             Next →
+          </button>
+          <button
+            className="leaderboard-pager-btn"
+            onClick={() => setPage(pageCount - 1)}
+            disabled={page >= pageCount - 1}
+          >
+            Last »
           </button>
         </div>
       )}
