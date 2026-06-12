@@ -20,6 +20,27 @@ export interface TipResultEmailData {
   awayTeam: { id: number; name: string; countryCode: string };
   homeArticle?: { headline: string; lede: string };
   awayArticle?: { headline: string; lede: string };
+  /**
+   * The recipient's current standing snapshot, rendered as a "Where you stand"
+   * block. Tips are global, so `points`/`exact`/`outcome`/`wrong` are a single
+   * set of totals shown once above the rankings (the same number applies to the
+   * global leaderboard and every league). `showTipNudge` is true when the user
+   * has no tips awaiting a result AND there are still matches open for tipping —
+   * the e-mail then shows a red nudge to predict more matches (suppressed once
+   * the tournament has no tippable matches left). `global` is null when the user
+   * is off the public leaderboard (tips_public = false). `leagues` lists every
+   * league they belong to, each with a `code` for the clickable link. Omitted
+   * entirely when standings could not be loaded.
+   */
+  standings?: {
+    points: number;
+    exact: number;
+    outcome: number;
+    wrong: number;
+    showTipNudge: boolean;
+    global: { rank: number; total: number } | null;
+    leagues: Array<{ name: string; code: string; rank: number; memberCount: number }>;
+  };
 }
 
 interface TemplateOutput {
@@ -48,6 +69,122 @@ function flagImg(code: string, alt: string): string {
   const lower = code.toLowerCase();
   const url = `https://cdn.jsdelivr.net/npm/flag-icons@7.5.0/flags/4x3/${lower}.svg`;
   return `<img src="${url}" width="36" height="27" alt="${esc(alt)}" style="display:inline-block;vertical-align:middle;border:1px solid rgba(0,0,0,0.08);border-radius:2px;margin:0 6px;background:#ffffff;" />`;
+}
+
+/** Olympic medal for a podium finish, empty string otherwise. */
+function medalFor(rank: number): string {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return '';
+}
+
+/** "1st", "2nd", "3rd", "4th", … */
+function ordinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
+
+/**
+ * A single standings line: clickable label on the left, medal + "Nth of M" on
+ * the right. Podium ranks get the gold/silver/bronze background tint.
+ */
+function standingRow(label: string, href: string, rank: number, total: number): string {
+  const medal = medalFor(rank);
+  const podiumBg =
+    rank === 1 ? '#fffbeb' : rank === 2 ? '#f8fafc' : rank === 3 ? '#fef6f0' : '#ffffff';
+  return `
+                <tr>
+                  <td style="padding:10px 14px;border-bottom:1px solid #eef2f7;background:${podiumBg};">
+                    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                      <td style="font-size:14px;font-weight:600;">
+                        <a href="${href}" style="color:#6f003c;text-decoration:none;font-weight:600;">${esc(label)}</a>
+                      </td>
+                      <td align="right" style="font-size:14px;color:#111827;font-weight:700;white-space:nowrap;">
+                        ${medal ? `<span style="font-size:18px;vertical-align:middle;">${medal}</span>&nbsp;` : ''}${ordinal(rank)}<span style="color:#9ca3af;font-weight:500;">&nbsp;of ${total}</span>
+                      </td>
+                    </tr></table>
+                  </td>
+                </tr>`;
+}
+
+/** Points total + exact/correct/missed breakdown, shown once above the rankings. */
+function renderPointsSummary(s: NonNullable<TipResultEmailData['standings']>): string {
+  return `
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:10px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                      <td style="vertical-align:middle;">
+                        <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Total points</div>
+                        <div style="font-size:30px;font-weight:800;color:#111827;line-height:1.1;">${s.points}</div>
+                      </td>
+                      <td align="right" style="vertical-align:middle;font-size:13px;color:#374151;line-height:1.9;">
+                        <span style="white-space:nowrap;">🎯 ${s.exact} exact</span>&nbsp;&nbsp;
+                        <span style="white-space:nowrap;">✅ ${s.outcome} correct</span>&nbsp;&nbsp;
+                        <span style="white-space:nowrap;">😢 ${s.wrong} missed</span>
+                      </td>
+                    </tr></table>
+                  </td>
+                </tr>
+              </table>`;
+}
+
+/** Red nudge shown when the user has no tips awaiting a result. */
+function renderNoPendingWarning(pickemUrl: string): string {
+  return `
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;margin-top:10px;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <div style="font-size:14px;color:#991b1b;font-weight:700;margin-bottom:6px;">⚠️ Missing future tips!</div>
+                    <p style="margin:0 0 12px;font-size:13px;color:#7f1d1d;line-height:1.5;">
+                      You have no predictions awaiting a result — without tipping more matches you won&rsquo;t earn any more points. Lock in your picks for the upcoming games to keep climbing.
+                    </p>
+                    <a href="${pickemUrl}" style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;padding:9px 18px;border-radius:6px;font-weight:600;font-size:13px;">Make your tips &rarr;</a>
+                  </td>
+                </tr>
+              </table>`;
+}
+
+function renderStandingsBlock(
+  standings: TipResultEmailData['standings'],
+): string {
+  if (!standings) return '';
+  const leaderboardUrl = `${SITE_URL}/pickem/leaderboard`;
+  const pickemUrl = `${SITE_URL}/pickem`;
+
+  const lines: string[] = [];
+  if (standings.global) {
+    lines.push(standingRow('🌍 Global leaderboard', leaderboardUrl, standings.global.rank, standings.global.total));
+  }
+  for (const lg of standings.leagues) {
+    lines.push(standingRow(lg.name, `${SITE_URL}/pickem/leagues/${lg.code}`, lg.rank, lg.memberCount));
+  }
+
+  const rankTable = lines.length
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">${lines.join('')}</table>`
+    : '';
+  const warning = standings.showTipNudge ? renderNoPendingWarning(pickemUrl) : '';
+
+  return `
+          <tr>
+            <td style="padding:16px 28px 0;">
+              <div style="font-size:12px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Where you stand</div>
+              ${renderPointsSummary(standings)}
+              ${rankTable}
+              ${warning}
+            </td>
+          </tr>`;
 }
 
 function kindFromPoints(points: 0 | 1 | 4): TipResultKind {
@@ -176,6 +313,8 @@ export function buildTipResultEmail(data: TipResultEmailData): TemplateOutput {
 
           ${renderArticleBlock(data.homeTeam, data.homeArticle, teamUrl(data.homeTeam.name))}
           ${renderArticleBlock(data.awayTeam, data.awayArticle, teamUrl(data.awayTeam.name))}
+
+          ${renderStandingsBlock(data.standings)}
 
           <tr>
             <td style="padding:16px 28px 4px;">

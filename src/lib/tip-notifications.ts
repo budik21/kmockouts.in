@@ -1,8 +1,9 @@
 import { Resend } from 'resend';
 import { buildTipResultEmail, type TipResultEmailData } from './email-templates/tip-result';
-import { query } from './db';
+import { query, queryOne } from './db';
 import type { TipTransition } from './tip-recalc';
 import { getCachedTeamArticle } from '@/engine/team-article-ai';
+import { TIP_LOCK_LEAD_MS } from './tip-lock';
 
 export interface NotifyUser {
   email: string;
@@ -87,6 +88,7 @@ export async function sendTipResultEmail(payload: NotifyPayload): Promise<'sent'
 
 interface TransitionRow {
   tip_id: number;
+  user_id: number;
   tip_home_goals: number;
   tip_away_goals: number;
   new_points: number;
@@ -130,6 +132,7 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
   const rows = await query<TransitionRow>(
     `SELECT
        t.id AS tip_id,
+       t.user_id AS user_id,
        t.home_goals AS tip_home_goals,
        t.away_goals AS tip_away_goals,
        t.points AS new_points,
@@ -161,6 +164,143 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
   return sendTipEmailsForRows(rows, hasKey);
 }
 
+/** Per-user standings snapshot embedded in the tip-result e-mail. */
+interface UserStandings {
+  points: number;
+  exact: number;
+  outcome: number;
+  wrong: number;
+  showTipNudge: boolean;
+  global: { rank: number; total: number } | null;
+  leagues: Array<{ name: string; code: string; rank: number; memberCount: number }>;
+}
+
+/**
+ * Load the tip totals, global-leaderboard rank and every league rank for the
+ * given users so the tip-result e-mail can show "where you stand" with a medal
+ * for podium finishes. Three queries:
+ *   1. Per-user tip totals (points + exact/correct/missed/pending) — NOT
+ *      filtered by tips_public, so private users still get their totals and the
+ *      "no tips lined up" nudge.
+ *   2. Global rank via a window over the public leaderboard (same ordering as
+ *      the site: points DESC, exact DESC, outcome DESC, tips ASC, name ASC).
+ *      Private users (tips_public = false) get global: null.
+ *   3. Each league's rank + member count, with the league code for the link.
+ * Ranks/points come from the same recalc that runs before e-mails dispatch
+ * (recalculateAllTipPoints → recalculateLeagueStandings), so they're current.
+ */
+async function loadStandingsForUsers(userIds: number[]): Promise<Map<number, UserStandings>> {
+  const result = new Map<number, UserStandings>();
+  if (userIds.length === 0) return result;
+  for (const id of userIds) {
+    result.set(id, { points: 0, exact: 0, outcome: 0, wrong: 0, showTipNudge: false, global: null, leagues: [] });
+  }
+
+  // Is there at least one match still open for tipping? Mirrors isTipLocked:
+  // a match is tippable while it's SCHEDULED and kick-off is more than
+  // TIP_LOCK_LEAD_MS away. Global (same for everyone), so query it once. When
+  // none remain (tournament over) we never show the "go tip more" nudge.
+  const lockThreshold = new Date(Date.now() + TIP_LOCK_LEAD_MS).toISOString();
+  const openRow = await queryOne<{ open: boolean }>(
+    `SELECT EXISTS(
+        SELECT 1 FROM match
+         WHERE status = 'SCHEDULED' AND kick_off > $1
+     ) AS open`,
+    [lockThreshold],
+  );
+  const openMatchesExist = openRow?.open ?? false;
+
+  // 1. Per-user totals (all tips, regardless of public/private).
+  const totalRows = await query<{
+    user_id: number;
+    exact_count: string;
+    outcome_count: string;
+    wrong_count: string;
+    pending_count: string;
+    total_points: string;
+  }>(
+    `SELECT
+        t.user_id,
+        COUNT(*) FILTER (WHERE t.points = 4)    AS exact_count,
+        COUNT(*) FILTER (WHERE t.points = 1)    AS outcome_count,
+        COUNT(*) FILTER (WHERE t.points = 0)    AS wrong_count,
+        COUNT(*) FILTER (WHERE t.points IS NULL) AS pending_count,
+        COALESCE(SUM(CASE WHEN t.points IS NOT NULL THEN t.points ELSE 0 END), 0) AS total_points
+      FROM tip t
+      WHERE t.user_id = ANY($1::int[])
+      GROUP BY t.user_id`,
+    [userIds],
+  );
+  for (const r of totalRows) {
+    const entry = result.get(r.user_id);
+    if (entry) {
+      entry.points = parseInt(r.total_points, 10);
+      entry.exact = parseInt(r.exact_count, 10);
+      entry.outcome = parseInt(r.outcome_count, 10);
+      entry.wrong = parseInt(r.wrong_count, 10);
+      // Nudge only when nothing is in flight AND there's still something to tip.
+      entry.showTipNudge = parseInt(r.pending_count, 10) === 0 && openMatchesExist;
+    }
+  }
+
+  // 2. Global leaderboard rank (public users only).
+  const globalRows = await query<{ user_id: number; rank: string; total: string }>(
+    `WITH agg AS (
+        SELECT
+          u.id AS user_id,
+          u.name AS user_name,
+          COUNT(t.id)                             AS total_tips,
+          COUNT(t.id) FILTER (WHERE t.points = 4) AS exact_count,
+          COUNT(t.id) FILTER (WHERE t.points = 1) AS outcome_count,
+          COALESCE(SUM(CASE WHEN t.points IS NOT NULL THEN t.points ELSE 0 END), 0) AS total_points
+        FROM tipster_user u
+        LEFT JOIN tip t ON t.user_id = u.id
+        WHERE u.tips_public = true
+        GROUP BY u.id, u.name
+        HAVING COUNT(t.id) > 0
+     ),
+     ranked AS (
+        SELECT
+          user_id,
+          ROW_NUMBER() OVER (
+            ORDER BY total_points DESC, exact_count DESC, outcome_count DESC,
+                     total_tips ASC, user_name ASC
+          ) AS rank,
+          COUNT(*) OVER () AS total
+        FROM agg
+     )
+     SELECT user_id, rank, total FROM ranked WHERE user_id = ANY($1::int[])`,
+    [userIds],
+  );
+  for (const r of globalRows) {
+    const entry = result.get(r.user_id);
+    if (entry) entry.global = { rank: parseInt(r.rank, 10), total: parseInt(r.total, 10) };
+  }
+
+  // 3. Per-league rank + member count.
+  const leagueRows = await query<{ user_id: number; name: string; code: string; rank: number; member_count: string }>(
+    `SELECT
+        s.user_id,
+        l.name,
+        l.code,
+        s.rank,
+        (SELECT COUNT(*) FROM pickem_league_standings s2 WHERE s2.league_id = s.league_id) AS member_count
+      FROM pickem_league_standings s
+      JOIN pickem_league l ON l.id = s.league_id
+      WHERE s.user_id = ANY($1::int[])
+      ORDER BY s.user_id, s.rank ASC, l.name ASC`,
+    [userIds],
+  );
+  for (const r of leagueRows) {
+    const entry = result.get(r.user_id);
+    if (entry) {
+      entry.leagues.push({ name: r.name, code: r.code, rank: r.rank, memberCount: parseInt(r.member_count, 10) });
+    }
+  }
+
+  return result;
+}
+
 // The outbound e-mail API is rate-limited (~5 requests/second in production).
 // With dozens of tipsters an unbounded Promise.allSettled fires every send in
 // one burst and gets throttled mid-run, so actual sends go out in batches of
@@ -187,6 +327,11 @@ async function sendTipEmailsForRows(rows: TransitionRow[], hasKey: boolean): Pro
     }),
   );
   const articleByTeamId = new Map(articleEntries);
+
+  // Current global + per-league standings for everyone being e-mailed, so each
+  // message can show "where you stand" with a podium medal.
+  const uniqueUserIds = Array.from(new Set(rows.map((r) => r.user_id)));
+  const standingsByUserId = await loadStandingsForUsers(uniqueUserIds);
 
   const results: TipEmailDispatchResult[] = [];
 
@@ -259,6 +404,7 @@ async function sendTipEmailsForRows(rows: TransitionRow[], hasKey: boolean): Pro
               awayArticle: awayArticle
                 ? { headline: awayArticle.headline, lede: awayArticle.lede }
                 : undefined,
+              standings: standingsByUserId.get(r.user_id),
             },
           });
           results.push({ ...base, outcome: 'sent' });
@@ -299,6 +445,7 @@ export async function dispatchTipResultEmailsForMatch(
   const rows = await query<TransitionRow>(
     `SELECT
        t.id AS tip_id,
+       t.user_id AS user_id,
        t.home_goals AS tip_home_goals,
        t.away_goals AS tip_away_goals,
        t.points AS new_points,
