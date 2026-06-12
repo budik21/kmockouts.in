@@ -161,9 +161,17 @@ export async function dispatchTipResultEmails(transitions: TipTransition[]): Pro
   return sendTipEmailsForRows(rows, hasKey);
 }
 
+// The outbound e-mail API is rate-limited (~5 requests/second in production).
+// With dozens of tipsters an unbounded Promise.allSettled fires every send in
+// one burst and gets throttled mid-run, so actual sends go out in batches of
+// SEND_BATCH_SIZE with a SEND_BATCH_DELAY_MS pause between batches.
+const SEND_BATCH_SIZE = 5;
+const SEND_BATCH_DELAY_MS = 2000;
+
 /**
  * Shared send loop: takes joined tip+user+match+team rows and sends one
- * tip-result e-mail per row, respecting the per-user opt-in. Returns a
+ * tip-result e-mail per row, respecting the per-user opt-in. Sends are paced
+ * in small batches to stay under the e-mail API rate limit. Returns a
  * per-recipient outcome list. Team articles are loaded with
  * `ignorePending: true` so the e-mail always embeds the freshly-generated
  * article even while the group's AI job is still 'processing'.
@@ -181,68 +189,89 @@ async function sendTipEmailsForRows(rows: TransitionRow[], hasKey: boolean): Pro
   const articleByTeamId = new Map(articleEntries);
 
   const results: TipEmailDispatchResult[] = [];
-  await Promise.allSettled(
-    rows.map(async (r) => {
-      const base = {
-        tipId: r.tip_id,
-        userName: r.user_name,
-        userEmail: r.email,
-        points: r.new_points,
-      };
-      if (r.new_points !== 0 && r.new_points !== 1 && r.new_points !== 4) {
-        results.push({ ...base, outcome: 'skipped', reason: `points=${r.new_points} not a scorable result` });
-        return;
-      }
-      const points = r.new_points as 0 | 1 | 4;
-      const user = {
-        email: r.email,
-        name: r.user_name,
-        notify_exact_score: r.notify_exact_score,
-        notify_winner_only: r.notify_winner_only,
-        notify_wrong_tip: r.notify_wrong_tip,
-      };
-      if (!hasKey) {
-        results.push({ ...base, outcome: 'disabled', reason: 'RESEND_API_KEY missing' });
-        return;
-      }
-      if (!shouldSend(user, points)) {
-        results.push({ ...base, outcome: 'skipped', reason: skipReason(points) });
-        return;
-      }
-      try {
-        const homeArticle = articleByTeamId.get(r.home_team_id) ?? undefined;
-        const awayArticle = articleByTeamId.get(r.away_team_id) ?? undefined;
-        await sendTipResultEmail({
-          user,
-          points,
-          data: {
-            match: {
-              groupId: r.match_group_id,
-              kickOff: typeof r.kick_off === 'string' ? r.kick_off : new Date(r.kick_off).toISOString(),
-              homeGoals: r.home_goals,
-              awayGoals: r.away_goals,
+
+  // Classify every row first; only rows that actually trigger an e-mail API
+  // call go through the paced batches below, so skipped/disabled rows don't
+  // burn batch slots or delay real sends.
+  const sendable: Array<{ row: TransitionRow; user: NotifyUser; points: 0 | 1 | 4 }> = [];
+  for (const r of rows) {
+    const base = {
+      tipId: r.tip_id,
+      userName: r.user_name,
+      userEmail: r.email,
+      points: r.new_points,
+    };
+    if (r.new_points !== 0 && r.new_points !== 1 && r.new_points !== 4) {
+      results.push({ ...base, outcome: 'skipped', reason: `points=${r.new_points} not a scorable result` });
+      continue;
+    }
+    const points = r.new_points as 0 | 1 | 4;
+    const user: NotifyUser = {
+      email: r.email,
+      name: r.user_name,
+      notify_exact_score: r.notify_exact_score,
+      notify_winner_only: r.notify_winner_only,
+      notify_wrong_tip: r.notify_wrong_tip,
+    };
+    if (!hasKey) {
+      results.push({ ...base, outcome: 'disabled', reason: 'RESEND_API_KEY missing' });
+      continue;
+    }
+    if (!shouldSend(user, points)) {
+      results.push({ ...base, outcome: 'skipped', reason: skipReason(points) });
+      continue;
+    }
+    sendable.push({ row: r, user, points });
+  }
+
+  for (let i = 0; i < sendable.length; i += SEND_BATCH_SIZE) {
+    const batch = sendable.slice(i, i + SEND_BATCH_SIZE);
+    await Promise.allSettled(
+      batch.map(async ({ row: r, user, points }) => {
+        const base = {
+          tipId: r.tip_id,
+          userName: r.user_name,
+          userEmail: r.email,
+          points: r.new_points,
+        };
+        try {
+          const homeArticle = articleByTeamId.get(r.home_team_id) ?? undefined;
+          const awayArticle = articleByTeamId.get(r.away_team_id) ?? undefined;
+          await sendTipResultEmail({
+            user,
+            points,
+            data: {
+              match: {
+                groupId: r.match_group_id,
+                kickOff: typeof r.kick_off === 'string' ? r.kick_off : new Date(r.kick_off).toISOString(),
+                homeGoals: r.home_goals,
+                awayGoals: r.away_goals,
+              },
+              tip: {
+                homeGoals: r.tip_home_goals,
+                awayGoals: r.tip_away_goals,
+              },
+              homeTeam: { id: r.home_team_id, name: r.home_team_name, countryCode: r.home_country_code },
+              awayTeam: { id: r.away_team_id, name: r.away_team_name, countryCode: r.away_country_code },
+              homeArticle: homeArticle
+                ? { headline: homeArticle.headline, lede: homeArticle.lede }
+                : undefined,
+              awayArticle: awayArticle
+                ? { headline: awayArticle.headline, lede: awayArticle.lede }
+                : undefined,
             },
-            tip: {
-              homeGoals: r.tip_home_goals,
-              awayGoals: r.tip_away_goals,
-            },
-            homeTeam: { id: r.home_team_id, name: r.home_team_name, countryCode: r.home_country_code },
-            awayTeam: { id: r.away_team_id, name: r.away_team_name, countryCode: r.away_country_code },
-            homeArticle: homeArticle
-              ? { headline: homeArticle.headline, lede: homeArticle.lede }
-              : undefined,
-            awayArticle: awayArticle
-              ? { headline: awayArticle.headline, lede: awayArticle.lede }
-              : undefined,
-          },
-        });
-        results.push({ ...base, outcome: 'sent' });
-      } catch (err) {
-        console.error('[tip-notifications] send failed for tip', r.tip_id, err);
-        results.push({ ...base, outcome: 'failed', reason: String(err) });
-      }
-    }),
-  );
+          });
+          results.push({ ...base, outcome: 'sent' });
+        } catch (err) {
+          console.error('[tip-notifications] send failed for tip', r.tip_id, err);
+          results.push({ ...base, outcome: 'failed', reason: String(err) });
+        }
+      }),
+    );
+    if (i + SEND_BATCH_SIZE < sendable.length) {
+      await new Promise((resolve) => setTimeout(resolve, SEND_BATCH_DELAY_MS));
+    }
+  }
   // Per-recipient outcome in the log, so the reason (skipped toggle, Resend
   // rejection, …) is visible without waiting for the diagnostic e-mail.
   for (const r of results) {
