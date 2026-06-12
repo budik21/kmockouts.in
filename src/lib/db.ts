@@ -300,14 +300,16 @@ export async function initializeSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_tipster_user_share ON tipster_user(share_token);
 
-    -- Email notification preferences. Exact-score notifications are on by
-    -- default (the most satisfying scoring event); the others are opt-in.
-    -- Pre-existing rows with exact-score off were flipped once via the
-    -- 'notify_exact_score_default_2026_05_16' data migration below.
+    -- Email notification preferences. All three channels are on by default;
+    -- pre-existing rows were flipped once via the
+    -- 'notify_exact_score_default_2026_05_16' and
+    -- 'notify_all_channels_on_2026_06_12' data migrations below.
     ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_exact_score BOOLEAN NOT NULL DEFAULT TRUE;
-    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_winner_only BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_wrong_tip   BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_winner_only BOOLEAN NOT NULL DEFAULT TRUE;
+    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_wrong_tip   BOOLEAN NOT NULL DEFAULT TRUE;
     ALTER TABLE tipster_user ALTER COLUMN notify_exact_score SET DEFAULT TRUE;
+    ALTER TABLE tipster_user ALTER COLUMN notify_winner_only SET DEFAULT TRUE;
+    ALTER TABLE tipster_user ALTER COLUMN notify_wrong_tip   SET DEFAULT TRUE;
 
     -- Tipovacka: individual match predictions
     CREATE TABLE IF NOT EXISTS tip (
@@ -449,9 +451,9 @@ export async function initializeSchema(): Promise<void> {
   `);
 
   // Turn ALL tip-result notification channels (exact score, winner only,
-  // wrong tip) on for every existing account once. Users can still opt out
-  // afterwards in settings; the guard keeps those opt-outs intact on
-  // subsequent deploys. Column defaults for new signups are unchanged.
+  // wrong tip) on for every existing account once; new signups get all three
+  // via the column defaults above. Users can still opt out afterwards in
+  // settings; the guard keeps those opt-outs intact on subsequent deploys.
   await pool.query(`
     DO $$
     BEGIN
