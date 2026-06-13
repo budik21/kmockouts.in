@@ -15,6 +15,7 @@ import UsersClient from '../users/UsersClient';
 import EmailsTab from './EmailsTab';
 import FeatureFlagsClient from './FeatureFlagsClient';
 import AiPredictionsActions, { type AiTeamOption } from './AiPredictionsActions';
+import CloudflareTab from './CloudflareTab';
 import TwitterTab from './TwitterTab';
 import ScenarioPicker from '@/app/components/ScenarioPicker';
 import type { FeatureFlag } from '@/lib/feature-flags';
@@ -44,7 +45,7 @@ interface DashboardTabsProps {
   initialTab?: TabKey;
 }
 
-type TabKey = 'matches' | 'scenarios' | 'pickem' | 'emails' | 'users' | 'flags' | 'ai' | 'twitter' | 'env';
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'emails' | 'users' | 'flags' | 'ai' | 'twitter' | 'cloudflare' | 'env';
 type PickemSubTab = 'management' | 'matches' | 'tipsters' | 'leagues' | 'tips';
 
 export default function DashboardTabs({
@@ -169,6 +170,11 @@ export default function DashboardTabs({
         {isSuperadmin && (
           <button onClick={() => setActiveTab('twitter')} style={tabButtonStyle(activeTab === 'twitter')}>
             Twitter
+          </button>
+        )}
+        {isSuperadmin && (
+          <button onClick={() => setActiveTab('cloudflare')} style={tabButtonStyle(activeTab === 'cloudflare')}>
+            Cloudflare
           </button>
         )}
         {isSuperadmin && (
@@ -432,6 +438,22 @@ export default function DashboardTabs({
               Twitter (X)
             </h2>
             <TwitterTab />
+          </div>
+        )}
+
+        {/* Cloudflare tab — superadmin only */}
+        {activeTab === 'cloudflare' && isSuperadmin && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1rem' }}>
+              Cloudflare
+            </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Purge the Cloudflare edge cache (whole site, one group, or one team) and the
+              matching Next.js caches, then re-warm the affected World&nbsp;Cup pages so the
+              next visitor hits a warm cache instead of a cold render. No-op on the Cloudflare
+              side when <code>CF_ZONE_ID</code>/<code>CF_API_TOKEN</code> are unset.
+            </p>
+            <CloudflareTab teams={aiTeams} groups={aiGroups} />
           </div>
         )}
 
