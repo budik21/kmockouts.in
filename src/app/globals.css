@@ -226,6 +226,7 @@ a { color: inherit; text-decoration: none; }
 
 .hero-fixtures-btn {
   display: inline-block;
+  margin-top: 0.75rem;
   padding: 0.6rem 1.3rem;
   font-size: 1rem;
   font-weight: 700;

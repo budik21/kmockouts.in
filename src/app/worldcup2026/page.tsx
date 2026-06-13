@@ -371,8 +371,8 @@ export default async function HomePage() {
           <Link href="/worldcup2026/how-to-clinch-play-off-worldcup2026" className="hero-clinch-link">
             How to Clinch a Play-Off Spot &rarr;
           </Link>
-          <Link href="/pickem" className="hero-pickem-btn">
-            🏆 Play Pick&apos;em — predict all 72 matches
+          <Link href="/pickem/leaderboard" className="hero-pickem-btn">
+            🏆 Show Leaderboard
           </Link>
           <a
             href="https://x.com/KnockoutsInEN"
