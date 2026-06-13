@@ -156,7 +156,7 @@ function CopyPromptButton({ m }: { m: MatchTipStats }) {
   );
 }
 
-function MatchCard({ m }: { m: MatchTipStats }) {
+function MatchCard({ m, past }: { m: MatchTipStats; past: boolean }) {
   const topScore = m.topScore ? `${m.topScore.homeGoals}:${m.topScore.awayGoals}` : '—';
 
   return (
@@ -166,6 +166,10 @@ function MatchCard({ m }: { m: MatchTipStats }) {
         borderRadius: 6,
         padding: '0.75rem 1rem',
         background: 'rgba(255, 255, 255, 0.03)',
+        // Played matches stay visible but are visually suppressed: dimmed and
+        // desaturated so attention falls on upcoming fixtures.
+        opacity: past ? 0.45 : 1,
+        filter: past ? 'grayscale(0.85)' : 'none',
       }}
     >
       <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -201,16 +205,21 @@ export default function PickemMatchesTab({ matches }: { matches: MatchTipStats[]
   // Dates are formatted in the admin's local timezone; gate on mount so the
   // grouped markup is client-only and can't trigger a hydration mismatch.
   const mounted = useHasMounted();
+  const [futureOnly, setFutureOnly] = useState(true);
+
+  // A match counts as "played" once its kick-off time has passed.
+  const isPast = (m: MatchTipStats) => new Date(m.kickOff).getTime() < Date.now();
 
   const groups = useMemo(() => {
     const map = new Map<string, MatchTipStats[]>();
     for (const m of matches) {
+      if (futureOnly && isPast(m)) continue;
       const key = dayKey(m.kickOff);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(m);
     }
     return Array.from(map.entries());
-  }, [matches]);
+  }, [matches, futureOnly]);
 
   if (!mounted) {
     return <p style={{ color: 'var(--wc-text-muted)' }}>Loading…</p>;
@@ -220,8 +229,32 @@ export default function PickemMatchesTab({ matches }: { matches: MatchTipStats[]
     return <p style={{ color: 'var(--wc-text-muted)' }}>No group-stage matches found.</p>;
   }
 
+  const toggle = (
+    <label
+      className="d-flex align-items-center gap-2"
+      style={{ color: 'var(--wc-text)', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none' }}
+    >
+      <input
+        type="checkbox"
+        checked={futureOnly}
+        onChange={(e) => setFutureOnly(e.target.checked)}
+      />
+      Show future matches only
+    </label>
+  );
+
+  if (groups.length === 0) {
+    return (
+      <div className="d-flex flex-column gap-3">
+        {toggle}
+        <p style={{ color: 'var(--wc-text-muted)' }}>No upcoming matches.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="d-flex flex-column gap-4">
+      {toggle}
       {groups.map(([key, rows]) => (
         <div key={key}>
           <h3 style={{ color: 'var(--wc-text)', fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
@@ -229,7 +262,7 @@ export default function PickemMatchesTab({ matches }: { matches: MatchTipStats[]
           </h3>
           <div className="d-flex flex-column gap-2">
             {rows.map((m) => (
-              <MatchCard key={m.id} m={m} />
+              <MatchCard key={m.id} m={m} past={isPast(m)} />
             ))}
           </div>
         </div>
