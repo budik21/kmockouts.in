@@ -1,5 +1,6 @@
 import { cachedQuery } from '@/lib/cached-db';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import LeaderboardTable from './LeaderboardTable';
 import LeaderboardRecalcBanner from './LeaderboardRecalcBanner';
@@ -175,7 +176,14 @@ export default async function LeaderboardPage() {
 
   return (
     <main className="container py-4">
-      <h1 className="mb-1">Global Leaderboard</h1>
+      <div className="leaderboard-header">
+        <h1 className="mb-1">Global Leaderboard</h1>
+        {!session && (
+          <Link href="/pickem" className="leaderboard-join-btn">
+            🏆 Join Pick&apos;em
+          </Link>
+        )}
+      </div>
       <LeaderboardSubheader
         description="Ranking of all public predictors for the FIFA World Cup 2026."
         lastScored={lastScored}
