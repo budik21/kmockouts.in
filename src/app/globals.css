@@ -5915,15 +5915,17 @@ a.ranking-team-name:hover {
 .leaderboard-join-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  padding: 0.45rem 1rem;
-  font-size: 0.85rem;
+  padding: 0.6rem 1.3rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #2a1a00;
   background: var(--wc-accent);
   border: none;
   border-radius: 999px;
   text-decoration: none;
+  white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.15s, box-shadow 0.15s;
 }
@@ -5933,6 +5935,15 @@ a.ranking-team-name:hover {
   text-decoration: none;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* On narrow screens the CTA wraps under the title — stretch it full-width
+   so it reads as a clear primary action rather than a stray pill. */
+@media (max-width: 576px) {
+  .leaderboard-join-btn {
+    width: 100%;
+    padding: 0.65rem 1rem;
+  }
 }
 
 /* Subheader: description + last scored match on the left, refresh button on the right */

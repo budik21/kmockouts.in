@@ -372,7 +372,7 @@ export default async function HomePage() {
             How to Clinch a Play-Off Spot &rarr;
           </Link>
           <Link href="/pickem/leaderboard" className="hero-pickem-btn">
-            🏆 Show Leaderboard
+            🏆 Pick&apos;em Leaderboard
           </Link>
           <a
             href="https://x.com/KnockoutsInEN"
