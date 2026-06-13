@@ -7,8 +7,14 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        // Keep internal/admin tooling and API routes out of search engines.
-        disallow: ['/admin', '/api/', '/worldcup2026/scenarios'],
+        // Keep internal/admin tooling, API routes and private user pages out of search engines.
+        disallow: [
+          '/admin',
+          '/api/',
+          '/worldcup2026/scenarios',
+          '/me',
+          '/pickem/share',
+        ],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
