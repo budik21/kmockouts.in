@@ -5,6 +5,7 @@ import Link from 'next/link';
 import TeamFlag from './TeamFlag';
 import LocalKickOff from './LocalKickOff';
 import { useHasMounted } from '@/lib/use-has-mounted';
+import { slugify } from '@/lib/slugify';
 
 interface FixtureTeam {
   name: string;
@@ -42,6 +43,10 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const pad = (n: number) => String(n).padStart(2, '0');
+
+/** Team page URL, e.g. "/worldcup2026/group-a/team/czech-republic". */
+const teamHref = (groupId: string, name: string) =>
+  `/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(name)}`;
 
 /** YYYY-MM-DD calendar-day key for an ISO kickoff. Before mount we use the UTC
  *  date (matching the SSR markup); after mount the visitor's local date, so a
@@ -208,11 +213,11 @@ function FixtureCard({ fixture: f }: { fixture: FixtureItem }) {
         </span>
       </div>
       <div className="fixture-card-main">
-        <div className="fixture-team fixture-team-home">
+        <Link href={teamHref(f.groupId, f.homeTeam.name)} className="fixture-team fixture-team-home">
           <span className="fixture-team-name">{f.homeTeam.name}</span>
           <span className="fixture-team-short">{f.homeTeam.shortName}</span>
           <TeamFlag countryCode={f.homeTeam.countryCode} />
-        </div>
+        </Link>
 
         <div className="fixture-score-box">
           {isFinished || isLive ? (
@@ -224,11 +229,11 @@ function FixtureCard({ fixture: f }: { fixture: FixtureItem }) {
           )}
         </div>
 
-        <div className="fixture-team fixture-team-away">
+        <Link href={teamHref(f.groupId, f.awayTeam.name)} className="fixture-team fixture-team-away">
           <TeamFlag countryCode={f.awayTeam.countryCode} />
           <span className="fixture-team-name">{f.awayTeam.name}</span>
           <span className="fixture-team-short">{f.awayTeam.shortName}</span>
-        </div>
+        </Link>
       </div>
     </div>
   );
