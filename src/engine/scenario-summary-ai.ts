@@ -33,6 +33,12 @@ CONTENT:
 - ACCURACY IS PARAMOUNT: before any general claim ("must win", "needs to beat X"), verify it against EVERY combination; if even one contradicts it, do not make it. Use ONLY the data given; never invent. If a team qualifies or is eliminated no matter what, say so. When another match matters, name it.
 - Real team names, never IDs. All matches are at neutral venues — never "home"/"away"; say "plays"/"faces". Position meanings: 1st = group winner, 2nd = runner-up (both auto-qualify), 3rd = may qualify as a best third-placed team, 4th = eliminated.
 
+TIEBREAKERS (critical — positions are NOT decided by points alone). When teams finish level on points the order is: (1) overall goal difference; (2) overall goals scored; (3) head-to-head among only the tied teams (their points, then goal difference, then goals scored in the matches between them); (4) fair play; (5) FIFA ranking. The "Results so far" and the goals-scored figures are given so you can EXPLAIN these — never to re-derive positions yourself.
+- Goal margins are load-bearing. A required "by X+ goals" exists because a smaller result fails a tiebreaker; keep the margin in the verdict AND in every path that needs it, and never drop or round it when simplifying. "beats X" and "beats X by 2+ goals" are different claims.
+- Each summary covers ONLY the combinations that put this team in THAT position. Never narrate a counterfactual that would land the team in a DIFFERENT position. In particular, do NOT justify a margin at a higher position by describing the worse outcome it avoids — at 1st place simply state the margin needed to finish 1st; the case where a smaller margin drops the team to 2nd belongs in the 2nd-place summary, not the 1st.
+- Explain a tiebreaker in the summary of the position the team ACTUALLY REACHES through it. When a listed path leaves this team level on points with a rival and a tiebreaker settles the order, name the tiebreaker and who is ahead, using the locked facts — e.g. in the 2nd-place summary: "Czech Republic beats Mexico by a single goal here, finishing level with South Korea on points and goal difference; South Korea places above because it won their head-to-head 2-1." Results in "Results so far" are locked and cannot change.
+- GROUND TRUTH: the PRE-COMPUTED PATHS and their goal margins are the only source of truth for WHAT must happen and for WHICH position each combination gives. Use standings / "Results so far" / goals-scored ONLY to explain WHY — never to infer, add, change, or re-rank a result.
+
 OUTPUT — for EACH requested position write a delimiter line exactly "===POSITION N===" (N = the position number) on its own line, then that position's summary HTML on the following line(s). No JSON, no markdown fences, no commentary. The HTML may contain double quotes freely. Example:
 ===POSITION 1===
 <p>...</p><div class="scenario-paths">...</div>
@@ -59,7 +65,10 @@ interface BatchSharedContext {
   groupId: string;
   allProbabilities: { [pos: number]: number };
   remainingMatches: { homeTeam: string; awayTeam: string; isTeamMatch: boolean }[];
-  currentStandings: { teamName: string; points: number; gd: number; position: number }[];
+  currentStandings: { teamName: string; points: number; gd: number; goalsFor?: number; position: number }[];
+  /** Finished group matches with scores — the locked head-to-head record the
+   *  model needs to EXPLAIN tiebreakers (e.g. "South Korea beat them 2-1"). */
+  playedMatches?: { homeTeam: string; awayTeam: string; homeGoals: number; awayGoals: number }[];
 }
 
 /** One finishing position to summarise. */
@@ -179,7 +188,17 @@ async function generateAiSummariesBatch(
     .join('\n');
 
   const standingsContext = shared.currentStandings
-    .map(s => `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}`)
+    .map(s => {
+      const gf = s.goalsFor !== undefined ? `, ${s.goalsFor} goals scored` : '';
+      return `  ${s.position}. ${s.teamName} — ${s.points} pts, GD ${s.gd >= 0 ? '+' : ''}${s.gd}${gf}`;
+    })
+    .join('\n');
+
+  // Locked head-to-head record. Tiebreakers can hinge on an already-played
+  // result, so list finished matches with scores; the model uses them only to
+  // EXPLAIN why a margin/tiebreaker matters (see system prompt).
+  const resultsContext = (shared.playedMatches ?? [])
+    .map(m => `  ${m.homeTeam} ${m.homeGoals}-${m.awayGoals} ${m.awayTeam}`)
     .join('\n');
 
   const probLines = [1, 2, 3, 4]
@@ -198,9 +217,9 @@ async function generateAiSummariesBatch(
 All position probabilities for ${shared.teamName}:
 ${probLines}
 
-Current standings:
+Current standings (points, goal difference, goals scored):
 ${standingsContext}
-
+${resultsContext ? `\nResults so far (locked — these decide head-to-head tiebreakers):\n${resultsContext}\n` : ''}
 Remaining matches in the group:
 ${matchList}
 
@@ -371,9 +390,11 @@ function hashPatterns(patterns: string[]): string {
   // Version salt — bump to invalidate all cached summaries after prompt changes
   const sorted = [...patterns].sort();
   let hash = 0;
-  // v7: the model now receives the capped edge-scenario set (≤50) instead of
-  // the full enumeration. Bump regenerates cached summaries under the new input.
-  const str = 'v7:' + sorted.join('|');
+  // v8: the prompt now carries goals-scored, the locked "Results so far" record
+  // and explicit tiebreaker rules so the model explains required goal margins
+  // (head-to-head / goals scored) instead of stating them bare. Bump
+  // regenerates cached summaries under the new input.
+  const str = 'v8:' + sorted.join('|');
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
@@ -432,7 +453,10 @@ export interface AiSummaryContext {
   edgeScenariosByPosition: { [pos: number]: MatchCombination[] };
   probabilities: { [pos: number]: number };
   remainingMatches: RemainingMatchInfo[];
-  currentStandings: { teamName: string; points: number; gd: number; position: number }[];
+  currentStandings: { teamName: string; points: number; gd: number; goalsFor?: number; position: number }[];
+  /** Finished group matches with scores (locked head-to-head record). Only the
+   *  generation path needs these; cache-only read paths may omit them. */
+  playedMatches?: { homeTeam: string; awayTeam: string; homeGoals: number; awayGoals: number }[];
 }
 
 /** Convert edge scenarios into the outcome+GD pattern strings the summariser
@@ -581,6 +605,7 @@ export async function generateAiScenarioSummaries(
     allProbabilities: ctx.probabilities,
     remainingMatches: remainingMatchesForPrompt,
     currentStandings: ctx.currentStandings,
+    playedMatches: ctx.playedMatches,
   };
 
   // Group the uncached positions into size-bounded chunks. Batching the system

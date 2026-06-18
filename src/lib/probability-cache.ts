@@ -406,6 +406,18 @@ export async function pregenerateTeamScenarioSummaries(
     awayTeamName: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
   }));
 
+  // Locked head-to-head record fed to the scenario AI so it can EXPLAIN why a
+  // required goal margin exists (a tiebreaker against a specific rival), not
+  // just state the margin. Only finished matches with both scores recorded.
+  const playedMatchesInfo = played
+    .filter(m => m.homeGoals !== null && m.awayGoals !== null)
+    .map(m => ({
+      homeTeam: teams.find(t => t.id === m.homeTeamId)?.name ?? '?',
+      awayTeam: teams.find(t => t.id === m.awayTeamId)?.name ?? '?',
+      homeGoals: m.homeGoals as number,
+      awayGoals: m.awayGoals as number,
+    }));
+
   const targetTeams = options.teamId
     ? teams.filter(t => t.id === options.teamId)
     : teams;
@@ -443,6 +455,7 @@ export async function pregenerateTeamScenarioSummaries(
             probabilities: teamSummary.positionProbabilities,
             remainingMatches: remainingMatchesInfo,
             currentStandings,
+            playedMatches: playedMatchesInfo,
           }, {
             force: options.force,
             ignoreFlags: options.ignoreFlags,
