@@ -11,6 +11,13 @@ import type { AiUsageStats } from '@/engine/scenario-summary-ai';
 import { AI_PREDICTION_MODELS } from '@/lib/ai-model';
 import { getAiPredictionModelKey } from '@/lib/ai-model-server';
 
+// This handler runs the full synchronous regeneration: scenario summaries for
+// every team (parallel) plus the group + per-team articles. With the longer
+// tiebreaker-explanation output that easily exceeds the platform's default
+// function limit, which surfaced as a 502. Give it the same generous budget as
+// the Cloudflare-purge route. For a faster, always-safe run use scope=team.
+export const maxDuration = 120;
+
 interface Body {
   scope?: 'team' | 'group';
   groupId?: string;
