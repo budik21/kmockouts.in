@@ -230,7 +230,10 @@ ${positionBlocks}`;
   const modelId = await getAiPredictionModelId();
   const response = await withClaudeSlot(() => withTimeout(client.messages.create({
     model: modelId,
-    max_tokens: Math.min(640 * tasks.length, 2048),
+    // Budget per position was raised when the prompt began asking for tiebreaker
+    // explanations (head-to-head / goals scored) on top of the paths — the older
+    // 640/2048 cap truncated the longer output and the parse came up empty.
+    max_tokens: Math.min(900 * tasks.length, 4096),
     system: [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
     ],
@@ -484,8 +487,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/** Per-position timeout for Claude API call. Overridable via env (slow lane). */
-const AI_CALL_TIMEOUT_MS = Number(process.env.AI_CALL_TIMEOUT_MS) || 15_000;
+/** Per-call timeout for the batched Claude request. Overridable via env (slow
+ *  lane). Raised from 15s to 30s once the prompt began asking for tiebreaker
+ *  explanations: the longer output pushed batches past the old limit, the call
+ *  was killed, and every position fell back to the deterministic summary. */
+const AI_CALL_TIMEOUT_MS = Number(process.env.AI_CALL_TIMEOUT_MS) || 30_000;
 
 /**
  * Read-only variant: returns cached AI summaries only, NEVER calls the Claude API.
