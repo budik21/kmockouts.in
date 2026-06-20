@@ -68,12 +68,15 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
     ? (teamName: string) => router.push(`/worldcup2026/group-${groupId.toLowerCase()}/team/${slugify(teamName)}`)
     : undefined;
 
+  // NOTE: do NOT put `className` here. This object is spread onto <tr> AFTER the
+  // `className={rowClass(s)}` prop, so a `className` key would overwrite the whole
+  // class string (dropping pos-N, focus and eliminated). The clickable class is
+  // added inside rowClass instead.
   const rowProps = (teamName: string) =>
     handleRowClick
       ? {
           onClick: () => handleRowClick(teamName),
           style: { cursor: 'pointer' } as React.CSSProperties,
-          className: 'standings-row-clickable',
         }
       : {};
 
@@ -117,6 +120,7 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
 
   const rowClass = (s: TeamStandingData) =>
     `pos-${s.position}` +
+    (handleRowClick ? ' standings-row-clickable' : '') +
     (focusTeamId === s.team.id ? ' standings-row-focus' : '') +
     (eliminatedIds.has(s.team.id) ? ' standings-row-eliminated' : '');
 
