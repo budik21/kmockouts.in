@@ -30,6 +30,10 @@ export interface TeamProbData {
   probSecond: number;
   probThird: number;
   probOut: number;
+  /** Probability (0–100) of advancing as one of the best third-placed teams.
+   *  Added to probFirst + probSecond it gives the full chance of reaching the
+   *  knockout stage. Optional — simulation paths may omit it. */
+  probThirdQualified?: number;
 }
 
 interface GroupStandingsProps {
@@ -80,29 +84,39 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
   const hasProbs = probabilities && Object.keys(probabilities).length > 0;
   const allTeamsPlayed = standings.every((s) => s.matchesPlayed > 0);
 
-  // Mathematical elimination: a team that can no longer escape last place in its
-  // group has no path to the knockout stage (top 2 advance directly, the 3rd
-  // places compete for the best-third spots — last place never qualifies). Such
-  // rows are visually dimmed so it is obvious they are out.
-  //
-  // Points never decrease, so if at least (groupSize - 1) rivals already hold
-  // more points than this team could still reach by winning all of its remaining
-  // matches, it is mathematically certain to finish last. Once every match in the
-  // group is played, the last-placed team is final regardless of tiebreakers.
+  // Elimination: a team with no remaining path to the knockout stage is visually
+  // dimmed so it is obvious it is out. Two complementary signals decide this.
   const groupSize = standings.length;
   const matchesPerTeam = groupSize - 1; // single round-robin
   const groupComplete = standings.every((s) => s.matchesPlayed >= matchesPerTeam);
+
+  // 1. Probability-based (preferred when available): the Monte-Carlo numbers
+  //    capture the FULL chance of reaching the knockouts — direct top-two
+  //    qualification PLUS the best-third route — so a team can be out even while
+  //    it could still theoretically climb to 3rd. Essentially zero (<0.5%) → out.
+  const noKnockoutChance = (s: TeamStandingData): boolean => {
+    const p = probabilities?.[s.team.id];
+    if (!p) return false;
+    return p.probFirst + p.probSecond + (p.probThirdQualified ?? 0) < 0.5;
+  };
+
+  // 2. Deterministic floor (fallback when probabilities are absent, e.g. an
+  //    applied simulation): points never decrease, so a team already sitting
+  //    below (groupSize - 1) rivals who each hold more points than it could still
+  //    reach by winning all its remaining matches is mathematically certain to
+  //    finish last. Once the group is complete the last-placed team is final.
+  //    This can never be a false positive.
+  const certainLast = (s: TeamStandingData): boolean => {
+    if (groupComplete) return s.position === groupSize;
+    const maxPoints = s.points + (matchesPerTeam - s.matchesPlayed) * 3;
+    const teamsAbove = standings.filter(
+      (o) => o.team.id !== s.team.id && o.points > maxPoints
+    ).length;
+    return teamsAbove >= groupSize - 1;
+  };
+
   const eliminatedIds = new Set(
-    standings
-      .filter((s) => {
-        if (groupComplete) return s.position === groupSize;
-        const maxPoints = s.points + (matchesPerTeam - s.matchesPlayed) * 3;
-        const teamsAbove = standings.filter(
-          (o) => o.team.id !== s.team.id && o.points > maxPoints
-        ).length;
-        return teamsAbove >= groupSize - 1;
-      })
-      .map((s) => s.team.id)
+    standings.filter((s) => noKnockoutChance(s) || certainLast(s)).map((s) => s.team.id)
   );
 
   const rowClass = (s: TeamStandingData) =>

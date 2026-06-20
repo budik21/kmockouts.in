@@ -155,7 +155,7 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
 
     // Build probability map for this group from cache
     const groupCache = cachedProbs.get(gid);
-    let probabilities: Record<number, { probFirst: number; probSecond: number; probThird: number; probOut: number }> | undefined;
+    let probabilities: Record<number, { probFirst: number; probSecond: number; probThird: number; probOut: number; probThirdQualified: number }> | undefined;
     if (groupCache && groupCache.size > 0) {
       probabilities = {};
       for (const [teamId, cp] of groupCache) {
@@ -164,6 +164,7 @@ async function buildGroupsData(): Promise<{ groups: Record<string, any>; thirdPl
           probSecond: cp.probSecond,
           probThird: cp.probThird,
           probOut: cp.probOut,
+          probThirdQualified: cp.probThirdQual,
         };
       }
     }
