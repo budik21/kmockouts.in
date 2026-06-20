@@ -30,10 +30,6 @@ export interface TeamProbData {
   probSecond: number;
   probThird: number;
   probOut: number;
-  /** Probability (0–100) of advancing as one of the best third-placed teams.
-   *  Added to probFirst + probSecond it gives the full chance of reaching the
-   *  knockout stage. Optional — simulation paths may omit it. */
-  probThirdQualified?: number;
 }
 
 interface GroupStandingsProps {
@@ -90,14 +86,14 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
   const matchesPerTeam = groupSize - 1; // single round-robin
   const groupComplete = standings.every((s) => s.matchesPlayed >= matchesPerTeam);
 
-  // 1. Probability-based (preferred when available): the Monte-Carlo numbers
-  //    capture the FULL chance of reaching the knockouts — direct top-two
-  //    qualification PLUS the best-third route — so a team can be out even while
-  //    it could still theoretically climb to 3rd. Essentially zero (<0.5%) → out.
+  // 1. Probability-based (preferred when available): the Monte-Carlo engine
+  //    already knows the final-position odds. 4th is the only non-advancing
+  //    slot, so an ~certain 4th place (≥99.5%) means no path to the knockouts.
+  //    This is the same threshold used for the "eliminated" social cards.
   const noKnockoutChance = (s: TeamStandingData): boolean => {
     const p = probabilities?.[s.team.id];
     if (!p) return false;
-    return p.probFirst + p.probSecond + (p.probThirdQualified ?? 0) < 0.5;
+    return p.probOut >= 99.5;
   };
 
   // 2. Deterministic floor (fallback when probabilities are absent, e.g. an

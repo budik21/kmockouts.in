@@ -182,7 +182,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
     await recalculateGroupProbabilities(groupId);
     cachedProbs = await getCachedGroupProbs(groupId);
   }
-  let probabilities: Record<number, { probFirst: number; probSecond: number; probThird: number; probOut: number; probThirdQualified: number }> | undefined;
+  let probabilities: Record<number, { probFirst: number; probSecond: number; probThird: number; probOut: number }> | undefined;
   if (cachedProbs && cachedProbs.size > 0) {
     probabilities = {};
     for (const [tid, cp] of cachedProbs) {
@@ -191,7 +191,6 @@ export default async function TeamDetailPage({ params }: PageProps) {
         probSecond: cp.probSecond,
         probThird: cp.probThird,
         probOut: cp.probOut,
-        probThirdQualified: cp.probThirdQual,
       };
     }
   }
