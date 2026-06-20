@@ -128,7 +128,7 @@ export default function QualifyWidgets({
         </div>
         <div className="col-12">
           <div className="text-muted text-center" style={{ fontSize: '0.8rem' }}>
-            Based on {totalScenarios.toLocaleString()} evaluated scenarios
+            Based on {totalScenarios.toLocaleString('en-GB')} evaluated scenarios
             ({matchesRemaining} match{matchesRemaining !== 1 ? 'es' : ''} remaining)
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function QualifyWidgets({
         </div>
         <div className="col-12">
           <div className="text-muted text-center" style={{ fontSize: '0.8rem' }}>
-            Based on {totalScenarios.toLocaleString()} evaluated scenarios
+            Based on {totalScenarios.toLocaleString('en-GB')} evaluated scenarios
             ({matchesRemaining} match{matchesRemaining !== 1 ? 'es' : ''} remaining)
           </div>
         </div>
@@ -279,7 +279,7 @@ export default function QualifyWidgets({
       {showScenarioFooter && (
         <div className="col-12">
           <div className="text-muted text-center" style={{ fontSize: '0.8rem' }}>
-            Based on {totalScenarios.toLocaleString()} evaluated scenarios
+            Based on {totalScenarios.toLocaleString('en-GB')} evaluated scenarios
             ({matchesRemaining} match{matchesRemaining !== 1 ? 'es' : ''} remaining)
           </div>
         </div>

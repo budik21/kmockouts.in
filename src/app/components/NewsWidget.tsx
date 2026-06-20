@@ -13,10 +13,17 @@ interface NewsWidgetProps {
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, {
+  if (Number.isNaN(d.getTime())) return '';
+  // Fixed locale + timezone so the SSR and client render produce identical
+  // text — `undefined` locale / the runtime timezone differ between the Node
+  // server (en/UTC) and the visitor's browser, which trips a hydration
+  // mismatch (React #418). en-GB matches the app's date convention (see
+  // LocalKickOff).
+  return d.toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
