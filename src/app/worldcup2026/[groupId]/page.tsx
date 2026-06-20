@@ -236,8 +236,6 @@ export default async function GroupDetailPage({ params }: PageProps) {
     <main className="container py-4">
       <JsonLd data={groupJsonLd} />
 
-      <PaypalDonate />
-
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Group {groupId}</h2>
         <div className="d-flex align-items-center gap-3 flex-wrap">
@@ -306,6 +304,8 @@ export default async function GroupDetailPage({ params }: PageProps) {
         The top 2 teams qualify automatically for the Round of 32, while the 3rd-placed team may advance
         as one of the 8 best third-placed teams across all 12 groups.
       </p>
+
+      <PaypalDonate />
     </main>
   );
 }

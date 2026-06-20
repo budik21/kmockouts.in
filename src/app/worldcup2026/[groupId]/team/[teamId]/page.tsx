@@ -435,8 +435,6 @@ export default async function TeamDetailPage({ params }: PageProps) {
     <main className="container py-4">
       <JsonLd data={teamJsonLd} />
 
-      <PaypalDonate />
-
       {/* Header: team name left, breadcrumb right */}
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <div>
@@ -592,6 +590,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
         Follow {team.name}&apos;s journey in Group {groupId} of the FIFA World Cup 2026.
         See current standings, qualification probability, and all possible scenarios for advancing to the knockout stage.
       </p>
+
+      <PaypalDonate />
     </main>
   );
 }
