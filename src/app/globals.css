@@ -391,6 +391,16 @@ a { color: inherit; text-decoration: none; }
 .pos-3 { border-left: 3px solid var(--badge-possible); }
 .pos-4 { border-left: 3px solid var(--badge-eliminated); }
 
+/* Mathematically eliminated team (can no longer escape last place / no path to
+   the knockout stage) — dimmed to signal it is out, while staying legible.
+   Hovering a clickable row restores full contrast for reading. */
+.standings-table tbody tr.standings-row-eliminated {
+  opacity: 0.55;
+}
+.standings-table tbody tr.standings-row-eliminated.standings-row-clickable:hover {
+  opacity: 1;
+}
+
 /* Points column subtle highlight */
 .standings-table th.standings-pts-col {
   background: rgba(0, 0, 0, 0.05);

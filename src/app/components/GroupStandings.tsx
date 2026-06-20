@@ -80,6 +80,36 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
   const hasProbs = probabilities && Object.keys(probabilities).length > 0;
   const allTeamsPlayed = standings.every((s) => s.matchesPlayed > 0);
 
+  // Mathematical elimination: a team that can no longer escape last place in its
+  // group has no path to the knockout stage (top 2 advance directly, the 3rd
+  // places compete for the best-third spots — last place never qualifies). Such
+  // rows are visually dimmed so it is obvious they are out.
+  //
+  // Points never decrease, so if at least (groupSize - 1) rivals already hold
+  // more points than this team could still reach by winning all of its remaining
+  // matches, it is mathematically certain to finish last. Once every match in the
+  // group is played, the last-placed team is final regardless of tiebreakers.
+  const groupSize = standings.length;
+  const matchesPerTeam = groupSize - 1; // single round-robin
+  const groupComplete = standings.every((s) => s.matchesPlayed >= matchesPerTeam);
+  const eliminatedIds = new Set(
+    standings
+      .filter((s) => {
+        if (groupComplete) return s.position === groupSize;
+        const maxPoints = s.points + (matchesPerTeam - s.matchesPlayed) * 3;
+        const teamsAbove = standings.filter(
+          (o) => o.team.id !== s.team.id && o.points > maxPoints
+        ).length;
+        return teamsAbove >= groupSize - 1;
+      })
+      .map((s) => s.team.id)
+  );
+
+  const rowClass = (s: TeamStandingData) =>
+    `pos-${s.position}` +
+    (focusTeamId === s.team.id ? ' standings-row-focus' : '') +
+    (eliminatedIds.has(s.team.id) ? ' standings-row-eliminated' : '');
+
   if (compact) {
     return (
       <table className="standings-table table table-sm mb-0">
@@ -97,7 +127,7 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
           {standings.map((s) => {
             const prob = probabilities?.[s.team.id];
             return (
-              <tr key={s.team.id} className={`pos-${s.position}${focusTeamId === s.team.id ? ' standings-row-focus' : ''}`} {...rowProps(s.team.name)}>
+              <tr key={s.team.id} className={rowClass(s)} {...rowProps(s.team.name)}>
                 <td>{s.position}</td>
                 <td className="team-name">
                   <TeamNameContent team={s.team} />
@@ -149,7 +179,7 @@ export default function GroupStandings({ standings, compact = false, narrow = fa
           {standings.map((s) => {
             const prob = probabilities?.[s.team.id];
             return (
-              <tr key={s.team.id} className={`pos-${s.position}${focusTeamId === s.team.id ? ' standings-row-focus' : ''}`} {...rowProps(s.team.name)}>
+              <tr key={s.team.id} className={rowClass(s)} {...rowProps(s.team.name)}>
                 <td>{s.position}</td>
                 <td className="team-name">
                   <TeamNameContent team={s.team} />
