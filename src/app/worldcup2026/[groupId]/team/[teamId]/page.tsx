@@ -25,6 +25,7 @@ import ProjectedOpponent from '@/app/components/ProjectedOpponent';
 import { resolveKnockoutBracket } from '@/engine/knockout-resolver';
 import { ROUND_LABELS } from '@/lib/knockout-bracket';
 import JsonLd from '@/app/components/JsonLd';
+import PaypalDonate from '@/app/components/PaypalDonate';
 import { SITE_URL } from '@/lib/seo';
 
 function rowToTeam(row: TeamRow): Team {
@@ -433,6 +434,8 @@ export default async function TeamDetailPage({ params }: PageProps) {
   return (
     <main className="container py-4">
       <JsonLd data={teamJsonLd} />
+
+      <PaypalDonate />
 
       {/* Header: team name left, breadcrumb right */}
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">

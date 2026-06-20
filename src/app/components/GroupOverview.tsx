@@ -1,8 +1,10 @@
 'use client';
 
+import { Fragment } from 'react';
 import Link from 'next/link';
 import GroupStandings, { TeamProbData } from './GroupStandings';
 import NextMatchesRow, { NextMatchDisplay } from './NextMatchesRow';
+import PaypalDonate from './PaypalDonate';
 
 interface GroupData {
   groupId: string;
@@ -45,7 +47,7 @@ export default function GroupOverview({ groups, articles }: GroupOverviewProps) 
 
   return (
     <div className="d-flex flex-column gap-3">
-      {groupIds.map((gid) => {
+      {groupIds.map((gid, index) => {
         const group = groups[gid];
         const article = articles?.[gid];
         const groupHref = `/worldcup2026/group-${gid.toLowerCase()}`;
@@ -57,7 +59,8 @@ export default function GroupOverview({ groups, articles }: GroupOverviewProps) 
         const total = group.totalMatches ?? 6;
 
         return (
-          <div key={gid} className="group-card group-overview-card">
+          <Fragment key={gid}>
+          <div className="group-card group-overview-card">
             <div className="group-card-header">
               <Link href={groupHref} className="group-overview-header-link">
                 Group {gid}
@@ -109,6 +112,10 @@ export default function GroupOverview({ groups, articles }: GroupOverviewProps) 
               </div>
             </div>
           </div>
+
+          {/* PayPal donate block sits between the 6th and 7th group cards. */}
+          {index === 5 && <PaypalDonate />}
+          </Fragment>
         );
       })}
     </div>

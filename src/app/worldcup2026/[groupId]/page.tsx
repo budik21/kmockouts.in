@@ -11,6 +11,7 @@ import type { Metadata } from 'next';
 import CollapsibleArticleBody from '@/app/components/CollapsibleArticleBody';
 import ArticleTimestamp from '@/app/components/ArticleTimestamp';
 import JsonLd from '@/app/components/JsonLd';
+import PaypalDonate from '@/app/components/PaypalDonate';
 import { SITE_URL } from '@/lib/seo';
 import { autoLinkTeams } from '@/lib/auto-link-teams';
 
@@ -234,6 +235,8 @@ export default async function GroupDetailPage({ params }: PageProps) {
   return (
     <main className="container py-4">
       <JsonLd data={groupJsonLd} />
+
+      <PaypalDonate />
 
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <h2 className="mb-0">Group {groupId}</h2>
