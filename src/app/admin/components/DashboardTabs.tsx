@@ -6,6 +6,7 @@ import type { AdminMatch } from '../dashboard/page';
 import type { PickemStatsRow } from '../dashboard/page';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 import MatchEditor from './MatchEditor';
+import KnockoutEditor from './KnockoutEditor';
 import PickemActions from './PickemActions';
 import TipstersTab, { type TipsterRow } from './TipstersTab';
 import LeaguesTab, { type LeagueRow } from './LeaguesTab';
@@ -42,10 +43,11 @@ interface DashboardTabsProps {
   aiGenerationFlagEnabled: boolean;
   aiDisplayFlagEnabled: boolean;
   aiModel: AiPredictionModelKey;
+  playoffEnabled: boolean;
   initialTab?: TabKey;
 }
 
-type TabKey = 'matches' | 'scenarios' | 'pickem' | 'emails' | 'users' | 'flags' | 'ai' | 'twitter' | 'cloudflare' | 'env';
+type TabKey = 'matches' | 'knockout' | 'scenarios' | 'pickem' | 'emails' | 'users' | 'flags' | 'ai' | 'twitter' | 'cloudflare' | 'env';
 type PickemSubTab = 'management' | 'matches' | 'tipsters' | 'leagues' | 'tips';
 
 export default function DashboardTabs({
@@ -69,6 +71,7 @@ export default function DashboardTabs({
   aiGenerationFlagEnabled,
   aiDisplayFlagEnabled,
   aiModel,
+  playoffEnabled,
   initialTab,
 }: DashboardTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? 'matches');
@@ -145,6 +148,11 @@ export default function DashboardTabs({
         <button onClick={() => setActiveTab('matches')} style={tabButtonStyle(activeTab === 'matches')}>
           Match Results
         </button>
+        {playoffEnabled && (
+          <button onClick={() => setActiveTab('knockout')} style={tabButtonStyle(activeTab === 'knockout')}>
+            Play-off
+          </button>
+        )}
         <button onClick={() => setActiveTab('scenarios')} style={tabButtonStyle(activeTab === 'scenarios')}>
           Scenarios
         </button>
@@ -193,6 +201,21 @@ export default function DashboardTabs({
               Match Results
             </h2>
             <MatchEditor initialMatches={initialMatches} isSuperadmin={isSuperadmin} />
+          </div>
+        )}
+
+        {/* Play-off (knockout) results tab */}
+        {playoffEnabled && activeTab === 'knockout' && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '0.5rem' }}>
+              Play-off Results
+            </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Enter knockout results — score after 90′, after extra time, and the penalty shoot-out.
+              Saving derives who advances, propagates them into later rounds, and rescores every
+              play-off tip and top-4 pick.
+            </p>
+            <KnockoutEditor />
           </div>
         )}
 

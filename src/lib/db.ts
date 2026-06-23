@@ -224,7 +224,8 @@ export async function initializeSchema(): Promise<void> {
     );
     INSERT INTO feature_flag (key, enabled, description) VALUES
       ('ai_predictions', true, 'GENERATION: trigger Claude API calls to produce new AI-written qualification scenario summaries. Disabling skips API calls; it does NOT hide existing summaries — use ai_predictions_display for that.'),
-      ('ai_predictions_display', true, 'DISPLAY: render cached AI-written summaries on team pages and best-third-placed standings. Disabling hides all AI commentary (deterministic fallback on team pages; best-third AI box is omitted). Generation is unaffected.')
+      ('ai_predictions_display', true, 'DISPLAY: render cached AI-written summaries on team pages and best-third-placed standings. Disabling hides all AI commentary (deterministic fallback on team pages; best-third AI box is omitted). Generation is unaffected.'),
+      ('playoff_pickem', false, 'Play-off (knockout) pick''em: the /pickem/playoff game, its nav link, the leaderboard All/Groups/Play-off toggle and the admin Play-off results tab. Off by default until launch.')
     ON CONFLICT (key) DO NOTHING;
 
     -- Generic key/value app settings (string values). Used for admin-tunable
@@ -387,6 +388,74 @@ export async function initializeSchema(): Promise<void> {
       posted_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_twitter_post_posted_at ON twitter_post(posted_at DESC);
+
+    -- ============================================================
+    -- PLAY-OFF (KNOCKOUT) PICK'EM
+    -- ============================================================
+
+    -- One row per knockout fixture, keyed by the FIFA match number (73..104).
+    -- Participants are derived: R32 from final group standings (FIFA Annex C for
+    -- 3rd-placed teams), later rounds from the advancing team of the feeder
+    -- matches. The bracket sync (engine/knockout-sync.ts) writes home/away team
+    -- ids as they become known; results are entered by an admin and never
+    -- overwritten by a sync.
+    CREATE TABLE IF NOT EXISTS knockout_match (
+      match_number      INTEGER PRIMARY KEY,
+      round             TEXT NOT NULL,                 -- r32 | r16 | qf | sf | thirdPlace | final
+      home_team_id      INTEGER REFERENCES team(id),
+      away_team_id      INTEGER REFERENCES team(id),
+      home_goals        INTEGER,                       -- score after 90' (regulation)
+      away_goals        INTEGER,
+      home_goals_et     INTEGER,                       -- full score at end of extra time (incl. 90')
+      away_goals_et     INTEGER,
+      home_pens         INTEGER,                       -- penalty shoot-out
+      away_pens         INTEGER,
+      advancing_team_id INTEGER REFERENCES team(id),   -- computed on result save
+      kick_off          TEXT NOT NULL DEFAULT '',
+      venue             TEXT NOT NULL DEFAULT '',
+      status            TEXT NOT NULL DEFAULT 'SCHEDULED', -- SCHEDULED | FINISHED
+      updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    -- Per-match knockout predictions: predicted 90' score + predicted advancing
+    -- team. Scored: 8 points for an exact 90' score, 5 points for the correct
+    -- advancing team (independent — max 13 per match). points is NULL until the
+    -- match is FINISHED.
+    CREATE TABLE IF NOT EXISTS knockout_tip (
+      id              SERIAL PRIMARY KEY,
+      user_id         INTEGER NOT NULL REFERENCES tipster_user(id) ON DELETE CASCADE,
+      match_number    INTEGER NOT NULL,
+      home_goals      INTEGER NOT NULL,
+      away_goals      INTEGER NOT NULL,
+      advance_team_id INTEGER NOT NULL REFERENCES team(id),
+      points          INTEGER,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, match_number)
+    );
+    CREATE INDEX IF NOT EXISTS idx_knockout_tip_user ON knockout_tip(user_id);
+    CREATE INDEX IF NOT EXISTS idx_knockout_tip_match ON knockout_tip(match_number);
+    -- Stamped once the result e-mail for this knockout tip has been sent, so the
+    -- dispatcher mails each tip exactly once and stays idempotent across retries.
+    ALTER TABLE knockout_tip ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;
+
+    -- "Top-4" winner picks, one set per user, four distinct teams:
+    --   champion       → 25 points  (winner of the final, match 104)
+    --   runner_up      → 20 points  (runner-up = loser of the final)
+    --   semifinalist_1 → 10 points  (a losing semifinalist; either SF, set match)
+    --   semifinalist_2 → 10 points
+    -- Locked 1 hour before the first knockout kick-off (see lib/playoff-lock.ts).
+    CREATE TABLE IF NOT EXISTS playoff_pick (
+      id          SERIAL PRIMARY KEY,
+      user_id     INTEGER NOT NULL REFERENCES tipster_user(id) ON DELETE CASCADE,
+      slot        TEXT NOT NULL,                 -- champion | runner_up | semifinalist_1 | semifinalist_2
+      team_id     INTEGER NOT NULL REFERENCES team(id),
+      points      INTEGER,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, slot)
+    );
+    CREATE INDEX IF NOT EXISTS idx_playoff_pick_user ON playoff_pick(user_id);
   `);
 
   // ---- Seed knockout third-place combinations (FIFA Annex C) ----

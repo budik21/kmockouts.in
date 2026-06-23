@@ -6,7 +6,7 @@ import { WC_TAG } from '@/lib/cache-tags';
 import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
 import { warmWcPages } from '@/lib/cache-warmup';
 
-const ALLOWED_KEYS = new Set(['ai_predictions', 'ai_predictions_display']);
+const ALLOWED_KEYS = new Set(['ai_predictions', 'ai_predictions_display', 'playoff_pickem']);
 
 export async function POST(request: NextRequest) {
   const unauthorized = await requireSuperadminApi();

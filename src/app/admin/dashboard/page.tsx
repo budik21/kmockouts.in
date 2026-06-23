@@ -6,7 +6,7 @@ import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
 import { signOut } from '@/lib/auth';
 import { SUPERADMIN_EMAIL } from '@/lib/superadmin';
-import { listFeatureFlags, isAiGenerationEnabledByEnv } from '@/lib/feature-flags';
+import { listFeatureFlags, isAiGenerationEnabledByEnv, isFeatureEnabled } from '@/lib/feature-flags';
 import { getAiPredictionModelKey } from '@/lib/ai-model-server';
 import { ALL_GROUPS } from '@/lib/constants';
 import DashboardTabs from '../components/DashboardTabs';
@@ -132,6 +132,9 @@ export default async function AdminDashboardPage({
   const { scenarios, active: activeScenario } = readScenarios();
 
   const featureFlags = isSuperadmin ? await listFeatureFlags() : [];
+
+  // Play-off results tab is shown to all admins only while the feature is live.
+  const playoffEnabled = await isFeatureEnabled('playoff_pickem', false);
 
   // Flags that are hard-locked off by an env var take precedence over the DB
   // value — the toggle is shown off + disabled with a warning. DB state is
@@ -435,6 +438,7 @@ export default async function AdminDashboardPage({
         aiGenerationFlagEnabled={aiGenerationFlagEnabled}
         aiDisplayFlagEnabled={aiDisplayFlagEnabled}
         aiModel={aiModel}
+        playoffEnabled={playoffEnabled}
         initialTab={initialTab}
       />
     </div>

@@ -1,6 +1,7 @@
 import { query, queryOne } from '@/lib/db';
 import Link from 'next/link';
 import PublicTipsView from '../../components/PublicTipsView';
+import PlayoffSummary from '../../components/PlayoffSummary';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,6 +164,8 @@ export default async function PublicSharePage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      <PlayoffSummary userId={user.id} />
 
       <PublicTipsView matches={matches} tips={tips} userName={firstName} shareToken={token} />
     </div>

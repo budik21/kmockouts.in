@@ -10,7 +10,7 @@
 
 import { query } from './db';
 
-export type FeatureFlagKey = 'ai_predictions' | 'ai_predictions_display';
+export type FeatureFlagKey = 'ai_predictions' | 'ai_predictions_display' | 'playoff_pickem';
 
 export interface FeatureFlag {
   key: string;

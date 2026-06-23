@@ -5,6 +5,9 @@ import { query, queryOne } from '@/lib/db';
 import { recalculateAffectedProbabilities, pregenerateTeamScenarioSummaries } from '@/lib/probability-cache';
 import type { GroupId } from '@/lib/types';
 import { recalculateAllTipPoints } from '@/lib/tip-recalc';
+import { recomputeKnockoutBracket } from '@/engine/knockout-sync';
+import { recalculateAllPlayoffPoints } from '@/lib/knockout-recalc';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 import { enqueueAiJob } from '@/lib/ai-queue';
 import { WC_TAG, LEADERBOARD_TAG } from '@/lib/cache-tags';
 import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
@@ -268,6 +271,22 @@ export async function POST(request: NextRequest) {
       await query(
         `UPDATE tip_recalc_status SET is_recalculating = false, last_completed_at = NOW() WHERE id = 1`,
       ).catch(() => {});
+    }
+
+    // Keep the play-off bracket in sync: a group result can change the R32
+    // participants (and seedings via Annex C). Bootstraps the knockout_match
+    // rows on first run, then rescores knockout tips/top-4 picks. Best-effort —
+    // never let it break the group-stage save. Gated behind the play-off flag so
+    // it stays completely inert until launch.
+    if (await isFeatureEnabled('playoff_pickem', false)) {
+      try {
+        await recomputeKnockoutBracket();
+        await recalculateAllPlayoffPoints();
+        console.log('[admin] Knockout bracket re-synced after group result');
+      } catch (err) {
+        console.error('[admin] Knockout bracket re-sync failed:', err);
+        trace.errors.push({ step: 'knockout-resync', message: String(err) });
+      }
     }
 
     // Did THIS save close the group out (open → fully decided)?

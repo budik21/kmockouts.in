@@ -27,22 +27,56 @@ export async function recalculateLeagueStandings(leagueId: number | null = null)
   }
 
   await query(
-    `WITH per_member AS (
+    `WITH g AS (
+        SELECT user_id,
+          COUNT(*)                                AS total,
+          COUNT(*) FILTER (WHERE points = 4)       AS exact,
+          COUNT(*) FILTER (WHERE points = 1)       AS outcome,
+          COUNT(*) FILTER (WHERE points = 0)       AS wrong,
+          COUNT(*) FILTER (WHERE points IS NULL)   AS pending,
+          COALESCE(SUM(CASE WHEN points IS NOT NULL THEN points ELSE 0 END), 0) AS pts
+        FROM tip GROUP BY user_id
+     ),
+     k AS (
+        SELECT kt.user_id,
+          COUNT(*)                                                                              AS total,
+          COUNT(*) FILTER (WHERE km.status = 'FINISHED' AND kt.home_goals = km.home_goals
+                                  AND kt.away_goals = km.away_goals)                            AS exact,
+          COUNT(*) FILTER (WHERE km.status = 'FINISHED' AND kt.advance_team_id = km.advancing_team_id) AS advance,
+          COUNT(*) FILTER (WHERE kt.points = 0)                                                 AS wrong,
+          COUNT(*) FILTER (WHERE kt.points IS NULL)                                             AS pending,
+          COALESCE(SUM(kt.points), 0)                                                           AS pts
+        FROM knockout_tip kt JOIN knockout_match km ON km.match_number = kt.match_number
+        GROUP BY kt.user_id
+     ),
+     p AS (
+        SELECT user_id,
+          COUNT(*)                                AS total,
+          COUNT(*) FILTER (WHERE points > 0)       AS correct,
+          COUNT(*) FILTER (WHERE points = 0)       AS wrong,
+          COUNT(*) FILTER (WHERE points IS NULL)   AS pending,
+          COALESCE(SUM(points), 0)                 AS pts
+        FROM playoff_pick GROUP BY user_id
+     ),
+     per_member AS (
+        -- One row per membership; group / knockout / pick aggregates are each
+        -- pre-aggregated per user, so these joins are 1:1 (no fan-out).
         SELECT
           m.league_id,
           m.user_id,
-          COUNT(t.id)                                AS total_tips,
-          COUNT(t.id) FILTER (WHERE t.points = 4)    AS exact_count,
-          COUNT(t.id) FILTER (WHERE t.points = 1)    AS outcome_count,
-          COUNT(t.id) FILTER (WHERE t.points = 0)    AS wrong_count,
-          COUNT(t.id) FILTER (WHERE t.points IS NULL) AS pending_count,
-          COALESCE(SUM(CASE WHEN t.points IS NOT NULL THEN t.points ELSE 0 END), 0) AS total_points,
+          COALESCE(g.total, 0) + COALESCE(k.total, 0) + COALESCE(p.total, 0)               AS total_tips,
+          COALESCE(g.exact, 0) + COALESCE(k.exact, 0)                                       AS exact_count,
+          COALESCE(g.outcome, 0) + COALESCE(k.advance, 0) + COALESCE(p.correct, 0)          AS outcome_count,
+          COALESCE(g.wrong, 0) + COALESCE(k.wrong, 0) + COALESCE(p.wrong, 0)                AS wrong_count,
+          COALESCE(g.pending, 0) + COALESCE(k.pending, 0) + COALESCE(p.pending, 0)          AS pending_count,
+          COALESCE(g.pts, 0) + COALESCE(k.pts, 0) + COALESCE(p.pts, 0)                       AS total_points,
           u.name AS user_name
         FROM pickem_league_member m
-        LEFT JOIN tip t ON t.user_id = m.user_id
         JOIN tipster_user u ON u.id = m.user_id
+        LEFT JOIN g ON g.user_id = m.user_id
+        LEFT JOIN k ON k.user_id = m.user_id
+        LEFT JOIN p ON p.user_id = m.user_id
         ${leagueFilter}
-        GROUP BY m.league_id, m.user_id, u.name
      ),
      ranked AS (
         SELECT

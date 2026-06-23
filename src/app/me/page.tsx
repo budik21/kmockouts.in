@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import DeleteAccountButton from './DeleteAccountButton';
+import PlayoffSummary from '../pickem/components/PlayoffSummary';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,12 @@ export default async function MePage() {
           />
         )}
       </div>
+
+      {session.tipsterId && (
+        <div className="me-playoff-section">
+          <PlayoffSummary userId={session.tipsterId} />
+        </div>
+      )}
 
       <div className="me-danger-zone">
         <h2 className="me-danger-title">Danger zone</h2>

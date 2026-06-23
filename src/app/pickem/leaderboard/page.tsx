@@ -3,11 +3,12 @@ import { LEADERBOARD_TAG } from '@/lib/cache-tags';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import LeaderboardTable from './LeaderboardTable';
+import LeaderboardViews, { type LeaderboardView } from './LeaderboardViews';
 import LeaderboardRecalcBanner from './LeaderboardRecalcBanner';
 import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubheader';
-import LeaderboardMeWidget from './LeaderboardMeWidget';
 import { SITE_URL } from '@/lib/seo';
 import { auth } from '@/lib/auth';
+import { isFeatureEnabled } from '@/lib/feature-flags';
 import { disambiguateNames } from '@/lib/name-disambiguate';
 
 // Opt out of build-time static prerendering. Without this, Next.js renders
@@ -45,15 +46,26 @@ export interface LeaderboardRow {
   totalPoints: number;
 }
 
-interface DbRow {
+interface BaseUserRow {
+  id: number;
   share_token: string;
   name: string;
   email: string;
-  total_tips: string;
-  exact: string;
-  outcome: string;
-  wrong: string;
-  pending: string;
+}
+
+interface GroupAggRow {
+  user_id: number;
+  total: string; exact: string; outcome: string; wrong: string; pending: string;
+}
+
+interface KoAggRow {
+  user_id: number;
+  total: string; exact: string; advance: string; wrong: string; pending: string; points: string;
+}
+
+interface PickAggRow {
+  user_id: number;
+  total: string; correct: string; wrong: string; pending: string; points: string;
 }
 
 interface LastScoredDbRow {
@@ -74,55 +86,127 @@ export default async function LeaderboardPage() {
   const session = await auth().catch(() => null);
   const currentUserToken = session?.shareToken ?? null;
 
-  const rows = await cachedQuery<DbRow>(
-    `
-    SELECT
-      u.share_token,
-      u.name,
-      u.email,
-      COUNT(t.id)                                           AS total_tips,
-      COUNT(t.id) FILTER (WHERE t.points = 4)               AS exact,
-      COUNT(t.id) FILTER (WHERE t.points = 1)               AS outcome,
-      COUNT(t.id) FILTER (WHERE t.points = 0)               AS wrong,
-      COUNT(t.id) FILTER (WHERE t.points IS NULL)           AS pending
-    FROM tipster_user u
-    LEFT JOIN tip t ON t.user_id = u.id
-    WHERE u.tips_public = true
-    GROUP BY u.id, u.share_token, u.name, u.email
-    HAVING COUNT(t.id) > 0
-  `,
-    [],
-    [LEADERBOARD_TAG],
-  );
+  // Play-off pick'em is feature-flagged. While it's off, the leaderboard is the
+  // original group-stage-only table: no knockout queries run and no All/Groups/
+  // Play-off toggle is rendered, so nothing about the upcoming feature leaks.
+  const playoffEnabled = await isFeatureEnabled('playoff_pickem', false);
+
+  // Base list of public predictors + the point sources. Group-stage tips always;
+  // knockout match tips + top-4 picks only when the play-off feature is live.
+  const [baseUsers, groupAgg] = await Promise.all([
+    cachedQuery<BaseUserRow>(
+      `SELECT id, share_token, name, email FROM tipster_user WHERE tips_public = true`,
+      [], [LEADERBOARD_TAG],
+    ),
+    cachedQuery<GroupAggRow>(
+      `SELECT user_id,
+         COUNT(*)                                 AS total,
+         COUNT(*) FILTER (WHERE points = 4)        AS exact,
+         COUNT(*) FILTER (WHERE points = 1)        AS outcome,
+         COUNT(*) FILTER (WHERE points = 0)        AS wrong,
+         COUNT(*) FILTER (WHERE points IS NULL)    AS pending
+       FROM tip GROUP BY user_id`,
+      [], [LEADERBOARD_TAG],
+    ),
+  ]);
+
+  const [koAgg, pickAgg, koFinishedRows] = playoffEnabled
+    ? await Promise.all([
+        cachedQuery<KoAggRow>(
+          `SELECT kt.user_id,
+             COUNT(*)                                                                              AS total,
+             COUNT(*) FILTER (WHERE km.status = 'FINISHED' AND kt.home_goals = km.home_goals
+                                     AND kt.away_goals = km.away_goals)                            AS exact,
+             COUNT(*) FILTER (WHERE km.status = 'FINISHED' AND kt.advance_team_id = km.advancing_team_id) AS advance,
+             COUNT(*) FILTER (WHERE kt.points = 0)                                                 AS wrong,
+             COUNT(*) FILTER (WHERE kt.points IS NULL)                                             AS pending,
+             COALESCE(SUM(kt.points), 0)                                                           AS points
+           FROM knockout_tip kt JOIN knockout_match km ON km.match_number = kt.match_number
+           GROUP BY kt.user_id`,
+          [], [LEADERBOARD_TAG],
+        ),
+        cachedQuery<PickAggRow>(
+          `SELECT user_id,
+             COUNT(*)                                AS total,
+             COUNT(*) FILTER (WHERE points > 0)       AS correct,
+             COUNT(*) FILTER (WHERE points = 0)       AS wrong,
+             COUNT(*) FILTER (WHERE points IS NULL)   AS pending,
+             COALESCE(SUM(points), 0)                 AS points
+           FROM playoff_pick GROUP BY user_id`,
+          [], [LEADERBOARD_TAG],
+        ),
+        cachedQuery<{ cnt: string }>(
+          `SELECT COUNT(*) AS cnt FROM knockout_match WHERE status = 'FINISHED'`,
+          [], [LEADERBOARD_TAG],
+        ),
+      ])
+    : [[] as KoAggRow[], [] as PickAggRow[], [] as { cnt: string }[]];
+
+  const groupBy = new Map(groupAgg.map((r) => [r.user_id, r]));
+  const koBy = new Map(koAgg.map((r) => [r.user_id, r]));
+  const pickBy = new Map(pickAgg.map((r) => [r.user_id, r]));
 
   // Disambiguate same-name users with email-domain (or local-part) suffix.
-  // Raw e-mails stay server-side; only the bare name + suffix fragment ship to
-  // the client, where the suffix is rendered as a muted "(…)" trailer.
-  const disambiguated = disambiguateNames(rows);
+  // Raw e-mails stay server-side; only the bare name + suffix fragment ship.
+  const disambiguated = disambiguateNames(baseUsers);
+  const suffixById = new Map(disambiguated.map((u) => [u.id, u.nameSuffix]));
 
-  const data: LeaderboardRow[] = disambiguated.map((r) => {
-    const exact = parseInt(r.exact, 10);
-    const outcome = parseInt(r.outcome, 10);
+  const n = (v: string | undefined) => (v ? parseInt(v, 10) : 0);
+
+  function buildRow(u: BaseUserRow, kind: 'all' | 'groups' | 'playoff'): LeaderboardRow | null {
+    const g = groupBy.get(u.id);
+    const k = koBy.get(u.id);
+    const p = pickBy.get(u.id);
+    const gTotal = n(g?.total), gExact = n(g?.exact), gOutcome = n(g?.outcome), gWrong = n(g?.wrong), gPending = n(g?.pending);
+    const gPoints = gExact * 4 + gOutcome;
+    const kTotal = n(k?.total), kExact = n(k?.exact), kAdvance = n(k?.advance), kWrong = n(k?.wrong), kPending = n(k?.pending), kPoints = n(k?.points);
+    const pTotal = n(p?.total), pCorrect = n(p?.correct), pWrong = n(p?.wrong), pPending = n(p?.pending), pPoints = n(p?.points);
+
+    const base = { shareToken: u.share_token, name: u.name, nameSuffix: suffixById.get(u.id) ?? null };
+
+    if (kind === 'groups') {
+      if (gTotal === 0) return null;
+      return { ...base, totalTips: gTotal, exact: gExact, outcome: gOutcome, wrong: gWrong, pending: gPending, totalPoints: gPoints };
+    }
+    if (kind === 'playoff') {
+      if (kTotal + pTotal === 0) return null;
+      return {
+        ...base,
+        totalTips: kTotal + pTotal,
+        exact: kExact,
+        outcome: kAdvance + pCorrect,
+        wrong: kWrong + pWrong,
+        pending: kPending + pPending,
+        totalPoints: kPoints + pPoints,
+      };
+    }
+    // all
+    if (gTotal + kTotal + pTotal === 0) return null;
     return {
-      shareToken: r.share_token,
-      name: r.name,
-      nameSuffix: r.nameSuffix,
-      totalTips: parseInt(r.total_tips, 10),
-      exact,
-      outcome,
-      wrong: parseInt(r.wrong, 10),
-      pending: parseInt(r.pending, 10),
-      totalPoints: exact * 4 + outcome,
+      ...base,
+      totalTips: gTotal + kTotal + pTotal,
+      exact: gExact + kExact,
+      outcome: gOutcome + kAdvance + pCorrect,
+      wrong: gWrong + kWrong + pWrong,
+      pending: gPending + kPending + pPending,
+      totalPoints: gPoints + kPoints + pPoints,
     };
-  });
+  }
 
-  // Compute current user's rank server-side so the heading widget needs no client JS.
-  // `totalRanked` = number of public predictors with at least one tip (the HAVING
-  // clause above already guarantees every row has > 0 tips), shown as "out of X".
-  const totalRanked = data.length;
+  const allData = baseUsers.map((u) => buildRow(u, 'all')).filter((r): r is LeaderboardRow => r !== null);
+  const groupsData = baseUsers.map((u) => buildRow(u, 'groups')).filter((r): r is LeaderboardRow => r !== null);
+  const playoffData = baseUsers.map((u) => buildRow(u, 'playoff')).filter((r): r is LeaderboardRow => r !== null);
+
+  // Switch the default view to Play-off once the first knockout match finishes.
+  const playoffStarted = n(koFinishedRows[0]?.cnt) > 0;
+  const defaultView: LeaderboardView = playoffStarted ? 'playoff' : 'all';
+  const defaultData = defaultView === 'playoff' ? playoffData : allData;
+
+  // Current user's rank in the default view (heading widget; no client JS).
+  const totalRanked = defaultData.length;
   const currentUserEntry: { rank: number; totalPoints: number; shareToken: string; totalRanked: number } | null = (() => {
     if (!currentUserToken) return null;
-    const sorted = [...data].sort((a, b) => {
+    const sorted = [...defaultData].sort((a, b) => {
       if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
       if (b.exact !== a.exact) return b.exact - a.exact;
       if (b.outcome !== a.outcome) return b.outcome - a.outcome;
@@ -192,7 +276,17 @@ export default async function LeaderboardPage() {
 
       <LeaderboardRecalcBanner />
 
-      <LeaderboardTable rows={data} currentUserToken={currentUserToken} />
+      {playoffEnabled ? (
+        <LeaderboardViews
+          all={allData}
+          groups={groupsData}
+          playoff={playoffData}
+          defaultView={defaultView}
+          currentUserToken={currentUserToken}
+        />
+      ) : (
+        <LeaderboardTable rows={groupsData} currentUserToken={currentUserToken} />
+      )}
     </main>
   );
 }

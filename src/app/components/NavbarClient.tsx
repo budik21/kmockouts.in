@@ -26,7 +26,7 @@ function computeInitials(name: string, email: string): string {
   return source.slice(0, 2).toUpperCase();
 }
 
-export default function NavbarClient() {
+export default function NavbarClient({ playoffEnabled = false }: { playoffEnabled?: boolean }) {
   const router = useRouter();
   const offcanvasRef = useRef<HTMLDivElement>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -221,6 +221,15 @@ export default function NavbarClient() {
             >
               🎯 Pick&apos;em
             </a>
+            {playoffEnabled && (
+              <a
+                href="/pickem/playoff"
+                className="nav-link offcanvas-nav-link"
+                onClick={navigateAndClose('/pickem/playoff')}
+              >
+                🏆 Play-off Pick&apos;em
+              </a>
+            )}
             <a
               href="/pickem/leaderboard"
               className="nav-link offcanvas-nav-link"
