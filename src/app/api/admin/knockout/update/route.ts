@@ -59,6 +59,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid score value' }, { status: 400 });
     }
 
+    // Extra time is cumulative (it includes the 90' goals), so neither side's
+    // ET total can be lower than its 90' score.
+    if ((homeGoalsEt != null && homeGoals != null && homeGoalsEt < homeGoals) ||
+        (awayGoalsEt != null && awayGoals != null && awayGoalsEt < awayGoals)) {
+      return NextResponse.json(
+        { error: 'Extra-time score cannot be lower than the 90′ score' },
+        { status: 400 },
+      );
+    }
+
     const km = await queryOne<{ home_team_id: number | null; away_team_id: number | null }>(
       'SELECT home_team_id, away_team_id FROM knockout_match WHERE match_number = $1',
       [matchNumber],

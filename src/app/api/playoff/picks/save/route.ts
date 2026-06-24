@@ -69,6 +69,11 @@ export async function POST(req: NextRequest) {
       [session.tipsterId, slot, teamId, now],
     );
   }
+  // Drop any picks from a previous slot scheme so stale rows can't linger.
+  await query(
+    `DELETE FROM playoff_pick WHERE user_id = $1 AND slot <> ALL($2::text[])`,
+    [session.tipsterId, PLAYOFF_PICK_SLOTS],
+  );
 
   const leagues = await query<{ league_id: number }>(
     'SELECT league_id FROM pickem_league_member WHERE user_id = $1',

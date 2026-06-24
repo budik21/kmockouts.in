@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { isFeatureEnabled } from '@/lib/feature-flags';
+import { query } from '@/lib/db';
 import { SITE_URL } from '@/lib/seo';
 import PlayoffLanding from './components/PlayoffLanding';
 import PlayoffApp from './components/PlayoffApp';
@@ -48,9 +49,16 @@ export default async function PlayoffPage() {
     session = null;
   }
 
-  // Guests see the landing page with the rules and a sign-in button.
+  // Guests see the landing page. Until the final group-stage result is in we
+  // show a "tipping opens …" notice instead of the sign-in button.
   if (!session?.tipsterId) {
-    return <PlayoffLanding />;
+    const counts = await query<{ total: string; finished: string }>(
+      `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'FINISHED') AS finished FROM match`,
+    );
+    const total = parseInt(counts[0]?.total ?? '0', 10);
+    const finished = parseInt(counts[0]?.finished ?? '0', 10);
+    const groupsComplete = total > 0 && finished === total;
+    return <PlayoffLanding groupsComplete={groupsComplete} />;
   }
 
   // Registered users go straight to the play-off tipping game.

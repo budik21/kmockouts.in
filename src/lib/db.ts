@@ -439,16 +439,20 @@ export async function initializeSchema(): Promise<void> {
     -- dispatcher mails each tip exactly once and stays idempotent across retries.
     ALTER TABLE knockout_tip ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;
 
-    -- "Top-4" winner picks, one set per user, four distinct teams:
-    --   champion       → 25 points  (winner of the final, match 104)
-    --   runner_up      → 20 points  (runner-up = loser of the final)
-    --   semifinalist_1 → 10 points  (a losing semifinalist; either SF, set match)
-    --   semifinalist_2 → 10 points
-    -- Locked 1 hour before the first knockout kick-off (see lib/playoff-lock.ts).
+    -- "Top-4" placement picks, one set per user, four distinct teams. The
+    -- third-place match decides 3rd vs 4th, so all four placings are named:
+    --   champion  → 40 points  (1st = winner of the final, match 104)
+    --   runner_up → 20 points  (2nd = loser of the final)
+    --   third     → 20 points  (3rd = winner of the third-place match, 103)
+    --   fourth    → 20 points  (4th = loser of the third-place match)
+    -- A picked team that finishes in the top 4 at another place scores 10; all
+    -- four exact adds a +50 bonus (folded into the champion pick). Scored once
+    -- matches 103 + 104 are finished. Locked 1 hour before the first knockout
+    -- kick-off (see lib/playoff-lock.ts).
     CREATE TABLE IF NOT EXISTS playoff_pick (
       id          SERIAL PRIMARY KEY,
       user_id     INTEGER NOT NULL REFERENCES tipster_user(id) ON DELETE CASCADE,
-      slot        TEXT NOT NULL,                 -- champion | runner_up | semifinalist_1 | semifinalist_2
+      slot        TEXT NOT NULL,                 -- champion | runner_up | third | fourth
       team_id     INTEGER NOT NULL REFERENCES team(id),
       points      INTEGER,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),

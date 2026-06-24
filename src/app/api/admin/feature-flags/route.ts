@@ -23,6 +23,23 @@ export async function POST(request: NextRequest) {
     await setFeatureFlag(key, enabled);
     const flags = await listFeatureFlags();
 
+    // Turning the play-off pick'em ON builds the knockout bracket from the
+    // current standings, in case the group stage already finished before the
+    // feature went live (so it doesn't depend on a later group-result save or
+    // a manual "Sync bracket" click). Best-effort.
+    if (key === 'playoff_pickem' && enabled) {
+      try {
+        const [{ recomputeKnockoutBracket }, { recalculateAllPlayoffPoints }] = await Promise.all([
+          import('@/engine/knockout-sync'),
+          import('@/lib/knockout-recalc'),
+        ]);
+        await recomputeKnockoutBracket();
+        await recalculateAllPlayoffPoints();
+      } catch (err) {
+        console.error('[feature-flags] knockout bracket sync on enable failed:', err);
+      }
+    }
+
     // Flags that change page content require purging Next's Full Route Cache
     // and the Cloudflare edge, otherwise visitors keep seeing the previous
     // render. ai_predictions_display is the obvious case; we purge on every

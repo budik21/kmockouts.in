@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import type { LeaderboardRow } from './page';
 
-type SortKey = 'rank' | 'name' | 'totalTips' | 'exact' | 'outcome' | 'wrong' | 'totalPoints';
+type SortKey = 'rank' | 'name' | 'totalTips' | 'exact' | 'outcome' | 'wrong' | 'advancing' | 'top4' | 'playoffPoints' | 'totalPoints';
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 20;
@@ -12,7 +12,30 @@ const PAGE_SIZE = 20;
 interface Props {
   rows: LeaderboardRow[];
   currentUserToken?: string | null;
+  /** Which dataset — drives the breakdown column labels. */
+  variant?: 'all' | 'groups' | 'playoff';
+  /** Show a "Play-off" column with each predictor's play-off-only points. */
+  playoffColumn?: boolean;
 }
+
+interface MidCol {
+  key: Extract<SortKey, 'exact' | 'outcome' | 'wrong' | 'advancing' | 'top4'>;
+  label: string;
+  get: (r: LeaderboardRow) => number;
+  cls: string;
+}
+
+const PLAYOFF_COLS: MidCol[] = [
+  { key: 'exact', label: 'Exact Score', get: (r) => r.exact, cls: 'leaderboard-exact' },
+  { key: 'advancing', label: 'Advancing Team', get: (r) => r.advancing, cls: 'leaderboard-outcome' },
+  { key: 'top4', label: 'Top 4', get: (r) => r.top4, cls: 'leaderboard-outcome' },
+];
+
+const DEFAULT_COLS: MidCol[] = [
+  { key: 'exact', label: 'Exact Score', get: (r) => r.exact, cls: 'leaderboard-exact' },
+  { key: 'outcome', label: 'Winner', get: (r) => r.outcome, cls: 'leaderboard-outcome' },
+  { key: 'wrong', label: 'Bad Tips', get: (r) => r.wrong, cls: 'leaderboard-wrong' },
+];
 
 function defaultCompare(a: LeaderboardRow, b: LeaderboardRow): number {
   if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
@@ -36,7 +59,10 @@ function medal(rank: number): string | null {
   return null;
 }
 
-export default function LeaderboardTable({ rows, currentUserToken }: Props) {
+export default function LeaderboardTable({ rows, currentUserToken, variant = 'groups', playoffColumn = false }: Props) {
+  const midCols = variant === 'playoff' ? PLAYOFF_COLS : DEFAULT_COLS;
+  // The all-exact top-4 bonus is a play-off achievement → flag it in those views.
+  const showBonus = variant === 'all' || variant === 'playoff';
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(0);
@@ -129,6 +155,7 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
             <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
             <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
             <col className="leaderboard-col-stat leaderboard-col-hide-mobile" />
+            {playoffColumn && <col className="leaderboard-col-pts" />}
             <col className="leaderboard-col-pts" />
             <col className="leaderboard-col-link" />
           </colgroup>
@@ -143,15 +170,16 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
               <th className="text-center leaderboard-sortable leaderboard-col-tips" onClick={() => handleSort('totalTips')}>
                 Tips Total {sortArrow('totalTips')}
               </th>
-              <th className="text-center leaderboard-sortable leaderboard-col-hide-mobile" onClick={() => handleSort('exact')}>
-                Exact Score {sortArrow('exact')}
-              </th>
-              <th className="text-center leaderboard-sortable leaderboard-col-hide-mobile" onClick={() => handleSort('outcome')}>
-                Winner {sortArrow('outcome')}
-              </th>
-              <th className="text-center leaderboard-sortable leaderboard-col-hide-mobile" onClick={() => handleSort('wrong')}>
-                Bad Tips {sortArrow('wrong')}
-              </th>
+              {midCols.map((c) => (
+                <th key={c.key} className="text-center leaderboard-sortable leaderboard-col-hide-mobile" onClick={() => handleSort(c.key)}>
+                  {c.label} {sortArrow(c.key)}
+                </th>
+              ))}
+              {playoffColumn && (
+                <th className="text-center leaderboard-sortable leaderboard-col-pts" onClick={() => handleSort('playoffPoints')}>
+                  Play-off {sortArrow('playoffPoints')}
+                </th>
+              )}
               <th className="text-center leaderboard-sortable leaderboard-col-pts" onClick={() => handleSort('totalPoints')}>
                 Points {sortArrow('totalPoints')}
               </th>
@@ -183,11 +211,23 @@ export default function LeaderboardTable({ rows, currentUserToken }: Props) {
                     {r.nameSuffix && (
                       <span className="leaderboard-name-suffix"> ({r.nameSuffix})</span>
                     )}
+                    {showBonus && r.hasBonus && (
+                      <span
+                        className="leaderboard-bonus-rocket"
+                        title="Nailed all four top-4 placings exactly — earned the +50 bonus!"
+                        aria-label="All four top-4 placings exact — +50 bonus"
+                      >
+                        {' '}🚀
+                      </span>
+                    )}
                   </td>
                   <td className="text-center leaderboard-col-tips">{r.totalTips}</td>
-                  <td className="text-center leaderboard-exact leaderboard-col-hide-mobile">{r.exact}</td>
-                  <td className="text-center leaderboard-outcome leaderboard-col-hide-mobile">{r.outcome}</td>
-                  <td className="text-center leaderboard-wrong leaderboard-col-hide-mobile">{r.wrong}</td>
+                  {midCols.map((c) => (
+                    <td key={c.key} className={`text-center ${c.cls} leaderboard-col-hide-mobile`}>{c.get(r)}</td>
+                  ))}
+                  {playoffColumn && (
+                    <td className="text-center leaderboard-col-pts">{r.playoffPoints ?? 0}</td>
+                  )}
                   <td className="text-center leaderboard-col-pts fw-bold">{r.totalPoints}</td>
                   <td className="text-end">
                     <Link

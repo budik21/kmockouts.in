@@ -5,6 +5,7 @@ import Link from 'next/link';
 import TopFourPicker from './TopFourPicker';
 import KnockoutTipEditor from './KnockoutTipEditor';
 import type { KnockoutMatchView, PlayoffTeam, UserKnockoutTip, UserPlayoffPick } from '@/lib/playoff-data';
+import { PLAYOFF_PICK_SLOTS } from '@/lib/playoff-scoring';
 
 interface Props {
   matches: KnockoutMatchView[];
@@ -18,7 +19,9 @@ interface Props {
 type Section = 'topfour' | 'bracket';
 
 export default function PlayoffApp({ matches, teams, userTips, userPicks, picksLockAt, picksLocked }: Props) {
-  const [section, setSection] = useState<Section>('topfour');
+  // If all four top-4 placings are already picked, open straight on Matches.
+  const allTopFourPicked = PLAYOFF_PICK_SLOTS.every((slot) => userPicks.some((p) => p.slot === slot));
+  const [section, setSection] = useState<Section>(allTopFourPicked ? 'bracket' : 'topfour');
 
   // Total play-off points earned so far (scored tips + scored picks).
   const tipPoints = userTips.reduce((s, t) => s + (t.points ?? 0), 0);
@@ -55,16 +58,20 @@ export default function PlayoffApp({ matches, teams, userTips, userPicks, picksL
           className={`playoff-tab ${section === 'bracket' ? 'active' : ''}`}
           onClick={() => setSection('bracket')}
         >
-          ⚔️ Bracket
+          ⚔️ Matches
         </button>
       </div>
 
+      {/* Both panels stay mounted; we only toggle visibility. Unmounting on tab
+          switch would reset each panel's local state — losing just-saved top-4
+          picks and unsaved bracket score drafts until a full page reload. */}
       <div className="playoff-tab-content">
-        {section === 'topfour' ? (
+        <div style={{ display: section === 'topfour' ? 'block' : 'none' }}>
           <TopFourPicker teams={teams} initialPicks={userPicks} locked={picksLocked} picksLockAt={picksLockAt} />
-        ) : (
+        </div>
+        <div style={{ display: section === 'bracket' ? 'block' : 'none' }}>
           <KnockoutTipEditor matches={matches} userTips={userTips} />
-        )}
+        </div>
       </div>
     </main>
   );

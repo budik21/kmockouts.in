@@ -11,6 +11,8 @@ interface Props {
   groups: LeaderboardRow[];
   playoff: LeaderboardRow[];
   defaultView: LeaderboardView;
+  /** Whole group stage decided — enables the Play-off column in the All view. */
+  groupsComplete: boolean;
   currentUserToken?: string | null;
 }
 
@@ -22,7 +24,7 @@ const META: Record<LeaderboardView, { label: string; caption: string }> = {
   playoff: { label: 'Play-off', caption: 'Knockout only — 8 pts exact 90′ score, 5 pts advancing team, plus your top-4 picks.' },
 };
 
-export default function LeaderboardViews({ all, groups, playoff, defaultView, currentUserToken }: Props) {
+export default function LeaderboardViews({ all, groups, playoff, defaultView, groupsComplete, currentUserToken }: Props) {
   const [view, setView] = useState<LeaderboardView>(defaultView);
   // Bumped on every change so the panel replays its slide-in animation.
   const [anim, setAnim] = useState(0);
@@ -84,7 +86,12 @@ export default function LeaderboardViews({ all, groups, playoff, defaultView, cu
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <LeaderboardTable rows={rowsByView[view]} currentUserToken={currentUserToken} />
+        <LeaderboardTable
+          rows={rowsByView[view]}
+          currentUserToken={currentUserToken}
+          variant={view}
+          playoffColumn={view === 'all' && groupsComplete}
+        />
       </div>
     </div>
   );

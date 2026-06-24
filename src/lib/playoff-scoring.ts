@@ -6,37 +6,47 @@
  *   - 8 points: exact 90' score (regulation full-time)
  *   - 5 points: correct advancing team
  *
- * Top-4 winner picks (one set per user, four distinct teams):
- *   - 25 points: champion (winner of the final)
- *   - 20 points: runner-up (loser of the final)
- *   - 10 points: each correctly named losing semifinalist
+ * Top-4 placement picks (one set per user, four distinct teams). The
+ * third-place match decides 3rd vs 4th, so all four final placings are named:
+ *   - 40 points: 1st place / champion (winner of the final)
+ *   - 20 points: 2nd place (loser of the final)
+ *   - 20 points: 3rd place (winner of the third-place match)
+ *   - 20 points: 4th place (loser of the third-place match)
+ *   - 10 points: a picked team that finishes in the top 4 but at another place
+ *   - +50 BONUS: all four placings named exactly right
  */
 
 export const KO_EXACT_POINTS = 8;
 export const KO_ADVANCE_POINTS = 5;
 
-export type PlayoffPickSlot = 'champion' | 'runner_up' | 'semifinalist_1' | 'semifinalist_2';
+export type PlayoffPickSlot = 'champion' | 'runner_up' | 'third' | 'fourth';
 
 export const PLAYOFF_PICK_SLOTS: PlayoffPickSlot[] = [
   'champion',
   'runner_up',
-  'semifinalist_1',
-  'semifinalist_2',
+  'third',
+  'fourth',
 ];
 
 export const PLAYOFF_PICK_POINTS: Record<PlayoffPickSlot, number> = {
-  champion: 25,
+  champion: 40,
   runner_up: 20,
-  semifinalist_1: 10,
-  semifinalist_2: 10,
+  third: 20,
+  fourth: 20,
 };
 
 export const PLAYOFF_PICK_LABELS: Record<PlayoffPickSlot, string> = {
-  champion: 'Champion',
-  runner_up: 'Runner-up',
-  semifinalist_1: 'Losing semifinalist',
-  semifinalist_2: 'Losing semifinalist',
+  champion: '1st place — Champion',
+  runner_up: '2nd place',
+  third: '3rd place',
+  fourth: '4th place',
 };
+
+/** A picked team that finishes in the top 4 but at a different placing. */
+export const PLAYOFF_PICK_WRONG_PLACE_POINTS = 10;
+
+/** Bonus added when all four placings are named exactly right. */
+export const PLAYOFF_PICK_ALL_EXACT_BONUS = 50;
 
 /** Raw result columns of a knockout match (regulation 90', extra time, penalties). */
 export interface KnockoutResult {

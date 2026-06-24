@@ -9,7 +9,15 @@
  * Both the SQL CASE below and the JS in lib/playoff-scoring.ts must agree.
  */
 import { query } from './db';
-import { KO_EXACT_POINTS, KO_ADVANCE_POINTS, PLAYOFF_PICK_POINTS } from './playoff-scoring';
+import {
+  KO_EXACT_POINTS,
+  KO_ADVANCE_POINTS,
+  PLAYOFF_PICK_POINTS,
+  PLAYOFF_PICK_SLOTS,
+  PLAYOFF_PICK_WRONG_PLACE_POINTS,
+  PLAYOFF_PICK_ALL_EXACT_BONUS,
+  type PlayoffPickSlot,
+} from './playoff-scoring';
 
 /** Recompute every knockout_tip's points from the current match results. */
 export async function recalculateKnockoutTips(): Promise<number> {
@@ -36,10 +44,13 @@ export async function recalculateKnockoutTips(): Promise<number> {
 }
 
 /**
- * Recompute every playoff_pick's points. Champion/runner-up resolve once the
- * final (match 104) is finished; semifinalist picks score as soon as a team is
- * a known losing semifinalist (loser of SF 101 / 102), and lock to 0 only once
- * both semifinals are finished.
+ * Recompute every playoff_pick's points. The four final placings come from the
+ * final (match 104 → 1st/2nd) and the third-place match (103 → 3rd/4th). Picks
+ * are scored only once BOTH are finished — that's when the full top-4 set is
+ * known, which the "right team, wrong place" (10 pts) and the all-exact bonus
+ * both depend on. Per slot: exact placing → its full value; team in the top 4
+ * at another place → 10; otherwise 0. All four exact → a +50 bonus folded into
+ * the champion pick (so the SUM-based leaderboard picks it up automatically).
  */
 export async function recalculatePlayoffPicks(): Promise<number> {
   const rows = await query<{
@@ -47,53 +58,74 @@ export async function recalculatePlayoffPicks(): Promise<number> {
     home_team_id: number | null; away_team_id: number | null; advancing_team_id: number | null;
   }>(
     `SELECT match_number, status, home_team_id, away_team_id, advancing_team_id
-     FROM knockout_match WHERE match_number IN (101, 102, 104)`,
+     FROM knockout_match WHERE match_number IN (103, 104)`,
   );
   const byNum = new Map(rows.map((r) => [r.match_number, r]));
 
+  const decided = (m?: { status: string; home_team_id: number | null; away_team_id: number | null; advancing_team_id: number | null }) =>
+    !!m && m.status === 'FINISHED' && m.advancing_team_id != null && m.home_team_id != null && m.away_team_id != null;
+  const loserOf = (m: { home_team_id: number | null; away_team_id: number | null; advancing_team_id: number | null }) =>
+    m.home_team_id === m.advancing_team_id ? m.away_team_id! : m.home_team_id!;
+
   const final = byNum.get(104);
-  const finalDecided = final?.status === 'FINISHED' && final.advancing_team_id != null;
-  const championId = finalDecided ? final!.advancing_team_id! : null;
-  const runnerUpId = finalDecided
-    ? (final!.home_team_id === championId ? final!.away_team_id : final!.home_team_id)
-    : null;
+  const third = byNum.get(103);
+  const allDone = decided(final) && decided(third);
 
-  const sfLosers: number[] = [];
-  let sfFinishedCount = 0;
-  for (const num of [101, 102]) {
-    const sf = byNum.get(num);
-    if (sf?.status === 'FINISHED' && sf.advancing_team_id != null && sf.home_team_id != null && sf.away_team_id != null) {
-      sfFinishedCount++;
-      const loser = sf.home_team_id === sf.advancing_team_id ? sf.away_team_id : sf.home_team_id;
-      sfLosers.push(loser);
-    }
+  let placement: Record<PlayoffPickSlot, number> | null = null;
+  let top4: Set<number> | null = null;
+  if (allDone) {
+    const champion = final!.advancing_team_id!;
+    const runnerUp = loserOf(final!);
+    const third3 = third!.advancing_team_id!;
+    const fourth = loserOf(third!);
+    placement = { champion, runner_up: runnerUp, third: third3, fourth };
+    top4 = new Set([champion, runnerUp, third3, fourth]);
   }
-  const bothSfDecided = sfFinishedCount === 2;
 
-  const picks = await query<{ id: number; slot: string; team_id: number; points: number | null }>(
-    `SELECT id, slot, team_id, points FROM playoff_pick`,
+  const picks = await query<{ id: number; user_id: number; slot: string; team_id: number; points: number | null }>(
+    `SELECT id, user_id, slot, team_id, points FROM playoff_pick`,
   );
 
-  let updated = 0;
+  // Group by user so the all-exact bonus can be evaluated per player.
+  const byUser = new Map<number, typeof picks>();
   for (const p of picks) {
-    let newPoints: number | null;
-    if (p.slot === 'champion') {
-      newPoints = finalDecided ? (p.team_id === championId ? PLAYOFF_PICK_POINTS.champion : 0) : null;
-    } else if (p.slot === 'runner_up') {
-      newPoints = finalDecided ? (p.team_id === runnerUpId ? PLAYOFF_PICK_POINTS.runner_up : 0) : null;
+    const arr = byUser.get(p.user_id) ?? [];
+    arr.push(p);
+    byUser.set(p.user_id, arr);
+  }
+
+  let updated = 0;
+  for (const [, userPicks] of byUser) {
+    const target = new Map<number, number | null>(); // pickId → new points
+
+    if (!allDone || !placement || !top4) {
+      for (const p of userPicks) target.set(p.id, null);
     } else {
-      // semifinalist_1 / semifinalist_2
-      if (sfLosers.includes(p.team_id)) {
-        newPoints = PLAYOFF_PICK_POINTS.semifinalist_1;
-      } else if (bothSfDecided) {
-        newPoints = 0;
-      } else {
-        newPoints = null;
+      const bySlot = new Map<string, { id: number; team_id: number }>();
+      for (const p of userPicks) bySlot.set(p.slot, { id: p.id, team_id: p.team_id });
+
+      for (const p of userPicks) {
+        if (!(PLAYOFF_PICK_SLOTS as string[]).includes(p.slot)) { target.set(p.id, null); continue; }
+        const slot = p.slot as PlayoffPickSlot;
+        if (p.team_id === placement[slot]) target.set(p.id, PLAYOFF_PICK_POINTS[slot]);
+        else if (top4.has(p.team_id)) target.set(p.id, PLAYOFF_PICK_WRONG_PLACE_POINTS);
+        else target.set(p.id, 0);
+      }
+
+      // All four placings exactly right → fold the bonus into the champion pick.
+      const allExact = PLAYOFF_PICK_SLOTS.every((s) => bySlot.get(s)?.team_id === placement![s]);
+      const champ = bySlot.get('champion');
+      if (allExact && champ) {
+        target.set(champ.id, (target.get(champ.id) ?? 0) + PLAYOFF_PICK_ALL_EXACT_BONUS);
       }
     }
-    if (p.points !== newPoints) {
-      await query('UPDATE playoff_pick SET points = $1, updated_at = NOW() WHERE id = $2', [newPoints, p.id]);
-      updated++;
+
+    for (const p of userPicks) {
+      const newPoints = target.get(p.id) ?? null;
+      if (p.points !== newPoints) {
+        await query('UPDATE playoff_pick SET points = $1, updated_at = NOW() WHERE id = $2', [newPoints, p.id]);
+        updated++;
+      }
     }
   }
   return updated;

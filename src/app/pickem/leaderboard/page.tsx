@@ -9,6 +9,7 @@ import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubhead
 import { SITE_URL } from '@/lib/seo';
 import { auth } from '@/lib/auth';
 import { isFeatureEnabled } from '@/lib/feature-flags';
+import { PLAYOFF_PICK_POINTS, PLAYOFF_PICK_ALL_EXACT_BONUS } from '@/lib/playoff-scoring';
 import { disambiguateNames } from '@/lib/name-disambiguate';
 
 // Opt out of build-time static prerendering. Without this, Next.js renders
@@ -44,6 +45,13 @@ export interface LeaderboardRow {
   wrong: number;
   pending: number;
   totalPoints: number;
+  /** Play-off-only points (knockout tips + top-4 picks); shown in the All view. */
+  playoffPoints: number;
+  /** Play-off view breakdown: correct advancing picks, and correct top-4 placings. */
+  advancing: number;
+  top4: number;
+  /** Earned the +50 all-exact top-4 bonus (shown as a 🚀 next to the name). */
+  hasBonus: boolean;
 }
 
 interface BaseUserRow {
@@ -66,6 +74,7 @@ interface KoAggRow {
 interface PickAggRow {
   user_id: number;
   total: string; correct: string; wrong: string; pending: string; points: string;
+  champ_pts: string | null;
 }
 
 interface LastScoredDbRow {
@@ -93,7 +102,7 @@ export default async function LeaderboardPage() {
 
   // Base list of public predictors + the point sources. Group-stage tips always;
   // knockout match tips + top-4 picks only when the play-off feature is live.
-  const [baseUsers, groupAgg] = await Promise.all([
+  const [baseUsers, groupAgg, groupCountRows] = await Promise.all([
     cachedQuery<BaseUserRow>(
       `SELECT id, share_token, name, email FROM tipster_user WHERE tips_public = true`,
       [], [LEADERBOARD_TAG],
@@ -108,7 +117,17 @@ export default async function LeaderboardPage() {
        FROM tip GROUP BY user_id`,
       [], [LEADERBOARD_TAG],
     ),
+    cachedQuery<{ total: string; finished: string }>(
+      `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'FINISHED') AS finished FROM match`,
+      [], [LEADERBOARD_TAG],
+    ),
   ]);
+
+  // The Play-off column in the All view appears only once the final group-stage
+  // result is in (the whole group stage is decided).
+  const groupTotal = parseInt(groupCountRows[0]?.total ?? '0', 10);
+  const groupFinished = parseInt(groupCountRows[0]?.finished ?? '0', 10);
+  const groupsComplete = groupTotal > 0 && groupFinished === groupTotal;
 
   const [koAgg, pickAgg, koFinishedRows] = playoffEnabled
     ? await Promise.all([
@@ -131,7 +150,8 @@ export default async function LeaderboardPage() {
              COUNT(*) FILTER (WHERE points > 0)       AS correct,
              COUNT(*) FILTER (WHERE points = 0)       AS wrong,
              COUNT(*) FILTER (WHERE points IS NULL)   AS pending,
-             COALESCE(SUM(points), 0)                 AS points
+             COALESCE(SUM(points), 0)                 AS points,
+             MAX(points) FILTER (WHERE slot = 'champion') AS champ_pts
            FROM playoff_pick GROUP BY user_id`,
           [], [LEADERBOARD_TAG],
         ),
@@ -164,20 +184,30 @@ export default async function LeaderboardPage() {
 
     const base = { shareToken: u.share_token, name: u.name, nameSuffix: suffixById.get(u.id) ?? null };
 
+    const playoffPoints = kPoints + pPoints;
+    // The +50 bonus is folded into the champion pick, so champion points reach
+    // its value + the bonus only when all four placings were exactly right.
+    const champPts = p?.champ_pts != null ? parseInt(p.champ_pts, 10) : null;
+    const hasBonus = champPts != null && champPts >= PLAYOFF_PICK_POINTS.champion + PLAYOFF_PICK_ALL_EXACT_BONUS;
+
     if (kind === 'groups') {
       if (gTotal === 0) return null;
-      return { ...base, totalTips: gTotal, exact: gExact, outcome: gOutcome, wrong: gWrong, pending: gPending, totalPoints: gPoints };
+      return { ...base, totalTips: gTotal, exact: gExact, outcome: gOutcome, wrong: gWrong, pending: gPending, totalPoints: gPoints, playoffPoints: 0, advancing: 0, top4: 0, hasBonus: false };
     }
     if (kind === 'playoff') {
       if (kTotal + pTotal === 0) return null;
       return {
         ...base,
         totalTips: kTotal + pTotal,
-        exact: kExact,
-        outcome: kAdvance + pCorrect,
+        exact: kExact,                       // correct exact 90' scores
+        outcome: kAdvance + pCorrect,        // ranking tiebreaker
         wrong: kWrong + pWrong,
         pending: kPending + pPending,
-        totalPoints: kPoints + pPoints,
+        totalPoints: playoffPoints,
+        playoffPoints,
+        advancing: kAdvance,                 // correct advancing-team picks
+        top4: pCorrect,                      // top-4 picks landing in the top 4
+        hasBonus,
       };
     }
     // all
@@ -189,7 +219,11 @@ export default async function LeaderboardPage() {
       outcome: gOutcome + kAdvance + pCorrect,
       wrong: gWrong + kWrong + pWrong,
       pending: gPending + kPending + pPending,
-      totalPoints: gPoints + kPoints + pPoints,
+      totalPoints: gPoints + playoffPoints,
+      playoffPoints,
+      advancing: kAdvance,
+      top4: pCorrect,
+      hasBonus,
     };
   }
 
@@ -282,6 +316,7 @@ export default async function LeaderboardPage() {
           groups={groupsData}
           playoff={playoffData}
           defaultView={defaultView}
+          groupsComplete={groupsComplete}
           currentUserToken={currentUserToken}
         />
       ) : (

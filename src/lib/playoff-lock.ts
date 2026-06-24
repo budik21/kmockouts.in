@@ -14,6 +14,13 @@ export { isTipLocked, isTipLastCall, TIP_LOCK_LEAD_MS, TIP_LOCK_LEAD_MINUTES } f
 /** Top-4 picks lock 1 hour before the first knockout match kicks off. */
 export const PLAYOFF_PICKS_LOCK_LEAD_MS = 60 * 60 * 1000;
 
+/**
+ * Announced moment the play-off tipping opens, shown on the landing page until
+ * the final group-stage result is in. Stored in UTC; the client renders it in
+ * the visitor's own timezone (so e.g. US visitors see it as Sunday evening).
+ */
+export const PLAYOFF_TIPPING_OPENS_AT = '2026-06-29T04:00:00Z';
+
 /** Kick-off (ms epoch) of the earliest Round-of-32 match, or null if unscheduled. */
 export function firstKnockoutKickOffMs(): number | null {
   let earliest: number | null = null;

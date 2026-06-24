@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import ArrowStepper from '@/app/components/ArrowStepper';
 import type { KnockoutMatchView } from '@/lib/playoff-data';
 import type { KnockoutRoundName } from '@/lib/knockout-bracket';
+import { computeAdvancing } from '@/lib/playoff-scoring';
 
 const ROUND_ORDER: { id: KnockoutRoundName; label: string }[] = [
   { id: 'r32', label: 'Round of 32' },
@@ -14,37 +16,22 @@ const ROUND_ORDER: { id: KnockoutRoundName; label: string }[] = [
 ];
 
 interface Draft {
-  homeGoals: string; awayGoals: string;
-  homeGoalsEt: string; awayGoalsEt: string;
-  homePens: string; awayPens: string;
-  status: string;
+  homeGoals: number | null; awayGoals: number | null;
+  homeGoalsEt: number | null; awayGoalsEt: number | null;
+  homePens: number | null; awayPens: number | null;
   saving: boolean;
   error: string | null;
   saved: boolean;
 }
 
-function numOrNull(s: string): number | null {
-  const t = s.trim();
-  if (t === '') return null;
-  const n = parseInt(t, 10);
-  return Number.isNaN(n) ? null : n;
-}
-
 function toDraft(m: KnockoutMatchView): Draft {
-  const s = (v: number | null) => (v == null ? '' : String(v));
   return {
-    homeGoals: s(m.homeGoals), awayGoals: s(m.awayGoals),
-    homeGoalsEt: s(m.homeGoalsEt), awayGoalsEt: s(m.awayGoalsEt),
-    homePens: s(m.homePens), awayPens: s(m.awayPens),
-    status: m.status,
+    homeGoals: m.homeGoals, awayGoals: m.awayGoals,
+    homeGoalsEt: m.homeGoalsEt, awayGoalsEt: m.awayGoalsEt,
+    homePens: m.homePens, awayPens: m.awayPens,
     saving: false, error: null, saved: false,
   };
 }
-
-const inputStyle: React.CSSProperties = {
-  width: '3rem', textAlign: 'center', background: 'var(--wc-bg, #1a1a1a)',
-  color: 'var(--wc-text)', border: '1px solid var(--wc-border)', borderRadius: 4, padding: '0.25rem',
-};
 
 export default function KnockoutEditor() {
   const [matches, setMatches] = useState<KnockoutMatchView[]>([]);
@@ -72,15 +59,6 @@ export default function KnockoutEditor() {
 
   useEffect(() => { load(); }, [load]);
 
-  const teamName = useMemo(() => {
-    const map = new Map<number, string>();
-    for (const m of matches) {
-      if (m.homeTeam) map.set(m.homeTeam.id, m.homeTeam.name);
-      if (m.awayTeam) map.set(m.awayTeam.id, m.awayTeam.name);
-    }
-    return map;
-  }, [matches]);
-
   async function sync() {
     setSyncing(true);
     setGlobalMsg(null);
@@ -100,7 +78,7 @@ export default function KnockoutEditor() {
     setDrafts((d) => ({ ...d, [num]: { ...d[num], ...p, saved: false, error: null } }));
   }
 
-  async function save(num: number) {
+  async function save(num: number, status: 'SCHEDULED' | 'FINISHED') {
     const d = drafts[num];
     patch(num, { saving: true });
     try {
@@ -109,10 +87,10 @@ export default function KnockoutEditor() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           matchNumber: num,
-          homeGoals: numOrNull(d.homeGoals), awayGoals: numOrNull(d.awayGoals),
-          homeGoalsEt: numOrNull(d.homeGoalsEt), awayGoalsEt: numOrNull(d.awayGoalsEt),
-          homePens: numOrNull(d.homePens), awayPens: numOrNull(d.awayPens),
-          status: d.status,
+          homeGoals: d.homeGoals, awayGoals: d.awayGoals,
+          homeGoalsEt: d.homeGoalsEt, awayGoalsEt: d.awayGoalsEt,
+          homePens: d.homePens, awayPens: d.awayPens,
+          status,
         }),
       });
       const data = await res.json();
@@ -161,49 +139,14 @@ export default function KnockoutEditor() {
               {ms.map((m) => {
                 const d = drafts[m.matchNumber];
                 if (!d) return null;
-                const advName = m.advancingTeamId != null ? teamName.get(m.advancingTeamId) : null;
                 return (
-                  <div key={m.matchNumber} style={{
-                    border: '1px solid var(--wc-border)', borderRadius: 6, padding: '0.6rem 0.8rem',
-                    background: 'rgba(255,255,255,0.02)',
-                  }}>
-                    <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                      <div style={{ color: 'var(--wc-text)', fontWeight: 600, minWidth: '16rem' }}>
-                        <span style={{ color: 'var(--wc-text-muted)', fontWeight: 400 }}>#{m.matchNumber} </span>
-                        {m.homeTeam?.name ?? 'TBD'} <span style={{ color: 'var(--wc-text-muted)' }}>vs</span> {m.awayTeam?.name ?? 'TBD'}
-                      </div>
-                      {advName && (
-                        <span style={{ color: 'var(--wc-accent)', fontSize: '0.8rem' }}>→ {advName} advances</span>
-                      )}
-                    </div>
-
-                    <div className="d-flex align-items-center gap-3 flex-wrap mt-2">
-                      <ScoreGroup label="90′" h={d.homeGoals} a={d.awayGoals}
-                        onH={(v) => patch(m.matchNumber, { homeGoals: v })} onA={(v) => patch(m.matchNumber, { awayGoals: v })} />
-                      <ScoreGroup label="A.E.T." h={d.homeGoalsEt} a={d.awayGoalsEt}
-                        onH={(v) => patch(m.matchNumber, { homeGoalsEt: v })} onA={(v) => patch(m.matchNumber, { awayGoalsEt: v })} />
-                      <ScoreGroup label="Pens" h={d.homePens} a={d.awayPens}
-                        onH={(v) => patch(m.matchNumber, { homePens: v })} onA={(v) => patch(m.matchNumber, { awayPens: v })} />
-
-                      <label style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem' }}>
-                        Status{' '}
-                        <select value={d.status} onChange={(e) => patch(m.matchNumber, { status: e.target.value })}
-                          style={{ ...inputStyle, width: 'auto', textAlign: 'left' }}>
-                          <option value="SCHEDULED">SCHEDULED</option>
-                          <option value="FINISHED">FINISHED</option>
-                        </select>
-                      </label>
-
-                      <button className="btn btn-sm btn-primary" disabled={d.saving || !m.participantsKnown}
-                        onClick={() => save(m.matchNumber)}>
-                        {d.saving ? 'Saving…' : d.saved ? '✓ Saved' : 'Save'}
-                      </button>
-                      {!m.participantsKnown && (
-                        <span style={{ color: 'var(--wc-text-muted)', fontSize: '0.75rem' }}>participants unknown</span>
-                      )}
-                      {d.error && <span style={{ color: '#ff6b6b', fontSize: '0.8rem' }}>{d.error}</span>}
-                    </div>
-                  </div>
+                  <KnockoutResultCard
+                    key={m.matchNumber}
+                    match={m}
+                    draft={d}
+                    onPatch={(p) => patch(m.matchNumber, p)}
+                    onSave={(status) => save(m.matchNumber, status)}
+                  />
                 );
               })}
             </div>
@@ -214,15 +157,108 @@ export default function KnockoutEditor() {
   );
 }
 
-function ScoreGroup({ label, h, a, onH, onA }: {
-  label: string; h: string; a: string; onH: (v: string) => void; onA: (v: string) => void;
+function KnockoutResultCard({
+  match, draft, onPatch, onSave,
+}: {
+  match: KnockoutMatchView;
+  draft: Draft;
+  onPatch: (p: Partial<Draft>) => void;
+  onSave: (status: 'SCHEDULED' | 'FINISHED') => void;
 }) {
+  const homeName = match.homeTeam?.name ?? 'TBD';
+  const awayName = match.awayTeam?.name ?? 'TBD';
+
+  const values = [draft.homeGoals, draft.awayGoals, draft.homeGoalsEt, draft.awayGoalsEt, draft.homePens, draft.awayPens];
+  const allEmpty = values.every((v) => v == null);
+  const hasNinety = draft.homeGoals != null && draft.awayGoals != null;
+
+  // Extra time is cumulative — neither side's ET total may be below its 90' score.
+  const etInvalid =
+    (draft.homeGoalsEt != null && draft.homeGoals != null && draft.homeGoalsEt < draft.homeGoals) ||
+    (draft.awayGoalsEt != null && draft.awayGoals != null && draft.awayGoalsEt < draft.awayGoals);
+
+  // Live winner derivation from the entered result.
+  const advancingId = match.participantsKnown
+    ? computeAdvancing({
+        homeTeamId: match.homeTeam!.id, awayTeamId: match.awayTeam!.id,
+        homeGoals: draft.homeGoals, awayGoals: draft.awayGoals,
+        homeGoalsEt: draft.homeGoalsEt, awayGoalsEt: draft.awayGoalsEt,
+        homePens: draft.homePens, awayPens: draft.awayPens,
+      })
+    : null;
+  const advancingName = advancingId == null ? null
+    : advancingId === match.homeTeam?.id ? homeName
+    : advancingId === match.awayTeam?.id ? awayName : null;
+
+  // A result may be saved only when it determines who advances. Clearing back to
+  // an unplayed state (all fields empty) is also allowed.
+  const decided = match.participantsKnown && hasNinety && !etInvalid && advancingId != null;
+  const canSave = !match.participantsKnown ? false : allEmpty || decided;
+
+  let hint: string | null = null;
+  if (!match.participantsKnown) hint = 'participants unknown';
+  else if (allEmpty) hint = null;
+  else if (!hasNinety) hint = 'Enter the full 90′ score';
+  else if (etInvalid) hint = 'Extra-time score cannot be lower than the 90′ score';
+  else if (advancingId == null) hint = 'Level — add extra time and/or penalties to decide who advances';
+
+  const stepper = (
+    value: number | null,
+    key: keyof Draft,
+    max: number,
+  ) => (
+    <ArrowStepper value={value} onChange={(v) => onPatch({ [key]: v } as Partial<Draft>)} nullable max={max} />
+  );
+
   return (
-    <div className="d-flex align-items-center gap-1">
-      <span style={{ color: 'var(--wc-text-muted)', fontSize: '0.75rem', width: '2.6rem' }}>{label}</span>
-      <input style={inputStyle} inputMode="numeric" value={h} onChange={(e) => onH(e.target.value)} />
-      <span style={{ color: 'var(--wc-text-muted)' }}>:</span>
-      <input style={inputStyle} inputMode="numeric" value={a} onChange={(e) => onA(e.target.value)} />
+    <div style={{
+      border: '1px solid var(--wc-border)', borderRadius: 6, padding: '0.6rem 0.8rem',
+      background: 'rgba(255,255,255,0.02)',
+    }}>
+      <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div style={{ color: 'var(--wc-text)', fontWeight: 600, minWidth: '16rem' }}>
+          <span style={{ color: 'var(--wc-text-muted)', fontWeight: 400 }}>#{match.matchNumber} </span>
+          {homeName} <span style={{ color: 'var(--wc-text-muted)' }}>vs</span> {awayName}
+        </div>
+        <span style={{ fontSize: '0.8rem', color: advancingName ? 'var(--wc-accent)' : 'var(--wc-text-muted)' }}>
+          {advancingName ? `→ ${advancingName} advances` : '→ winner undecided'}
+        </span>
+      </div>
+
+      <div className="d-flex align-items-start gap-4 flex-wrap mt-2">
+        <ScoreGroup label="90′" home={stepper(draft.homeGoals, 'homeGoals', 20)} away={stepper(draft.awayGoals, 'awayGoals', 20)} />
+        <ScoreGroup label="A.E.T." home={stepper(draft.homeGoalsEt, 'homeGoalsEt', 20)} away={stepper(draft.awayGoalsEt, 'awayGoalsEt', 20)} />
+        <ScoreGroup label="Pens" home={stepper(draft.homePens, 'homePens', 30)} away={stepper(draft.awayPens, 'awayPens', 30)} />
+
+        <div className="d-flex flex-column gap-1">
+          <button
+            className="btn btn-sm btn-primary"
+            disabled={draft.saving || !canSave}
+            onClick={() => onSave(allEmpty ? 'SCHEDULED' : 'FINISHED')}
+            title={!canSave && hint ? hint : undefined}
+          >
+            {draft.saving ? 'Saving…' : draft.saved ? '✓ Saved' : allEmpty ? 'Clear' : 'Save result'}
+          </button>
+        </div>
+      </div>
+
+      {hint && !draft.error && (
+        <div style={{ color: 'var(--wc-text-muted)', fontSize: '0.78rem', marginTop: '0.4rem' }}>⚠️ {hint}</div>
+      )}
+      {draft.error && <div style={{ color: '#ff6b6b', fontSize: '0.8rem', marginTop: '0.4rem' }}>{draft.error}</div>}
+    </div>
+  );
+}
+
+function ScoreGroup({ label, home, away }: { label: string; home: React.ReactNode; away: React.ReactNode }) {
+  return (
+    <div className="d-flex flex-column align-items-center gap-1">
+      <span style={{ color: 'var(--wc-text-muted)', fontSize: '0.75rem' }}>{label}</span>
+      <div className="d-flex align-items-center gap-2">
+        {home}
+        <span style={{ color: 'var(--wc-text-muted)' }}>:</span>
+        {away}
+      </div>
     </div>
   );
 }
