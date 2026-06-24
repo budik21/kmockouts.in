@@ -8,6 +8,7 @@ const ALLOWED_FIELDS = new Set([
   'notify_exact_score',
   'notify_winner_only',
   'notify_wrong_tip',
+  'notify_playoff',
 ]);
 
 export async function PATCH(req: NextRequest) {

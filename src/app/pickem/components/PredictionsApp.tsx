@@ -13,6 +13,7 @@ interface NotifyPrefs {
   exactScore: boolean;
   winnerOnly: boolean;
   wrongTip: boolean;
+  playoff: boolean;
 }
 
 interface TipData {

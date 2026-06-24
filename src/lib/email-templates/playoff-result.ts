@@ -30,10 +30,24 @@ function flag(code: string): string {
 
 /** Build the play-off match-result e-mail (subject + HTML). */
 export function buildPlayoffResultEmail(d: PlayoffResultEmailData): { subject: string; html: string } {
-  const headline =
-    d.points >= KO_EXACT_POINTS + KO_ADVANCE_POINTS ? '🎯 Perfect call!'
-    : d.points > 0 ? '✅ Nice one!'
+  // Four distinct outcomes, each with its own headline + flavour line:
+  //   both hit (13) · exact score only (8) · advancing only (5) · neither (0).
+  const both = d.exactHit && d.advanceHit;
+  const exactOnly = d.exactHit && !d.advanceHit;
+  const advanceOnly = !d.exactHit && d.advanceHit;
+
+  const headline = both ? '🎯 Perfect call!'
+    : exactOnly ? '💯 Bang on the scoreline!'
+    : advanceOnly ? '✅ Nice one!'
     : '😬 Not this time';
+
+  const flavour = both
+    ? 'Exact score and the right team through — that’s as good as it gets.'
+    : exactOnly
+    ? `You nailed the exact 90′ score — only who’d go through slipped past you. That’s still a hefty ${KO_EXACT_POINTS} points.`
+    : advanceOnly
+    ? `You read who’d advance — the scoreline got away, but that’s ${KO_ADVANCE_POINTS} points banked.`
+    : 'Neither the score nor who advanced landed this time — on to the next one.';
 
   const subject = `${headline} ${d.homeTeam.name} ${d.homeGoals}–${d.awayGoals} ${d.awayTeam.name} — ${d.points} pts`;
 
@@ -49,7 +63,8 @@ export function buildPlayoffResultEmail(d: PlayoffResultEmailData): { subject: s
   const html = `
   <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:560px;margin:0 auto;color:#222">
     <h2 style="margin:0 0 4px">${headline}</h2>
-    <p style="margin:0 0 16px;color:#666">${esc(d.roundLabel)} result, ${esc(d.userName)}.</p>
+    <p style="margin:0 0 4px;color:#666">${esc(d.roundLabel)} result, ${esc(d.userName)}.</p>
+    <p style="margin:0 0 16px;color:#444;font-size:14px">${esc(flavour)}</p>
 
     <div style="background:#faf7ef;border:1px solid #e7dfc7;border-radius:10px;padding:16px 18px;margin-bottom:16px">
       <div style="font-size:16px;margin-bottom:6px">${resultLine}</div>

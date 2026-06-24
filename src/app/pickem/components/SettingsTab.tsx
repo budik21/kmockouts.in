@@ -6,12 +6,14 @@ interface NotifyPrefs {
   exactScore: boolean;
   winnerOnly: boolean;
   wrongTip: boolean;
+  playoff: boolean;
 }
 
 const NOTIFY_FIELD_MAP = {
   exactScore: 'notify_exact_score',
   winnerOnly: 'notify_winner_only',
   wrongTip: 'notify_wrong_tip',
+  playoff: 'notify_playoff',
 } as const;
 
 type NotifyKey = keyof NotifyPrefs;
@@ -83,6 +85,13 @@ export default function SettingsTab({ initialNotify, tipsPublic, shareUrl, onTog
             checked={notify.wrongTip}
             disabled={savingNotify === 'wrongTip'}
             onChange={() => toggleNotify('wrongTip')}
+          />
+          <NotifyRow
+            title="🏆 Play-off results"
+            desc="E-mail me the result of each knockout match I tipped (score + who advanced + points)."
+            checked={notify.playoff}
+            disabled={savingNotify === 'playoff'}
+            onChange={() => toggleNotify('playoff')}
           />
         </div>
         {notifyError && <p className="text-danger mt-3">{notifyError}</p>}

@@ -312,6 +312,12 @@ export async function initializeSchema(): Promise<void> {
     ALTER TABLE tipster_user ALTER COLUMN notify_winner_only SET DEFAULT TRUE;
     ALTER TABLE tipster_user ALTER COLUMN notify_wrong_tip   SET DEFAULT TRUE;
 
+    -- Play-off result e-mails: a single on/off channel for the knockout-stage
+    -- match-result e-mails (separate from the group-stage channels above). On
+    -- by default; only ever sent to users who tipped the match in question.
+    ALTER TABLE tipster_user ADD COLUMN IF NOT EXISTS notify_playoff BOOLEAN NOT NULL DEFAULT TRUE;
+    ALTER TABLE tipster_user ALTER COLUMN notify_playoff SET DEFAULT TRUE;
+
     -- Tipovacka: individual match predictions
     CREATE TABLE IF NOT EXISTS tip (
       id            SERIAL PRIMARY KEY,
@@ -460,6 +466,10 @@ export async function initializeSchema(): Promise<void> {
       UNIQUE (user_id, slot)
     );
     CREATE INDEX IF NOT EXISTS idx_playoff_pick_user ON playoff_pick(user_id);
+    -- Stamped once the post-final TOP-4 recap e-mail has been sent to this user,
+    -- so the recap goes out exactly once (all four of a user's pick rows share
+    -- the same stamp). Independent of the per-match knockout_tip.notified_at.
+    ALTER TABLE playoff_pick ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;
   `);
 
   // ---- Seed knockout third-place combinations (FIFA Annex C) ----

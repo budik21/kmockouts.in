@@ -4,8 +4,9 @@ import { query, queryOne } from '@/lib/db';
 import { recomputeKnockoutBracket } from '@/engine/knockout-sync';
 import { recalculateAllPlayoffPoints } from '@/lib/knockout-recalc';
 import { recalculateLeagueStandings } from '@/lib/league-standings';
-import { dispatchKnockoutResultEmails } from '@/lib/playoff-notifications';
+import { dispatchKnockoutResultEmails, dispatchTop4ResultEmails, sendPlayoffAdminRecap, type PlayoffEmailResult } from '@/lib/playoff-notifications';
 import { computeAdvancing } from '@/lib/playoff-scoring';
+import { ROUND_LABELS, type KnockoutRoundName } from '@/lib/knockout-bracket';
 import { expireTags } from '@/lib/cache-expire';
 import { LEADERBOARD_TAG, WC_TAG } from '@/lib/cache-tags';
 import { purgeCloudflareCache } from '@/lib/cloudflare-purge';
@@ -34,7 +35,9 @@ function isValidGoal(v: unknown, max: number): v is number | null {
  * Enter (or clear) a knockout match result: 90' score, extra-time score and
  * penalty shoot-out. On save we derive the advancing team, propagate it into
  * the later rounds (recomputeKnockoutBracket) and rescore every play-off tip
- * and top-4 pick.
+ * and top-4 pick. NO AI runs in this flow. Tipsters who tipped the match get a
+ * result e-mail (gated by their notify_playoff toggle); the superadmin gets a
+ * diagnostic recap of everything that happened.
  */
 export async function POST(request: NextRequest) {
   const unauthorized = await requireAdminApi();
@@ -69,8 +72,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const km = await queryOne<{ home_team_id: number | null; away_team_id: number | null }>(
-      'SELECT home_team_id, away_team_id FROM knockout_match WHERE match_number = $1',
+    const km = await queryOne<{
+      home_team_id: number | null; away_team_id: number | null;
+      round: string; home_name: string | null; away_name: string | null;
+    }>(
+      `SELECT km.home_team_id, km.away_team_id, km.round,
+              ht.name AS home_name, at.name AS away_name
+       FROM knockout_match km
+       LEFT JOIN team ht ON ht.id = km.home_team_id
+       LEFT JOIN team at ON at.id = km.away_team_id
+       WHERE km.match_number = $1`,
       [matchNumber],
     );
     if (!km) {
@@ -94,6 +105,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const startedAt = Date.now();
+    const errors: string[] = [];
+
     await query(
       `UPDATE knockout_match
        SET home_goals = $1, away_goals = $2, home_goals_et = $3, away_goals_et = $4,
@@ -102,24 +116,46 @@ export async function POST(request: NextRequest) {
       [homeGoals, awayGoals, homeGoalsEt, awayGoalsEt, homePens, awayPens, status, matchNumber],
     );
 
-    // Propagate participants/advancing into later rounds, then rescore.
+    // Propagate participants/advancing into later rounds, then rescore. No AI.
     await recomputeKnockoutBracket();
     const recalc = await recalculateAllPlayoffPoints();
-    await recalculateLeagueStandings(); // leagues now fold in play-off points
+
+    let leagueRefreshed = true;
+    try {
+      await recalculateLeagueStandings(); // leagues fold in play-off points
+    } catch (err) {
+      leagueRefreshed = false;
+      errors.push(`league-standings: ${String(err)}`);
+    }
 
     // E-mail tipsters whose tip for THIS match was just scored (idempotent via
-    // knockout_tip.notified_at). Only when the match is finished/decided.
-    let emailed = 0;
+    // knockout_tip.notified_at, gated by each user's notify_playoff toggle, and
+    // only ever sent to users who actually tipped this match).
+    let emailResults: PlayoffEmailResult[] = [];
     if (status === 'FINISHED') {
       try {
-        const sent = await dispatchKnockoutResultEmails(matchNumber);
-        emailed = sent.filter((r) => r.outcome === 'sent').length;
+        emailResults = await dispatchKnockoutResultEmails(matchNumber);
       } catch (err) {
-        console.error('[admin] Play-off result e-mails failed:', err);
+        errors.push(`emails: ${String(err)}`);
+      }
+    }
+
+    // Once both the third-place match (103) and the final (104) are in, the
+    // top-4 is fully decided — send each picker their post-final TOP-4 recap
+    // (idempotent; separate from the per-match result e-mail above).
+    let top4Emailed = 0;
+    if (status === 'FINISHED' && (matchNumber === 103 || matchNumber === 104)) {
+      try {
+        const t4 = await dispatchTop4ResultEmails();
+        top4Emailed = t4.filter((r) => r.outcome === 'sent').length;
+      } catch (err) {
+        errors.push(`top4-emails: ${String(err)}`);
       }
     }
 
     expireTags(LEADERBOARD_TAG, WC_TAG);
+    let cloudflarePurged = true;
+    let cloudflareError: string | undefined;
     try {
       await purgeCloudflareCache([
         `${SITE_URL}/`,
@@ -128,10 +164,53 @@ export async function POST(request: NextRequest) {
         `${SITE_URL}/worldcup2026/knockout-bracket`,
       ]);
     } catch (err) {
-      console.error('[admin] Cloudflare purge failed:', err);
+      cloudflarePurged = false;
+      cloudflareError = String(err);
+      errors.push(`cloudflare: ${String(err)}`);
     }
 
-    return NextResponse.json({ success: true, recalc, emailed });
+    // Advancing team name after propagation, for the recap.
+    const advRow = await queryOne<{ name: string | null }>(
+      `SELECT t.name FROM knockout_match km LEFT JOIN team t ON t.id = km.advancing_team_id WHERE km.match_number = $1`,
+      [matchNumber],
+    ).catch(() => null);
+
+    const ninety = homeGoals != null && awayGoals != null ? `${homeGoals}–${awayGoals}` : null;
+    const extraBits: string[] = [];
+    if (homeGoalsEt != null && awayGoalsEt != null) extraBits.push(`AET ${homeGoalsEt}–${awayGoalsEt}`);
+    if (homePens != null && awayPens != null) extraBits.push(`pens ${homePens}–${awayPens}`);
+
+    const count = (o: PlayoffEmailResult['outcome']) => emailResults.filter((r) => r.outcome === o).length;
+    const sent = count('sent');
+
+    // Diagnostic recap to the superadmin (same pattern as group-stage matches).
+    await sendPlayoffAdminRecap({
+      matchNumber,
+      roundLabel: ROUND_LABELS[km.round as KnockoutRoundName] ?? km.round,
+      homeTeam: km.home_name ?? 'TBD',
+      awayTeam: km.away_name ?? 'TBD',
+      status,
+      cleared: status === 'SCHEDULED' && ninety == null,
+      ninety,
+      extra: extraBits.length ? extraBits.join(' · ') : null,
+      advancing: advRow?.name ?? null,
+      recalc,
+      leagueStandingsRefreshed: leagueRefreshed,
+      emails: {
+        total: emailResults.length,
+        sent,
+        skipped: count('skipped'),
+        disabled: count('disabled'),
+        failed: count('failed'),
+        recipients: emailResults.map((r) => ({ email: r.email, outcome: r.outcome, reason: r.reason })),
+      },
+      top4Emails: top4Emailed,
+      cache: { tags: [LEADERBOARD_TAG, WC_TAG], cloudflarePurged, cloudflareError },
+      errors,
+      durationMs: Date.now() - startedAt,
+    });
+
+    return NextResponse.json({ success: true, recalc, emailed: sent });
   } catch (error) {
     console.error('POST /api/admin/knockout/update error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });

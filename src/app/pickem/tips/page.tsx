@@ -62,6 +62,7 @@ interface NotifyPrefsRow {
   notify_exact_score: boolean;
   notify_winner_only: boolean;
   notify_wrong_tip: boolean;
+  notify_playoff: boolean;
 }
 
 type Tab = 'predictions' | 'leagues' | 'settings';
@@ -124,7 +125,7 @@ export default async function TipsPage({
       [myUserId],
     ),
     queryOne<NotifyPrefsRow>(
-      'SELECT notify_exact_score, notify_winner_only, notify_wrong_tip FROM tipster_user WHERE id = $1',
+      'SELECT notify_exact_score, notify_winner_only, notify_wrong_tip, notify_playoff FROM tipster_user WHERE id = $1',
       [myUserId],
     ),
   ]);
@@ -164,6 +165,7 @@ export default async function TipsPage({
     exactScore: !!notifyRow?.notify_exact_score,
     winnerOnly: !!notifyRow?.notify_winner_only,
     wrongTip: !!notifyRow?.notify_wrong_tip,
+    playoff: notifyRow?.notify_playoff ?? true,
   };
 
   return (
