@@ -19,7 +19,8 @@ export default function PlayoffLanding({ tippingOpen }: { tippingOpen: boolean }
     const started = Date.now() >= d.getTime();
     setOpens({
       started,
-      when: started ? null : d.toLocaleString(undefined, {
+      // Always English wording, but still rendered in the visitor's own timezone.
+      when: started ? null : d.toLocaleString('en-GB', {
         weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
       }),
     });
@@ -46,8 +47,8 @@ export default function PlayoffLanding({ tippingOpen }: { tippingOpen: boolean }
   }
 
   return (
-    <div className="tipovacka-landing">
-      <div className="container py-5">
+    <div className="tipovacka-landing playoff-landing">
+      <div className="container py-4">
         <div className="row justify-content-center">
           <div className="col-lg-8 text-center">
             <div className="tipovacka-hero-icon">&#127942;</div>

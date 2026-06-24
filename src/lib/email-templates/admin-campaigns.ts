@@ -1,5 +1,6 @@
 import { query } from '@/lib/db';
 import { buildReactivationEmail, REACTIVATION_SUBJECT } from './reactivate-sleeping-users';
+import { buildPlayoffLaunchEmail, PLAYOFF_LAUNCH_SUBJECT } from './playoff-launch';
 
 /** A tipster_user row reduced to what an e-mail campaign needs. */
 export interface CampaignRecipient {
@@ -39,6 +40,25 @@ export const ADMIN_EMAIL_CAMPAIGNS: AdminEmailCampaign[] = [
          LEFT JOIN tip t ON t.user_id = u.id
          GROUP BY u.id, u.email, u.name
          HAVING COUNT(t.id) <= 1
+         ORDER BY u.name, u.email`,
+      ),
+  },
+  {
+    id: 'playoff-launch',
+    label: 'Play-off Pick’em promo',
+    description:
+      'Announce the launch of the knockout-stage prediction game. One CTA leading to the ' +
+      'play-off landing page, with the rules and when it opens. Default recipients: tipsters ' +
+      'who placed at least one group-stage tip.',
+    subject: PLAYOFF_LAUNCH_SUBJECT,
+    build: (recipient) => buildPlayoffLaunchEmail({ userName: recipient.name }),
+    defaultRecipients: () =>
+      query<CampaignRecipient>(
+        `SELECT u.id, u.email, u.name
+         FROM tipster_user u
+         JOIN tip t ON t.user_id = u.id
+         GROUP BY u.id, u.email, u.name
+         HAVING COUNT(t.id) >= 1
          ORDER BY u.name, u.email`,
       ),
   },

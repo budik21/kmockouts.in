@@ -7355,3 +7355,11 @@ a.ranking-team-name:hover {
 .playoff-slot-result-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
 .playoff-slot-result-row .playoff-slot-badge { margin-top: 0; }
 .playoff-slot-reason { font-size: 0.8rem; color: var(--wc-text-muted); }
+
+/* Play-off landing is taller (rules + notice + donate) — flow from the top
+   instead of vertically centering, and tighten spacing so "Support us" fits. */
+.playoff-landing { align-items: flex-start; min-height: auto; }
+.playoff-landing .tipovacka-hero-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.playoff-landing .tipovacka-subtitle { margin-bottom: 1.25rem; }
+.playoff-landing .playoff-rules { margin: 1.25rem 0; }
+.playoff-landing .playoff-opens-notice { margin-top: 1rem; }
