@@ -7,7 +7,7 @@ import { PLAYOFF_TIPPING_OPENS_AT } from '@/lib/playoff-lock';
 
 type Gtag = (command: 'event', name: string, params?: Record<string, unknown>) => void;
 
-export default function PlayoffLanding({ groupsComplete }: { groupsComplete: boolean }) {
+export default function PlayoffLanding({ tippingOpen }: { tippingOpen: boolean }) {
   // Computed after mount so the server (UTC) and first client render agree —
   // avoids a hydration mismatch on the timezone-dependent string and the
   // now-vs-open-time comparison. `started` = the announced open time has passed
@@ -53,7 +53,7 @@ export default function PlayoffLanding({ groupsComplete }: { groupsComplete: boo
             <div className="tipovacka-hero-icon">&#127942;</div>
             <h1 className="tipovacka-title">World Cup 2026 Play-off Predictions</h1>
             <p className="tipovacka-subtitle">
-              {groupsComplete
+              {tippingOpen
                 ? <>The group stage is done — now predict the knockout rounds. Call the medalists and pick your way through the bracket.</>
                 : <>The knockout bracket is taking shape. Get ready to call the medalists and pick your way through it.</>}
             </p>
@@ -87,7 +87,7 @@ export default function PlayoffLanding({ groupsComplete }: { groupsComplete: boo
               </div>
             </div>
 
-            {groupsComplete ? (
+            {tippingOpen ? (
               <div className="tipovacka-auth-buttons">
                 <button className="tipovacka-btn tipovacka-btn-google" onClick={handleSignIn}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

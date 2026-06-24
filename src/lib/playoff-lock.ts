@@ -21,6 +21,20 @@ export const PLAYOFF_PICKS_LOCK_LEAD_MS = 60 * 60 * 1000;
  */
 export const PLAYOFF_TIPPING_OPENS_AT = '2026-06-29T04:00:00Z';
 
+/**
+ * Whether the play-off tipping game is open. Two conditions must both hold:
+ *   1. the whole group stage is decided (caller passes `groupsComplete`), and
+ *   2. the announced opening time has arrived.
+ * Until then everyone — including signed-in users — sees the landing notice
+ * instead of the tipping app.
+ */
+export function isPlayoffTippingOpen(groupsComplete: boolean, nowMs: number = Date.now()): boolean {
+  if (!groupsComplete) return false;
+  const opensAt = new Date(PLAYOFF_TIPPING_OPENS_AT).getTime();
+  if (Number.isNaN(opensAt)) return true; // misconfigured date → gate on groups only
+  return nowMs >= opensAt;
+}
+
 /** Kick-off (ms epoch) of the earliest Round-of-32 match, or null if unscheduled. */
 export function firstKnockoutKickOffMs(): number | null {
   let earliest: number | null = null;

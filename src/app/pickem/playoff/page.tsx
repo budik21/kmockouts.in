@@ -12,7 +12,7 @@ import {
   getUserKnockoutTips,
   getUserPlayoffPicks,
 } from '@/lib/playoff-data';
-import { playoffPicksLockAtMs, isPlayoffPicksLocked } from '@/lib/playoff-lock';
+import { playoffPicksLockAtMs, isPlayoffPicksLocked, isPlayoffTippingOpen } from '@/lib/playoff-lock';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,16 +49,19 @@ export default async function PlayoffPage() {
     session = null;
   }
 
-  // Guests see the landing page. Until the final group-stage result is in we
-  // show a "tipping opens …" notice instead of the sign-in button.
-  if (!session?.tipsterId) {
-    const counts = await query<{ total: string; finished: string }>(
-      `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'FINISHED') AS finished FROM match`,
-    );
-    const total = parseInt(counts[0]?.total ?? '0', 10);
-    const finished = parseInt(counts[0]?.finished ?? '0', 10);
-    const groupsComplete = total > 0 && finished === total;
-    return <PlayoffLanding groupsComplete={groupsComplete} />;
+  // Tipping opens only once the whole group stage is decided AND the announced
+  // opening time has arrived. Until then EVERYONE (guests and signed-in users)
+  // sees the landing notice — nobody gets into the tipping app early.
+  const counts = await query<{ total: string; finished: string }>(
+    `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'FINISHED') AS finished FROM match`,
+  );
+  const total = parseInt(counts[0]?.total ?? '0', 10);
+  const finished = parseInt(counts[0]?.finished ?? '0', 10);
+  const groupsComplete = total > 0 && finished === total;
+  const tippingOpen = isPlayoffTippingOpen(groupsComplete);
+
+  if (!session?.tipsterId || !tippingOpen) {
+    return <PlayoffLanding tippingOpen={tippingOpen} />;
   }
 
   // Registered users go straight to the play-off tipping game.
