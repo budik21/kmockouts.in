@@ -4,7 +4,7 @@ import { recomputeKnockoutBracket } from '@/engine/knockout-sync';
 import { recalculateAllPlayoffPoints } from '@/lib/knockout-recalc';
 import { recalculateLeagueStandings } from '@/lib/league-standings';
 import { expireTags } from '@/lib/cache-expire';
-import { LEADERBOARD_TAG } from '@/lib/cache-tags';
+import { LEADERBOARD_TAG, WC_TAG } from '@/lib/cache-tags';
 import { isFeatureEnabled } from '@/lib/feature-flags';
 
 /**
@@ -24,7 +24,7 @@ export async function POST() {
     const written = await recomputeKnockoutBracket();
     const recalc = await recalculateAllPlayoffPoints();
     await recalculateLeagueStandings();
-    expireTags(LEADERBOARD_TAG);
+    expireTags(LEADERBOARD_TAG, WC_TAG);
     return NextResponse.json({ success: true, matches: written, recalc });
   } catch (error) {
     console.error('POST /api/admin/knockout/sync error:', error);

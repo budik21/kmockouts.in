@@ -41,6 +41,17 @@ interface SlotData {
   placeholder: string;
 }
 
+interface MatchResult {
+  status: string; // FINISHED
+  homeGoals: number | null;
+  awayGoals: number | null;
+  homeGoalsEt: number | null;
+  awayGoalsEt: number | null;
+  homePens: number | null;
+  awayPens: number | null;
+  advancingTeamId: number | null;
+}
+
 interface MatchData {
   matchNumber: number;
   round: string;
@@ -48,6 +59,7 @@ interface MatchData {
   away: SlotData;
   kickOff: string | null;
   venue: string | null;
+  result?: MatchResult | null;
 }
 
 interface BracketResponse {
@@ -231,6 +243,7 @@ function MatchCard({ match, highlight, pulse }: { match: MatchData; highlight?: 
       pulse={pulse}
       kickOff={match.kickOff}
       venue={match.venue}
+      result={match.result}
     />
   );
 }

@@ -13,6 +13,17 @@ interface SlotData {
   placeholder: string;
 }
 
+interface MatchResult {
+  status: string; // FINISHED
+  homeGoals: number | null;
+  awayGoals: number | null;
+  homeGoalsEt: number | null;
+  awayGoalsEt: number | null;
+  homePens: number | null;
+  awayPens: number | null;
+  advancingTeamId: number | null;
+}
+
 interface MatchData {
   matchNumber: number;
   round: string;
@@ -20,6 +31,7 @@ interface MatchData {
   away: SlotData;
   kickOff: string | null;
   venue: string | null;
+  result?: MatchResult | null;
 }
 
 interface KnockoutRoundProps {
@@ -44,6 +56,7 @@ export default function KnockoutRound({ roundId, label, matches, pulseMatch }: K
             away={m.away}
             kickOff={m.kickOff}
             venue={m.venue}
+            result={m.result}
             pulse={pulseMatch === m.matchNumber}
           />
         ))}
