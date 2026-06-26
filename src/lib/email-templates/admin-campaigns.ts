@@ -1,6 +1,7 @@
 import { query } from '@/lib/db';
 import { buildReactivationEmail, REACTIVATION_SUBJECT } from './reactivate-sleeping-users';
 import { buildPlayoffLaunchEmail, PLAYOFF_LAUNCH_SUBJECT } from './playoff-launch';
+import { buildPlayoffOpenEmail, PLAYOFF_OPEN_SUBJECT } from './playoff-open';
 
 /** A tipster_user row reduced to what an e-mail campaign needs. */
 export interface CampaignRecipient {
@@ -59,6 +60,24 @@ export const ADMIN_EMAIL_CAMPAIGNS: AdminEmailCampaign[] = [
          JOIN tip t ON t.user_id = u.id
          GROUP BY u.id, u.email, u.name
          HAVING COUNT(t.id) >= 1
+         ORDER BY u.name, u.email`,
+      ),
+  },
+  {
+    id: 'playoff-open',
+    label: 'Play-off Pick’em is LIVE',
+    description:
+      'Sent the moment the group stage finishes and knockout tipping opens. An urgent call ' +
+      'to act: the top-4 picks (champion + medalists) lock 1 hour before the first play-off ' +
+      'kick-off, only ~12–15 hours away. Also introduces the three leaderboards (Overall / ' +
+      'Group stage / Play-off) and the play-off-only league option. Default recipients: ' +
+      'everyone registered for the group-stage Pick’em.',
+    subject: PLAYOFF_OPEN_SUBJECT,
+    build: (recipient) => buildPlayoffOpenEmail({ userName: recipient.name }),
+    defaultRecipients: () =>
+      query<CampaignRecipient>(
+        `SELECT u.id, u.email, u.name
+         FROM tipster_user u
          ORDER BY u.name, u.email`,
       ),
   },
