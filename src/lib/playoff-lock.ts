@@ -19,7 +19,7 @@ export const PLAYOFF_PICKS_LOCK_LEAD_MS = 60 * 60 * 1000;
  * the final group-stage result is in. Stored in UTC; the client renders it in
  * the visitor's own timezone (so e.g. US visitors see it as Saturday evening).
  */
-export const PLAYOFF_TIPPING_OPENS_AT = '2026-06-28T04:00:00Z';
+export const PLAYOFF_TIPPING_OPENS_AT = '2026-06-28T06:00:00Z';
 
 /**
  * Whether the play-off tipping game is open. Two conditions must both hold:
