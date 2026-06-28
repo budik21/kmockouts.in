@@ -13,6 +13,7 @@ import LeaguesTab, { type LeagueRow } from './LeaguesTab';
 import TipsTab, { type TipRow } from './TipsTab';
 import PickemMatchesTab, { type MatchTipStats } from './PickemMatchesTab';
 import type { PlayoffTipRow, PlayoffPickRow } from './PlayoffTipsTab';
+import PlayersTab, { type PlayerRow } from './PlayersTab';
 import UsersClient from '../users/UsersClient';
 import EmailsTab from './EmailsTab';
 import FeatureFlagsClient from './FeatureFlagsClient';
@@ -29,6 +30,7 @@ interface DashboardTabsProps {
   tipsters: TipsterRow[];
   leagues: LeagueRow[];
   tips: TipRow[];
+  players: PlayerRow[];
   matchTipStats: MatchTipStats[];
   playoffMatchTipStats: MatchTipStats[];
   playoffTips: PlayoffTipRow[];
@@ -51,7 +53,7 @@ interface DashboardTabsProps {
   initialTab?: TabKey;
 }
 
-type TabKey = 'matches' | 'knockout' | 'scenarios' | 'pickem' | 'emails' | 'users' | 'flags' | 'ai' | 'twitter' | 'cloudflare' | 'env';
+type TabKey = 'matches' | 'knockout' | 'scenarios' | 'pickem' | 'emails' | 'players' | 'users' | 'flags' | 'ai' | 'twitter' | 'cloudflare' | 'env';
 type PickemSubTab = 'management' | 'matches' | 'tipsters' | 'leagues' | 'tips';
 
 export default function DashboardTabs({
@@ -60,6 +62,7 @@ export default function DashboardTabs({
   tipsters,
   leagues,
   tips,
+  players,
   matchTipStats,
   playoffMatchTipStats,
   playoffTips,
@@ -171,8 +174,11 @@ export default function DashboardTabs({
         <button onClick={() => setActiveTab('emails')} style={tabButtonStyle(activeTab === 'emails')}>
           Emails
         </button>
+        <button onClick={() => setActiveTab('players')} style={tabButtonStyle(activeTab === 'players')}>
+          Users
+        </button>
         <button onClick={() => setActiveTab('users')} style={tabButtonStyle(activeTab === 'users')}>
-          User Management
+          Administrators
         </button>
         {isSuperadmin && (
           <button onClick={() => setActiveTab('flags')} style={tabButtonStyle(activeTab === 'flags')}>
@@ -425,7 +431,21 @@ export default function DashboardTabs({
           </div>
         )}
 
-        {/* User Management tab */}
+        {/* Users tab — every registered tipster */}
+        {activeTab === 'players' && (
+          <div>
+            <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '0.5rem' }}>
+              Users
+            </h2>
+            <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
+              Everyone signed up to the prediction game — their name and e-mail, which post-scoring
+              e-mail replies they opted in to, and how many group-stage and play-off tips they placed.
+            </p>
+            <PlayersTab players={players} />
+          </div>
+        )}
+
+        {/* Administrator Management tab */}
         {activeTab === 'users' && (
           <div>
             <h2 style={{ color: 'var(--wc-text)', fontSize: '1.3rem', marginTop: 0, marginBottom: '1.5rem' }}>

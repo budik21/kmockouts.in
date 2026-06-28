@@ -16,6 +16,7 @@ import type { LeagueRow } from '../components/LeaguesTab';
 import type { TipRow } from '../components/TipsTab';
 import type { MatchTipStats } from '../components/PickemMatchesTab';
 import type { PlayoffTipRow, PlayoffPickRow } from '../components/PlayoffTipsTab';
+import type { PlayerRow } from '../components/PlayersTab';
 import type { ScenarioMeta } from '@/app/worldcup2026/scenarios/page';
 
 interface AdminMatchRow {
@@ -109,8 +110,8 @@ function readScenarios(): { scenarios: ScenarioMeta[]; active: number | null } {
   return { scenarios, active };
 }
 
-type TabKey = 'matches' | 'scenarios' | 'pickem' | 'emails' | 'users' | 'flags' | 'ai' | 'twitter' | 'cloudflare' | 'env';
-const VALID_TABS: TabKey[] = ['matches', 'scenarios', 'pickem', 'emails', 'users', 'flags', 'ai', 'twitter', 'cloudflare', 'env'];
+type TabKey = 'matches' | 'scenarios' | 'pickem' | 'emails' | 'players' | 'users' | 'flags' | 'ai' | 'twitter' | 'cloudflare' | 'env';
+const VALID_TABS: TabKey[] = ['matches', 'scenarios', 'pickem', 'emails', 'players', 'users', 'flags', 'ai', 'twitter', 'cloudflare', 'env'];
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -177,7 +178,7 @@ export default async function AdminDashboardPage({
     : false;
   const aiModel = isSuperadmin ? await getAiPredictionModelKey() : 'haiku';
 
-  const [matchRows, statsRows, adminUserRows, tipsterRows, leagueRows, tipRows] = await Promise.all([
+  const [matchRows, statsRows, adminUserRows, tipsterRows, leagueRows, tipRows, playerRows] = await Promise.all([
     query<AdminMatchRow>(`
       SELECT m.*,
         ht.name as home_name, ht.short_name as home_short, ht.country_code as home_cc,
@@ -249,6 +250,27 @@ export default async function AdminDashboardPage({
       JOIN team ht ON m.home_team_id = ht.id
       JOIN team at2 ON m.away_team_id = at2.id
       ORDER BY t.created_at DESC
+    `),
+    query<{
+      id: number;
+      name: string;
+      email: string;
+      tips_public: boolean;
+      notify_exact_score: boolean;
+      notify_winner_only: boolean;
+      notify_wrong_tip: boolean;
+      notify_playoff: boolean;
+      group_tips: number;
+      playoff_tips: number;
+    }>(`
+      SELECT tu.id, tu.name, tu.email, tu.tips_public,
+        tu.notify_exact_score, tu.notify_winner_only, tu.notify_wrong_tip, tu.notify_playoff,
+        COALESCE(g.cnt, 0)::int AS group_tips,
+        COALESCE(k.cnt, 0)::int AS playoff_tips
+      FROM tipster_user tu
+      LEFT JOIN (SELECT user_id, COUNT(*) AS cnt FROM tip GROUP BY user_id) g ON g.user_id = tu.id
+      LEFT JOIN (SELECT user_id, COUNT(*) AS cnt FROM knockout_tip GROUP BY user_id) k ON k.user_id = tu.id
+      ORDER BY tu.name
     `),
   ]);
 
@@ -562,6 +584,18 @@ export default async function AdminDashboardPage({
     memberCount: r.member_count,
     createdAt: r.created_at,
   }));
+  const players: PlayerRow[] = playerRows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    tipsPublic: r.tips_public,
+    notifyExactScore: r.notify_exact_score,
+    notifyWinnerOnly: r.notify_winner_only,
+    notifyWrongTip: r.notify_wrong_tip,
+    notifyPlayoff: r.notify_playoff,
+    groupTips: r.group_tips,
+    playoffTips: r.playoff_tips,
+  }));
   const tips: TipRow[] = tipRows.map((r) => ({
     id: r.id,
     tipsterName: r.tipster_name,
@@ -610,6 +644,7 @@ export default async function AdminDashboardPage({
         tipsters={tipsters}
         leagues={leagues}
         tips={tips}
+        players={players}
         matchTipStats={matchTipStats}
         playoffMatchTipStats={playoffMatchTipStats}
         playoffTips={playoffTips}
