@@ -214,13 +214,6 @@ export default function NavbarClient({ playoffEnabled = false }: { playoffEnable
               📊 FIFA Ranking
             </a>
             <hr className="offcanvas-divider" />
-            <a
-              href="/pickem"
-              className="nav-link offcanvas-nav-link"
-              onClick={navigateAndClose('/pickem')}
-            >
-              🎯 Pick&apos;em
-            </a>
             {playoffEnabled && (
               <a
                 href="/pickem/playoff"
@@ -236,6 +229,13 @@ export default function NavbarClient({ playoffEnabled = false }: { playoffEnable
               onClick={navigateAndClose('/pickem/leaderboard')}
             >
               🏅 Leaderboard
+            </a>
+            <a
+              href="/pickem"
+              className="nav-link offcanvas-nav-link"
+              onClick={navigateAndClose('/pickem')}
+            >
+              🎯 Groups Pick&apos;em
             </a>
             <hr className="offcanvas-divider" />
             {user ? (
