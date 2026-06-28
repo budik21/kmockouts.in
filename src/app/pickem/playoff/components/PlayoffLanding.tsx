@@ -1,31 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import PaypalDonate from '@/app/components/PaypalDonate';
-import { PLAYOFF_TIPPING_OPENS_AT } from '@/lib/playoff-lock';
 
 type Gtag = (command: 'event', name: string, params?: Record<string, unknown>) => void;
 
 export default function PlayoffLanding({ tippingOpen }: { tippingOpen: boolean }) {
-  // Computed after mount so the server (UTC) and first client render agree —
-  // avoids a hydration mismatch on the timezone-dependent string and the
-  // now-vs-open-time comparison. `started` = the announced open time has passed
-  // but the last group result still isn't in → show "Starting soon…".
-  const [opens, setOpens] = useState<{ when: string | null; started: boolean }>({ when: null, started: false });
-  useEffect(() => {
-    const d = new Date(PLAYOFF_TIPPING_OPENS_AT);
-    if (Number.isNaN(d.getTime())) return;
-    const started = Date.now() >= d.getTime();
-    setOpens({
-      started,
-      // Always English wording, but still rendered in the visitor's own timezone.
-      when: started ? null : d.toLocaleString('en-GB', {
-        weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
-      }),
-    });
-  }, []);
-
   // Mirror the group-stage landing: fire the Google Ads conversion (if gtag is
   // available after cookie consent), then start the OAuth flow.
   function handleSignIn() {
@@ -103,18 +83,8 @@ export default function PlayoffLanding({ tippingOpen }: { tippingOpen: boolean }
             ) : (
               <div className="playoff-opens-notice">
                 <div className="playoff-opens-icon">🗓️</div>
-                {opens.started ? (
-                  <>
-                    <p className="playoff-opens-time">Starting soon…</p>
-                    <p className="playoff-opens-sub">The last group results are being finalised — check back shortly to sign in and make your picks.</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="playoff-opens-lead">Play-off tipping opens once the last group match is decided:</p>
-                    <p className="playoff-opens-time">{opens.when ?? ' '}</p>
-                    <p className="playoff-opens-sub">Come back then to sign in and make your picks.</p>
-                  </>
-                )}
+                <p className="playoff-opens-time">As soon as the group stage wraps up</p>
+                <p className="playoff-opens-sub">Play-off tipping goes live the moment the last group match is decided — come back then to sign in and make your picks.</p>
               </div>
             )}
           </div>

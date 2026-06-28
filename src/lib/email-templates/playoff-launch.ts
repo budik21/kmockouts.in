@@ -1,5 +1,4 @@
 import { SITE_URL } from '@/lib/seo';
-import { PLAYOFF_TIPPING_OPENS_AT } from '@/lib/playoff-lock';
 import {
   PLAYOFF_PICK_POINTS,
   PLAYOFF_PICK_WRONG_PLACE_POINTS,
@@ -28,13 +27,6 @@ function esc(str: string): string {
 export const PLAYOFF_LAUNCH_SUBJECT =
   'Call the champion 🏆 — Play-off Pick’em is coming';
 
-/** Opening time, stated in UTC so it reads the same for every recipient. */
-function openingLabel(): string {
-  const d = new Date(PLAYOFF_TIPPING_OPENS_AT);
-  if (Number.isNaN(d.getTime())) return 'once the group stage finishes';
-  return `${d.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
-}
-
 /**
  * "Play-off Pick'em promo" campaign: announces the launch of the knockout-stage
  * prediction game. One CTA pointing to the play-off landing page. Sent to
@@ -45,7 +37,6 @@ export function buildPlayoffLaunchEmail(data: PlayoffLaunchEmailData): TemplateO
   const landingUrl = `${SITE_URL}/pickem/playoff`;
   const leaderboardUrl = `${SITE_URL}/pickem/leaderboard`;
   const settingsUrl = `${SITE_URL}/pickem/tips?tab=settings`;
-  const opensAt = openingLabel();
 
   const ruleRow = (pts: string, text: string) => `
     <tr>
@@ -108,7 +99,7 @@ export function buildPlayoffLaunchEmail(data: PlayoffLaunchEmailData): TemplateO
           <tr>
             <td style="padding:8px 28px 4px;">
               <div style="background:#fbf3f7;border:1px solid #f0d6e2;border-radius:10px;padding:14px 16px;color:#6f003c;font-size:14px;line-height:1.5;">
-                🗓️ Tipping opens once the last group match is decided &mdash; around <strong>${esc(opensAt)}</strong>.
+                🗓️ Tipping goes live the moment the last group match is decided.
                 Come back then to make your picks.
               </div>
             </td>

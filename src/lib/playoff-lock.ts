@@ -15,24 +15,14 @@ export { isTipLocked, isTipLastCall, TIP_LOCK_LEAD_MS, TIP_LOCK_LEAD_MINUTES } f
 export const PLAYOFF_PICKS_LOCK_LEAD_MS = 60 * 60 * 1000;
 
 /**
- * Announced moment the play-off tipping opens, shown on the landing page until
- * the final group-stage result is in. Stored in UTC; the client renders it in
- * the visitor's own timezone (so e.g. US visitors see it as Saturday evening).
+ * Whether the play-off tipping game is open. The single condition: the whole
+ * group stage is decided (caller passes `groupsComplete`). Until then everyone
+ * — including signed-in users — sees the landing notice instead of the tipping
+ * app. There is no fixed opening time; it goes live the moment the last group
+ * match is final.
  */
-export const PLAYOFF_TIPPING_OPENS_AT = '2026-06-28T06:00:00Z';
-
-/**
- * Whether the play-off tipping game is open. Two conditions must both hold:
- *   1. the whole group stage is decided (caller passes `groupsComplete`), and
- *   2. the announced opening time has arrived.
- * Until then everyone — including signed-in users — sees the landing notice
- * instead of the tipping app.
- */
-export function isPlayoffTippingOpen(groupsComplete: boolean, nowMs: number = Date.now()): boolean {
-  if (!groupsComplete) return false;
-  const opensAt = new Date(PLAYOFF_TIPPING_OPENS_AT).getTime();
-  if (Number.isNaN(opensAt)) return true; // misconfigured date → gate on groups only
-  return nowMs >= opensAt;
+export function isPlayoffTippingOpen(groupsComplete: boolean): boolean {
+  return groupsComplete;
 }
 
 /** Kick-off (ms epoch) of the earliest Round-of-32 match, or null if unscheduled. */
