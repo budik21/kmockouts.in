@@ -2,12 +2,15 @@ import { auth } from '@/lib/auth';
 import { queryOne } from '@/lib/db';
 import { cachedQuery } from '@/lib/cached-db';
 import { isValidLeagueCode, normalizeLeagueCode } from '@/lib/league-code';
-import { LEAGUES_TAG, leagueStandingsTag } from '@/lib/cache-tags';
+import { LEADERBOARD_TAG, leagueStandingsTag } from '@/lib/cache-tags';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SITE_URL } from '@/lib/seo';
-import LeagueLeaderboardTable, { type LeagueRow } from './LeagueLeaderboardTable';
+import { isFeatureEnabled } from '@/lib/feature-flags';
+import { buildLeaderboardRow, type LeaderboardRow } from '@/lib/leaderboard-build';
+import LeaderboardViews, { type LeaderboardView } from '../../leaderboard/LeaderboardViews';
+import LeaderboardTable from '../../leaderboard/LeaderboardTable';
 import LeagueMembershipActions from './LeagueMembershipActions';
 import CopyInviteButton from './CopyInviteButton';
 import { disambiguateNames } from '@/lib/name-disambiguate';
@@ -17,6 +20,8 @@ import { createInviteHash } from '@/lib/league-hash';
 // stale data; data still cached via tag-based unstable_cache and busted
 // inside recalculateLeagueStandings().
 export const dynamic = 'force-dynamic';
+
+const EMPTY_LEAGUE_MESSAGE = 'This league has no members yet. Share the invite link to get people in!';
 
 interface Props {
   params: Promise<{ code: string }>;
@@ -30,19 +35,16 @@ interface LeagueRowDb {
   created_at: string;
 }
 
-interface StandingDb {
+interface MemberDb {
   user_id: number;
   user_name: string;
   user_email: string;
   share_token: string | null;
-  total_tips: number;
-  exact_count: number;
-  outcome_count: number;
-  wrong_count: number;
-  pending_count: number;
-  total_points: number;
-  rank: number;
 }
+
+interface GroupAggDb { user_id: number; total: string; exact: string; outcome: string; wrong: string; pending: string; }
+interface KoAggDb { user_id: number; total: string; exact: string; advance: string; wrong: string; pending: string; points: string; }
+interface PickAggDb { user_id: number; total: string; correct: string; wrong: string; pending: string; points: string; champ_pts: string | null; }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { code: rawCode } = await params;
@@ -75,6 +77,11 @@ export default async function LeaguePage({ params }: Props) {
 
   const session = await auth().catch(() => null);
   const myUserId = session?.tipsterId ?? null;
+  const currentUserToken = session?.shareToken ?? null;
+
+  // Play-off pick'em is feature-flagged. While off, the league board is the
+  // group-stage-only table — no knockout queries, no All/Groups/Play-off toggle.
+  const playoffEnabled = await isFeatureEnabled('playoff_pickem', false);
 
   const league = await queryOne<LeagueRowDb>(
     `SELECT l.id, l.name, l.owner_user_id, owner.name AS owner_name, l.created_at::text AS created_at
@@ -85,22 +92,84 @@ export default async function LeaguePage({ params }: Props) {
   );
   if (!league) notFound();
 
-  const standings = await cachedQuery<StandingDb>(
-    `SELECT s.user_id, u.name AS user_name, u.email AS user_email, u.share_token,
-            s.total_tips, s.exact_count, s.outcome_count, s.wrong_count, s.pending_count,
-            s.total_points, s.rank
-       FROM pickem_league_standings s
-       JOIN tipster_user u ON u.id = s.user_id
-      WHERE s.league_id = $1
-      ORDER BY s.rank ASC`,
+  // League members (the predictors whose tips we rank). Cached under this
+  // league's standings tag, busted by recalculateLeagueStandings().
+  const members = await cachedQuery<MemberDb>(
+    `SELECT m.user_id, u.name AS user_name, u.email AS user_email, u.share_token
+       FROM pickem_league_member m
+       JOIN tipster_user u ON u.id = m.user_id
+      WHERE m.league_id = $1`,
     [league.id],
     [leagueStandingsTag(code)],
   );
+  const memberIds = members.map((m) => m.user_id);
+
+  // Per-member point sources, mirroring the global leaderboard aggregates but
+  // scoped to this league's members. Group-stage tips always; knockout match
+  // tips + top-4 picks only when the play-off feature is live.
+  const [groupAgg, groupCountRows] = await Promise.all([
+    memberIds.length === 0
+      ? Promise.resolve([] as GroupAggDb[])
+      : cachedQuery<GroupAggDb>(
+          `SELECT user_id,
+             COUNT(*)                               AS total,
+             COUNT(*) FILTER (WHERE points = 4)      AS exact,
+             COUNT(*) FILTER (WHERE points = 1)      AS outcome,
+             COUNT(*) FILTER (WHERE points = 0)      AS wrong,
+             COUNT(*) FILTER (WHERE points IS NULL)  AS pending
+           FROM tip WHERE user_id = ANY($1::int[]) GROUP BY user_id`,
+          [memberIds],
+          [leagueStandingsTag(code)],
+        ),
+    cachedQuery<{ total: string; finished: string }>(
+      `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'FINISHED') AS finished FROM match`,
+      [], [LEADERBOARD_TAG],
+    ),
+  ]);
+
+  const groupTotal = parseInt(groupCountRows[0]?.total ?? '0', 10);
+  const groupFinished = parseInt(groupCountRows[0]?.finished ?? '0', 10);
+  const groupsComplete = groupTotal > 0 && groupFinished === groupTotal;
+
+  const [koAgg, pickAgg, koFinishedRows] = playoffEnabled && memberIds.length > 0
+    ? await Promise.all([
+        cachedQuery<KoAggDb>(
+          `SELECT kt.user_id,
+             COUNT(*)                                                                              AS total,
+             COUNT(*) FILTER (WHERE km.status = 'FINISHED' AND kt.home_goals = km.home_goals
+                                     AND kt.away_goals = km.away_goals)                            AS exact,
+             COUNT(*) FILTER (WHERE km.status = 'FINISHED' AND kt.advance_team_id = km.advancing_team_id) AS advance,
+             COUNT(*) FILTER (WHERE kt.points = 0)                                                 AS wrong,
+             COUNT(*) FILTER (WHERE kt.points IS NULL)                                             AS pending,
+             COALESCE(SUM(kt.points), 0)                                                           AS points
+           FROM knockout_tip kt JOIN knockout_match km ON km.match_number = kt.match_number
+           WHERE kt.user_id = ANY($1::int[])
+           GROUP BY kt.user_id`,
+          [memberIds],
+          [leagueStandingsTag(code)],
+        ),
+        cachedQuery<PickAggDb>(
+          `SELECT user_id,
+             COUNT(*)                                AS total,
+             COUNT(*) FILTER (WHERE points > 0)       AS correct,
+             COUNT(*) FILTER (WHERE points = 0)       AS wrong,
+             COUNT(*) FILTER (WHERE points IS NULL)   AS pending,
+             COALESCE(SUM(points), 0)                 AS points,
+             MAX(points) FILTER (WHERE slot = 'champion') AS champ_pts
+           FROM playoff_pick WHERE user_id = ANY($1::int[]) GROUP BY user_id`,
+          [memberIds],
+          [leagueStandingsTag(code)],
+        ),
+        cachedQuery<{ cnt: string }>(
+          `SELECT COUNT(*) AS cnt FROM knockout_match WHERE status = 'FINISHED'`,
+          [], [LEADERBOARD_TAG],
+        ),
+      ])
+    : [[] as KoAggDb[], [] as PickAggDb[], [] as { cnt: string }[]];
 
   // Is the current user a member? Query the source of truth directly rather
-  // than relying on the cached standings — after a just-completed invite join
-  // the standings cache can still serve a snapshot without the new member,
-  // which would render a spurious "Join this league" button.
+  // than relying on the cached members list — after a just-completed invite
+  // join the cache can still serve a snapshot without the new member.
   const myMembership = myUserId !== null
     ? await queryOne<{ user_id: number }>(
         'SELECT user_id FROM pickem_league_member WHERE league_id = $1 AND user_id = $2',
@@ -108,39 +177,45 @@ export default async function LeaguePage({ params }: Props) {
       )
     : null;
   const isMember = !!myMembership;
-
-  // Owner-of-league flag (so the page can show admin links if needed).
   const isOwner = myUserId !== null && league.owner_user_id === myUserId;
+  const memberCount = members.length;
 
-  // Member count from a fresh query so we see members who joined but have no
-  // tips yet (they're still in standings as 0/0/0). Cached under LEAGUES_TAG.
-  const memberCountRow = await cachedQuery<{ cnt: string }>(
-    'SELECT COUNT(*)::text AS cnt FROM pickem_league_member WHERE league_id = $1',
-    [league.id],
-    [LEAGUES_TAG],
-  );
-  const memberCount = parseInt(memberCountRow[0]?.cnt ?? '0', 10);
-
-  // Disambiguate same-name members within this league. Raw e-mails stay
-  // server-side; only the bare name + suffix fragment ship to the client,
-  // where the suffix is rendered as a muted "(…)" trailer.
+  // Disambiguate same-name members. Raw e-mails stay server-side; only the bare
+  // name + suffix fragment ship to the client.
   const disambiguated = disambiguateNames(
-    standings.map((s) => ({ ...s, name: s.user_name, email: s.user_email })),
+    members.map((m) => ({ id: m.user_id, share_token: m.share_token, name: m.user_name, email: m.user_email })),
   );
 
-  const rows: LeagueRow[] = disambiguated.map((s) => ({
-    userId: s.user_id,
-    name: s.name,
-    nameSuffix: s.nameSuffix,
-    shareToken: s.share_token,
-    totalTips: s.total_tips,
-    exact: s.exact_count,
-    outcome: s.outcome_count,
-    wrong: s.wrong_count,
-    pending: s.pending_count,
-    totalPoints: s.total_points,
-    rank: s.rank,
-  }));
+  const groupBy = new Map(groupAgg.map((r) => [r.user_id, r]));
+  const koBy = new Map(koAgg.map((r) => [r.user_id, r]));
+  const pickBy = new Map(pickAgg.map((r) => [r.user_id, r]));
+  const n = (v: string | undefined) => (v ? parseInt(v, 10) : 0);
+
+  function buildRows(kind: LeaderboardView): LeaderboardRow[] {
+    return disambiguated
+      .map((u) => {
+        const g = groupBy.get(u.id);
+        const k = koBy.get(u.id);
+        const p = pickBy.get(u.id);
+        return buildLeaderboardRow(
+          { shareToken: u.share_token, userId: u.id, name: u.name, nameSuffix: u.nameSuffix },
+          kind,
+          g ? { total: n(g.total), exact: n(g.exact), outcome: n(g.outcome), wrong: n(g.wrong), pending: n(g.pending) } : undefined,
+          k ? { total: n(k.total), exact: n(k.exact), advance: n(k.advance), wrong: n(k.wrong), pending: n(k.pending), points: n(k.points) } : undefined,
+          p ? { total: n(p.total), correct: n(p.correct), wrong: n(p.wrong), pending: n(p.pending), points: n(p.points), champPts: p.champ_pts != null ? parseInt(p.champ_pts, 10) : null } : undefined,
+          true, // keep every member visible, even at zero tips
+        );
+      })
+      .filter((r): r is LeaderboardRow => r !== null);
+  }
+
+  const allData = buildRows('all');
+  const groupsData = buildRows('groups');
+  const playoffData = buildRows('playoff');
+
+  // Default to the Play-off view once the first knockout match is decided.
+  const playoffStarted = n(koFinishedRows[0]?.cnt) > 0;
+  const defaultView: LeaderboardView = playoffStarted ? 'playoff' : 'all';
 
   return (
     <main className="container py-4">
@@ -173,7 +248,25 @@ export default async function LeaguePage({ params }: Props) {
         invitePath={`/pickem/leagues/invite/${code}/${createInviteHash(code, league.name)}`}
       />
 
-      <LeagueLeaderboardTable rows={rows} myUserId={myUserId} />
+      {playoffEnabled ? (
+        <LeaderboardViews
+          all={allData}
+          groups={groupsData}
+          playoff={playoffData}
+          defaultView={defaultView}
+          groupsComplete={groupsComplete}
+          currentUserToken={currentUserToken}
+          currentUserId={myUserId}
+          emptyMessage={EMPTY_LEAGUE_MESSAGE}
+        />
+      ) : (
+        <LeaderboardTable
+          rows={groupsData}
+          currentUserToken={currentUserToken}
+          currentUserId={myUserId}
+          emptyMessage={EMPTY_LEAGUE_MESSAGE}
+        />
+      )}
     </main>
   );
 }

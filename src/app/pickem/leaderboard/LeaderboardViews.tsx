@@ -14,6 +14,10 @@ interface Props {
   /** Whole group stage decided — enables the Play-off column in the All view. */
   groupsComplete: boolean;
   currentUserToken?: string | null;
+  /** Fallback identity for the "me" row when share tokens may be null (leagues). */
+  currentUserId?: number | null;
+  /** Empty-state message passed through to the table. */
+  emptyMessage?: string;
 }
 
 const ORDER: LeaderboardView[] = ['all', 'groups', 'playoff'];
@@ -24,7 +28,7 @@ const META: Record<LeaderboardView, { label: string; caption: string }> = {
   playoff: { label: 'Play-off', caption: 'Knockout only — 8 pts exact 90′ score, 5 pts advancing team, plus your top-4 picks.' },
 };
 
-export default function LeaderboardViews({ all, groups, playoff, defaultView, groupsComplete, currentUserToken }: Props) {
+export default function LeaderboardViews({ all, groups, playoff, defaultView, groupsComplete, currentUserToken, currentUserId, emptyMessage }: Props) {
   const [view, setView] = useState<LeaderboardView>(defaultView);
   // Bumped on every change so the panel replays its slide-in animation.
   const [anim, setAnim] = useState(0);
@@ -89,8 +93,10 @@ export default function LeaderboardViews({ all, groups, playoff, defaultView, gr
         <LeaderboardTable
           rows={rowsByView[view]}
           currentUserToken={currentUserToken}
+          currentUserId={currentUserId}
           variant={view}
           playoffColumn={view === 'all' && groupsComplete}
+          emptyMessage={emptyMessage}
         />
       </div>
     </div>

@@ -9,8 +9,10 @@ import LeaderboardSubheader, { type LastScoredMatch } from './LeaderboardSubhead
 import { SITE_URL } from '@/lib/seo';
 import { auth } from '@/lib/auth';
 import { isFeatureEnabled } from '@/lib/feature-flags';
-import { PLAYOFF_PICK_POINTS, PLAYOFF_PICK_ALL_EXACT_BONUS } from '@/lib/playoff-scoring';
+import { buildLeaderboardRow, type LeaderboardRow } from '@/lib/leaderboard-build';
 import { disambiguateNames } from '@/lib/name-disambiguate';
+
+export type { LeaderboardRow };
 
 // Opt out of build-time static prerendering. Without this, Next.js renders
 // the page during `next build` using whatever `tip.points` values exist then
@@ -34,25 +36,6 @@ export const metadata: Metadata = {
     url: `${SITE_URL}/pickem/leaderboard`,
   },
 };
-
-export interface LeaderboardRow {
-  shareToken: string;
-  name: string;
-  nameSuffix: string | null;
-  totalTips: number;
-  exact: number;
-  outcome: number;
-  wrong: number;
-  pending: number;
-  totalPoints: number;
-  /** Play-off-only points (knockout tips + top-4 picks); shown in the All view. */
-  playoffPoints: number;
-  /** Play-off view breakdown: correct advancing picks, and correct top-4 placings. */
-  advancing: number;
-  top4: number;
-  /** Earned the +50 all-exact top-4 bonus (shown as a 🚀 next to the name). */
-  hasBonus: boolean;
-}
 
 interface BaseUserRow {
   id: number;
@@ -177,54 +160,13 @@ export default async function LeaderboardPage() {
     const g = groupBy.get(u.id);
     const k = koBy.get(u.id);
     const p = pickBy.get(u.id);
-    const gTotal = n(g?.total), gExact = n(g?.exact), gOutcome = n(g?.outcome), gWrong = n(g?.wrong), gPending = n(g?.pending);
-    const gPoints = gExact * 4 + gOutcome;
-    const kTotal = n(k?.total), kExact = n(k?.exact), kAdvance = n(k?.advance), kWrong = n(k?.wrong), kPending = n(k?.pending), kPoints = n(k?.points);
-    const pTotal = n(p?.total), pCorrect = n(p?.correct), pWrong = n(p?.wrong), pPending = n(p?.pending), pPoints = n(p?.points);
-
-    const base = { shareToken: u.share_token, name: u.name, nameSuffix: suffixById.get(u.id) ?? null };
-
-    const playoffPoints = kPoints + pPoints;
-    // The +50 bonus is folded into the champion pick, so champion points reach
-    // its value + the bonus only when all four placings were exactly right.
-    const champPts = p?.champ_pts != null ? parseInt(p.champ_pts, 10) : null;
-    const hasBonus = champPts != null && champPts >= PLAYOFF_PICK_POINTS.champion + PLAYOFF_PICK_ALL_EXACT_BONUS;
-
-    if (kind === 'groups') {
-      if (gTotal === 0) return null;
-      return { ...base, totalTips: gTotal, exact: gExact, outcome: gOutcome, wrong: gWrong, pending: gPending, totalPoints: gPoints, playoffPoints: 0, advancing: 0, top4: 0, hasBonus: false };
-    }
-    if (kind === 'playoff') {
-      if (kTotal + pTotal === 0) return null;
-      return {
-        ...base,
-        totalTips: kTotal + pTotal,
-        exact: kExact,                       // correct exact 90' scores
-        outcome: kAdvance + pCorrect,        // ranking tiebreaker
-        wrong: kWrong + pWrong,
-        pending: kPending + pPending,
-        totalPoints: playoffPoints,
-        playoffPoints,
-        advancing: kAdvance,                 // correct advancing-team picks
-        top4: pCorrect,                      // top-4 picks landing in the top 4
-        hasBonus,
-      };
-    }
-    // all
-    if (gTotal + kTotal + pTotal === 0) return null;
-    return {
-      ...base,
-      totalTips: gTotal + kTotal + pTotal,
-      exact: gExact + kExact,
-      outcome: gOutcome + kAdvance + pCorrect,
-      wrong: gWrong + kWrong + pWrong,
-      pending: gPending + kPending + pPending,
-      totalPoints: gPoints + playoffPoints,
-      playoffPoints,
-      advancing: kAdvance,
-      top4: pCorrect,
-      hasBonus,
-    };
+    return buildLeaderboardRow(
+      { shareToken: u.share_token, userId: u.id, name: u.name, nameSuffix: suffixById.get(u.id) ?? null },
+      kind,
+      g ? { total: n(g.total), exact: n(g.exact), outcome: n(g.outcome), wrong: n(g.wrong), pending: n(g.pending) } : undefined,
+      k ? { total: n(k.total), exact: n(k.exact), advance: n(k.advance), wrong: n(k.wrong), pending: n(k.pending), points: n(k.points) } : undefined,
+      p ? { total: n(p.total), correct: n(p.correct), wrong: n(p.wrong), pending: n(p.pending), points: n(p.points), champPts: p.champ_pts != null ? parseInt(p.champ_pts, 10) : null } : undefined,
+    );
   }
 
   const allData = baseUsers.map((u) => buildRow(u, 'all')).filter((r): r is LeaderboardRow => r !== null);

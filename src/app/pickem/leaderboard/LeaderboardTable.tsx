@@ -12,10 +12,14 @@ const PAGE_SIZE = 20;
 interface Props {
   rows: LeaderboardRow[];
   currentUserToken?: string | null;
+  /** Fallback identity for the "me" row when the share token may be null (leagues). */
+  currentUserId?: number | null;
   /** Which dataset — drives the breakdown column labels. */
   variant?: 'all' | 'groups' | 'playoff';
   /** Show a "Play-off" column with each predictor's play-off-only points. */
   playoffColumn?: boolean;
+  /** Empty-state message (defaults to the global "be the first" copy). */
+  emptyMessage?: string;
 }
 
 interface MidCol {
@@ -59,7 +63,12 @@ function medal(rank: number): string | null {
   return null;
 }
 
-export default function LeaderboardTable({ rows, currentUserToken, variant = 'groups', playoffColumn = false }: Props) {
+export default function LeaderboardTable({ rows, currentUserToken, currentUserId, variant = 'groups', playoffColumn = false, emptyMessage }: Props) {
+  // A row is "me" by share token (global board) or user id (league members,
+  // whose profile may be private and token-less).
+  const isMeRow = (r: LeaderboardRow) =>
+    (!!currentUserToken && r.shareToken === currentUserToken) ||
+    (currentUserId != null && r.userId === currentUserId);
   const midCols = variant === 'playoff' ? PLAYOFF_COLS : DEFAULT_COLS;
   // The all-exact top-4 bonus is a play-off achievement → flag it in those views.
   const showBonus = variant === 'all' || variant === 'playoff';
@@ -74,8 +83,9 @@ export default function LeaderboardTable({ rows, currentUserToken, variant = 'gr
   }, [rows]);
 
   const currentUserRanked = useMemo(
-    () => (currentUserToken ? ranked.find((r) => r.shareToken === currentUserToken) : null),
-    [ranked, currentUserToken],
+    () => (currentUserToken || currentUserId != null ? ranked.find(isMeRow) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ranked, currentUserToken, currentUserId],
   );
 
   const sorted = useMemo(() => {
@@ -118,10 +128,11 @@ export default function LeaderboardTable({ rows, currentUserToken, variant = 'gr
 
   const jumpToMe = useCallback(() => {
     if (!currentUserRanked) return;
-    const idx = sorted.findIndex((r) => r.shareToken === currentUserToken);
+    const idx = sorted.findIndex(isMeRow);
     if (idx === -1) return;
     setPage(Math.floor(idx / PAGE_SIZE));
-  }, [currentUserRanked, sorted, currentUserToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserRanked, sorted, currentUserToken, currentUserId]);
 
   // Listen for the "Show my position" button in the heading widget
   useEffect(() => {
@@ -139,7 +150,9 @@ export default function LeaderboardTable({ rows, currentUserToken, variant = 'gr
   if (rows.length === 0) {
     return (
       <div className="leaderboard-empty">
-        <p>No public predictors yet. <Link href="/pickem">Be the first!</Link></p>
+        {emptyMessage
+          ? <p>{emptyMessage}</p>
+          : <p>No public predictors yet. <Link href="/pickem">Be the first!</Link></p>}
       </div>
     );
   }
@@ -188,7 +201,7 @@ export default function LeaderboardTable({ rows, currentUserToken, variant = 'gr
           </thead>
           <tbody>
             {pageRows.map((r, idx) => {
-              const isMe = currentUserToken && r.shareToken === currentUserToken;
+              const isMe = isMeRow(r);
               const displayRank = page * PAGE_SIZE + idx + 1;
               const medalEmoji = medal(r.rank);
               const rowClass = [
@@ -197,7 +210,7 @@ export default function LeaderboardTable({ rows, currentUserToken, variant = 'gr
               ].filter(Boolean).join(' ');
               return (
                 <tr
-                  key={r.shareToken}
+                  key={r.shareToken ?? `uid-${r.userId}`}
                   ref={isMe ? highlightRef : undefined}
                   className={rowClass || undefined}
                 >
@@ -230,14 +243,16 @@ export default function LeaderboardTable({ rows, currentUserToken, variant = 'gr
                   )}
                   <td className="text-center leaderboard-col-pts fw-bold">{r.totalPoints}</td>
                   <td className="text-end">
-                    <Link
-                      href={`/pickem/share/${r.shareToken}`}
-                      className="leaderboard-profile-link"
-                      title={`View ${plainDisplayName(r)}'s predictions`}
-                      aria-label={`View ${plainDisplayName(r)}'s predictions`}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8.636 3.5a.5.5 0 00-.5-.5H1.5A1.5 1.5 0 000 4.5v10A1.5 1.5 0 001.5 16h10a1.5 1.5 0 001.5-1.5V7.864a.5.5 0 00-1 0V14.5a.5.5 0 01-.5.5h-10a.5.5 0 01-.5-.5v-10a.5.5 0 01.5-.5h6.636a.5.5 0 00.5-.5z"/><path d="M16 .5a.5.5 0 00-.5-.5h-5a.5.5 0 000 1h3.793L6.146 9.146a.5.5 0 10.708.708L15 1.707V5.5a.5.5 0 001 0v-5z"/></svg>
-                    </Link>
+                    {r.shareToken && (
+                      <Link
+                        href={`/pickem/share/${r.shareToken}`}
+                        className="leaderboard-profile-link"
+                        title={`View ${plainDisplayName(r)}'s predictions`}
+                        aria-label={`View ${plainDisplayName(r)}'s predictions`}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8.636 3.5a.5.5 0 00-.5-.5H1.5A1.5 1.5 0 000 4.5v10A1.5 1.5 0 001.5 16h10a1.5 1.5 0 001.5-1.5V7.864a.5.5 0 00-1 0V14.5a.5.5 0 01-.5.5h-10a.5.5 0 01-.5-.5v-10a.5.5 0 01.5-.5h6.636a.5.5 0 00.5-.5z"/><path d="M16 .5a.5.5 0 00-.5-.5h-5a.5.5 0 000 1h3.793L6.146 9.146a.5.5 0 10.708.708L15 1.707V5.5a.5.5 0 001 0v-5z"/></svg>
+                      </Link>
+                    )}
                   </td>
                 </tr>
               );
