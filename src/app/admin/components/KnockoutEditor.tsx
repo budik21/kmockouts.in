@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import ArrowStepper from '@/app/components/ArrowStepper';
+import SliderToggle from './SliderToggle';
 import type { KnockoutMatchView } from '@/lib/playoff-data';
 import type { KnockoutRoundName } from '@/lib/knockout-bracket';
 import { computeAdvancing } from '@/lib/playoff-scoring';
@@ -39,6 +40,8 @@ export default function KnockoutEditor() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [globalMsg, setGlobalMsg] = useState<string | null>(null);
+  // Default to the matches still needing a result entered.
+  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -107,9 +110,12 @@ export default function KnockoutEditor() {
 
   if (loading) return <p style={{ color: 'var(--wc-text-muted)' }}>Loading knockout bracket…</p>;
 
+  // "Without result" hides matches whose result has already been saved (FINISHED).
+  const visible = matches.filter((m) => filter === 'all' || m.status !== 'FINISHED');
+
   const byRound = new Map<KnockoutRoundName, KnockoutMatchView[]>();
   for (const r of ROUND_ORDER) byRound.set(r.id, []);
-  for (const m of matches) byRound.get(m.round)?.push(m);
+  for (const m of visible) byRound.get(m.round)?.push(m);
 
   return (
     <div>
@@ -123,9 +129,29 @@ export default function KnockoutEditor() {
         {globalMsg && <span style={{ color: 'var(--wc-accent)', fontSize: '0.85rem' }}>{globalMsg}</span>}
       </div>
 
+      {matches.length > 0 && (
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <SliderToggle<'pending' | 'all'>
+            ariaLabel="Result filter"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { key: 'pending', label: 'Without result' },
+              { key: 'all', label: 'All matches' },
+            ]}
+          />
+        </div>
+      )}
+
       {matches.length === 0 && (
         <p style={{ color: 'var(--wc-text-muted)' }}>
           No knockout matches yet. Click <strong>Sync bracket from standings</strong> once the group stage is far enough along.
+        </p>
+      )}
+
+      {matches.length > 0 && visible.length === 0 && filter === 'pending' && (
+        <p style={{ color: 'var(--wc-text-muted)' }}>
+          Every knockout match has a result entered. Switch to <strong>All matches</strong> to review or edit them.
         </p>
       )}
 

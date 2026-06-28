@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useHasMounted } from '@/lib/use-has-mounted';
 import PlayoffTipsTab, { type PlayoffTipRow, type PlayoffPickRow } from './PlayoffTipsTab';
+import StageToggle from './StageToggle';
 
 export interface TipRow {
   id: number;
@@ -84,7 +85,8 @@ export default function TipsTab({
   // trigger a hydration mismatch.
   const mounted = useHasMounted();
   const [openDays, setOpenDays] = useState<Set<string>>(new Set());
-  const [view, setView] = useState<'group' | 'playoff'>('group');
+  // Default to the play-off view when the bracket is live; otherwise group only.
+  const [view, setView] = useState<'group' | 'playoff'>(playoffEnabled ? 'playoff' : 'group');
 
   const groups = useMemo(() => {
     const map = new Map<string, TipRow[]>();
@@ -109,26 +111,7 @@ export default function TipsTab({
     });
   };
 
-  const stageSwitch = playoffEnabled ? (
-    <div className="d-flex gap-2">
-      {(['group', 'playoff'] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          onClick={() => setView(v)}
-          className="btn btn-sm"
-          style={{
-            backgroundColor: view === v ? 'var(--wc-accent)' : 'var(--wc-surface)',
-            color: view === v ? '#fff' : 'var(--wc-text)',
-            border: '1px solid var(--wc-border)',
-            fontSize: '0.8rem',
-          }}
-        >
-          {v === 'group' ? 'Group stage' : 'Play-off'}
-        </button>
-      ))}
-    </div>
-  ) : null;
+  const stageSwitch = playoffEnabled ? <StageToggle value={view} onChange={setView} /> : null;
 
   if (playoffEnabled && view === 'playoff') {
     return (

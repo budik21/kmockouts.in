@@ -81,7 +81,9 @@ export default function DashboardTabs({
   playoffEnabled,
   initialTab,
 }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? 'matches');
+  // Default to the Play-off tab when the bracket is live (admins spend the
+  // knockout phase entering results there); otherwise the group-stage results.
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab ?? (playoffEnabled ? 'knockout' : 'matches'));
   const [pickemSubTab, setPickemSubTab] = useState<PickemSubTab>('management');
 
   const subTabButtonStyle = (isActive: boolean): React.CSSProperties => ({

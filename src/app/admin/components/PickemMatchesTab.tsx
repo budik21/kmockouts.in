@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useHasMounted } from '@/lib/use-has-mounted';
 import { matchColors, DRAW_COLOR } from '@/lib/flag-colors';
 import { buildInfographicPrompt, tipShares } from '@/lib/infographic-prompt';
+import StageToggle from './StageToggle';
 
 /** Per-match tip distribution for a single fixture (group stage or knockout). */
 export interface MatchTipStats {
@@ -217,7 +218,8 @@ export default function PickemMatchesTab({
   // grouped markup is client-only and can't trigger a hydration mismatch.
   const mounted = useHasMounted();
   const [futureOnly, setFutureOnly] = useState(true);
-  const [view, setView] = useState<'group' | 'playoff'>('group');
+  // Default to the play-off view when the bracket is live; otherwise group only.
+  const [view, setView] = useState<'group' | 'playoff'>(playoffEnabled ? 'playoff' : 'group');
 
   const activeMatches = view === 'playoff' ? playoffMatches : matches;
 
@@ -239,26 +241,7 @@ export default function PickemMatchesTab({
     return <p style={{ color: 'var(--wc-text-muted)' }}>Loading…</p>;
   }
 
-  const stageSwitch = playoffEnabled ? (
-    <div className="d-flex gap-2">
-      {(['group', 'playoff'] as const).map((v) => (
-        <button
-          key={v}
-          type="button"
-          onClick={() => setView(v)}
-          className="btn btn-sm"
-          style={{
-            backgroundColor: view === v ? 'var(--wc-accent)' : 'var(--wc-surface)',
-            color: view === v ? '#fff' : 'var(--wc-text)',
-            border: '1px solid var(--wc-border)',
-            fontSize: '0.8rem',
-          }}
-        >
-          {v === 'group' ? 'Group stage' : 'Play-off'}
-        </button>
-      ))}
-    </div>
-  ) : null;
+  const stageSwitch = playoffEnabled ? <StageToggle value={view} onChange={setView} /> : null;
 
   const futureToggle = (
     <label
