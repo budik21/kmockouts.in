@@ -29,17 +29,21 @@ const NOTIFY_COLS = [
 
 export default function PlayersTab({ players }: { players: PlayerRow[] }) {
   const [search, setSearch] = useState('');
+  const [onlyGroupTips, setOnlyGroupTips] = useState(false);
+  const [onlyPlayoffTips, setOnlyPlayoffTips] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const rows = q
-      ? players.filter(
-          (p) =>
-            p.name.toLowerCase().includes(q) || p.email.toLowerCase().includes(q),
-        )
-      : players;
+    const rows = players.filter((p) => {
+      if (q && !p.name.toLowerCase().includes(q) && !p.email.toLowerCase().includes(q)) {
+        return false;
+      }
+      if (onlyGroupTips && p.groupTips === 0) return false;
+      if (onlyPlayoffTips && p.playoffTips === 0) return false;
+      return true;
+    });
 
     const sorted = [...rows].sort((a, b) => {
       let cmp: number;
@@ -53,7 +57,7 @@ export default function PlayersTab({ players }: { players: PlayerRow[] }) {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return sorted;
-  }, [players, search, sortKey, sortDir]);
+  }, [players, search, onlyGroupTips, onlyPlayoffTips, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -99,25 +103,49 @@ export default function PlayersTab({ players }: { players: PlayerRow[] }) {
 
   return (
     <div>
-      <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or e-mail…"
-          style={{
-            background: 'rgba(255, 255, 255, 0.04)',
-            border: '1px solid var(--wc-border)',
-            borderRadius: 6,
-            color: 'var(--wc-text)',
-            padding: '0.45rem 0.75rem',
-            fontSize: '0.9rem',
-            minWidth: 260,
-            maxWidth: '100%',
-          }}
-        />
+      <div className="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+        <div className="d-flex align-items-center flex-wrap gap-3">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or e-mail…"
+            style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--wc-border)',
+              borderRadius: 6,
+              color: 'var(--wc-text)',
+              padding: '0.45rem 0.75rem',
+              fontSize: '0.9rem',
+              minWidth: 260,
+              maxWidth: '100%',
+            }}
+          />
+          <label
+            className="d-flex align-items-center gap-2"
+            style={{ color: 'var(--wc-text)', fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            <input
+              type="checkbox"
+              checked={onlyGroupTips}
+              onChange={(e) => setOnlyGroupTips(e.target.checked)}
+            />
+            With group tips
+          </label>
+          <label
+            className="d-flex align-items-center gap-2"
+            style={{ color: 'var(--wc-text)', fontSize: '0.85rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            <input
+              type="checkbox"
+              checked={onlyPlayoffTips}
+              onChange={(e) => setOnlyPlayoffTips(e.target.checked)}
+            />
+            With play-off tips
+          </label>
+        </div>
         <span style={{ color: 'var(--wc-text)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-          {search ? (
+          {search || onlyGroupTips || onlyPlayoffTips ? (
             <>
               Showing{' '}
               <strong style={{ color: 'var(--wc-accent)' }}>{filtered.length}</strong> of{' '}
