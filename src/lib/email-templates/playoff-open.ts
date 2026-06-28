@@ -26,17 +26,20 @@ function esc(str: string): string {
 export const PLAYOFF_OPEN_SUBJECT =
   '🏆 Play-off Pick’em is LIVE — tip today to grab the most points';
 
+const PAYPAL_BUTTON_ID = 'KL6HYXE53XDTG';
+
 /**
- * Absolute moment the top-4 picks lock — i.e. the first knockout kick-off,
- * 21:00 Czech time — or null when the knockout schedule has no kick-off yet.
- * Shown in Czech (Europe/Prague) time, the reference timezone for kick-offs.
+ * Absolute moment the top-4 picks lock — i.e. the first knockout kick-off — in
+ * UTC, or null when the knockout schedule has no kick-off yet. Stated in UTC so
+ * it reads the same for every recipient regardless of their timezone (the
+ * kick-off is 21:00 Czech time, which the schedule already stores as UTC).
  */
 function lockLabel(): string | null {
   const ms = playoffPicksLockAtMs();
   if (ms === null) return null;
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return null;
-  return `${d.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Prague' })} Czech time`;
+  return `${d.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
 }
 
 /**
@@ -55,6 +58,7 @@ export function buildPlayoffOpenEmail(data: PlayoffOpenEmailData): TemplateOutpu
   const leaderboardUrl = `${SITE_URL}/pickem/leaderboard`;
   const leaguesUrl = `${SITE_URL}/pickem/leagues`;
   const settingsUrl = `${SITE_URL}/pickem/tips?tab=settings`;
+  const paypalUrl = `https://www.paypal.com/donate/?hosted_button_id=${PAYPAL_BUTTON_ID}`;
   const lockAt = lockLabel();
 
   const ruleRow = (pts: string, text: string) => `
@@ -112,7 +116,13 @@ export function buildPlayoffOpenEmail(data: PlayoffOpenEmailData): TemplateOutpu
           </tr>
 
           <tr>
-            <td style="padding:4px 28px 4px;">
+            <td align="center" style="padding:4px 28px 8px;">
+              <a href="${playoffUrl}" style="display:inline-block;background:#6f003c;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:16px;">Make your picks now &rarr;</a>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:14px 28px 4px;">
               <div style="background:#fff4ed;border:1px solid #f7caa6;border-left:4px solid #e8590c;border-radius:10px;padding:16px 18px;color:#7a3408;font-size:14px;line-height:1.55;">
                 <div style="font-size:15px;font-weight:700;color:#b34700;margin-bottom:6px;">⏳ Tip today &mdash; your top 4 locks at the first kick-off</div>
                 Your <strong>top-4 picks</strong> (champion &amp; medalists) are worth the most points, and they lock <strong>the moment the very first play-off match kicks off</strong>${lockAt ? ` &mdash; <strong>${esc(lockAt)}</strong>` : ''}.
@@ -120,12 +130,6 @@ export function buildPlayoffOpenEmail(data: PlayoffOpenEmailData): TemplateOutpu
                 <br/><br/>
                 Individual knockout matches stay open until shortly before each match &mdash; but the top 4 won&rsquo;t wait.
               </div>
-            </td>
-          </tr>
-
-          <tr>
-            <td align="center" style="padding:22px 28px 8px;">
-              <a href="${playoffUrl}" style="display:inline-block;background:#6f003c;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:16px;">Make your picks now &rarr;</a>
             </td>
           </tr>
 
@@ -169,6 +173,19 @@ export function buildPlayoffOpenEmail(data: PlayoffOpenEmailData): TemplateOutpu
               <a href="${leaderboardUrl}" style="color:#6f003c;text-decoration:none;font-weight:600;font-size:13px;">See the Leaderboard &rarr;</a>
               <span style="color:#d1d5db;margin:0 8px;">·</span>
               <a href="${leaguesUrl}" style="color:#6f003c;text-decoration:none;font-weight:600;font-size:13px;">Create a league &rarr;</a>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:#fffbf0;padding:26px 28px;border-top:1px solid #f4e0a8;text-align:center;">
+              <div style="font-size:30px;line-height:1;margin-bottom:8px;">&#128155;</div>
+              <p style="margin:0 auto 14px;max-width:460px;color:#1f2937;font-size:14px;line-height:1.6;">
+                Knockouts.in is <strong>completely free</strong> and has zero ads.<br/>
+                If it brightens your World Cup, feel free to chip in a dollar, two, or two hundred &mdash; entirely up to you.
+              </p>
+              <a href="${paypalUrl}" target="_blank" style="display:inline-block;background:#0070ba;color:#ffffff;text-decoration:none;padding:12px 26px;border-radius:8px;font-weight:700;font-size:14px;">
+                Support us via PayPal
+              </a>
             </td>
           </tr>
 
