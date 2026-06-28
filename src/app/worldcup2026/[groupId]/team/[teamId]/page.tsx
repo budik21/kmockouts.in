@@ -24,9 +24,18 @@ import NextMatchDate from '@/app/components/NextMatchDate';
 import ProjectedOpponent from '@/app/components/ProjectedOpponent';
 import { resolveKnockoutBracket } from '@/engine/knockout-resolver';
 import { ROUND_LABELS } from '@/lib/knockout-bracket';
+import { getPlayoffFixtures } from '@/lib/playoff-data';
+import { buildKnockoutPath } from '@/lib/knockout-path';
+import KnockoutPath from '@/app/components/KnockoutPath';
 import JsonLd from '@/app/components/JsonLd';
 import PaypalDonate from '@/app/components/PaypalDonate';
 import { SITE_URL } from '@/lib/seo';
+import { unstable_cache } from 'next/cache';
+import { WC_TAG } from '@/lib/cache-tags';
+
+const getCachedPlayoffFixtures = unstable_cache(getPlayoffFixtures, ['fixtures-playoff'], {
+  tags: [WC_TAG],
+});
 
 function rowToTeam(row: TeamRow): Team {
   return {
@@ -308,6 +317,13 @@ export default async function TeamDetailPage({ params }: PageProps) {
     }
   }
 
+  // Knockout journey for teams that have actually qualified to the play-off
+  // (i.e. they are resolved into an R32 slot in the stored bracket). When this
+  // is present it replaces the speculative "projected opponent" widget with the
+  // real bracket path; otherwise we keep the standings-based projection below.
+  const playoffFixtures = await getCachedPlayoffFixtures();
+  const knockoutPath = buildKnockoutPath(team.id, playoffFixtures);
+
   // Compute projected knockout opponent based on current standings across all groups
   let projectedOpponent: {
     roundLabel: string;
@@ -318,7 +334,7 @@ export default async function TeamDetailPage({ params }: PageProps) {
     matchNumber: number;
   } | null = null;
 
-  if (teamHasPlayed) {
+  if (teamHasPlayed && !knockoutPath) {
     const groupStates = [];
     // Track whether every group has completed round 1
     let allGroupsRound1Done = true;
@@ -570,19 +586,27 @@ export default async function TeamDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Projected knockout opponent — placed AFTER the scenarios accordion
-          so the visitor first sees what their team needs, then sees who
-          they would face if current standings hold. */}
-      {projectedOpponent && (
-        <ProjectedOpponent
-          roundLabel={projectedOpponent.roundLabel}
-          opponent={projectedOpponent.opponent}
-          opponentPlaceholder={projectedOpponent.opponentPlaceholder}
-          kickOff={projectedOpponent.kickOff}
-          venue={projectedOpponent.venue}
+      {/* Knockout journey (qualified teams) or projected opponent (group stage).
+          Placed AFTER the scenarios accordion so the visitor first sees what
+          their team needs, then sees the real bracket path / projection. */}
+      {knockoutPath ? (
+        <KnockoutPath
           teamName={team.name}
-          matchNumber={projectedOpponent.matchNumber}
+          teamCountryCode={team.countryCode}
+          nodes={knockoutPath}
         />
+      ) : (
+        projectedOpponent && (
+          <ProjectedOpponent
+            roundLabel={projectedOpponent.roundLabel}
+            opponent={projectedOpponent.opponent}
+            opponentPlaceholder={projectedOpponent.opponentPlaceholder}
+            kickOff={projectedOpponent.kickOff}
+            venue={projectedOpponent.venue}
+            teamName={team.name}
+            matchNumber={projectedOpponent.matchNumber}
+          />
+        )
       )}
 
       {/* SEO text */}
