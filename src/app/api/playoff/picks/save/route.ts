@@ -3,7 +3,7 @@ import { expireTags } from '@/lib/cache-expire';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { LEADERBOARD_TAG } from '@/lib/cache-tags';
-import { isPlayoffPicksLocked, PLAYOFF_PICKS_LOCK_LEAD_MS } from '@/lib/playoff-lock';
+import { isPlayoffPicksLocked } from '@/lib/playoff-lock';
 import { PLAYOFF_PICK_SLOTS, PlayoffPickSlot } from '@/lib/playoff-scoring';
 import { getPlayoffTeams } from '@/lib/playoff-data';
 import { recalculateLeagueStandings } from '@/lib/league-standings';
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   if (isPlayoffPicksLocked()) {
     return NextResponse.json(
-      { error: `Top-4 picks closed ${PLAYOFF_PICKS_LOCK_LEAD_MS / 60000} minutes before the first knockout match` },
+      { error: 'Top-4 picks are closed — the first knockout match has kicked off' },
       { status: 403 },
     );
   }

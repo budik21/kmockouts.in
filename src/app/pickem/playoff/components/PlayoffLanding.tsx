@@ -63,7 +63,7 @@ export default function PlayoffLanding({ tippingOpen }: { tippingOpen: boolean }
                 </ul>
                 <p className="playoff-rules-note">
                   The third-place match decides 3rd vs 4th. Four different teams, only from the 32 in the
-                  bracket. Locked <strong>1 hour before</strong> the first knockout kick-off.
+                  bracket. Locked <strong>at</strong> the first knockout kick-off.
                 </p>
               </div>
             </div>

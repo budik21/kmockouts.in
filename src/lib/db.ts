@@ -453,8 +453,8 @@ export async function initializeSchema(): Promise<void> {
     --   fourth    → 20 points  (4th = loser of the third-place match)
     -- A picked team that finishes in the top 4 at another place scores 10; all
     -- four exact adds a +50 bonus (folded into the champion pick). Scored once
-    -- matches 103 + 104 are finished. Locked 1 hour before the first knockout
-    -- kick-off (see lib/playoff-lock.ts).
+    -- matches 103 + 104 are finished. Locked at the first knockout kick-off
+    -- (see lib/playoff-lock.ts).
     CREATE TABLE IF NOT EXISTS playoff_pick (
       id          SERIAL PRIMARY KEY,
       user_id     INTEGER NOT NULL REFERENCES tipster_user(id) ON DELETE CASCADE,

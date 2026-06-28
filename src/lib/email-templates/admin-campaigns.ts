@@ -81,16 +81,19 @@ export const ADMIN_EMAIL_CAMPAIGNS: AdminEmailCampaign[] = [
     label: 'Play-off Pick’em is LIVE',
     description:
       'Sent the moment the group stage finishes and knockout tipping opens. An urgent call ' +
-      'to act: the top-4 picks (champion + medalists) lock 1 hour before the first play-off ' +
-      'kick-off, only ~12–15 hours away. Also introduces the three leaderboards (Overall / ' +
-      'Group stage / Play-off) and the play-off-only league option. Default recipients: ' +
-      'everyone registered for the group-stage Pick’em.',
+      'to act: the top-4 picks (champion + medalists) lock at the first play-off kick-off ' +
+      '(21:00 Czech time), only ~12–15 hours away. Also introduces the three leaderboards ' +
+      '(Overall / Group stage / Play-off) and the play-off-only league option. Default ' +
+      'recipients: everyone registered for the Pick’em who has NOT yet locked in a top-4 pick.',
     subject: PLAYOFF_OPEN_SUBJECT,
     build: (recipient) => buildPlayoffOpenEmail({ userName: recipient.name }),
     defaultRecipients: () =>
       query<CampaignRecipient>(
         `SELECT u.id, u.email, u.name
          FROM tipster_user u
+         WHERE NOT EXISTS (
+           SELECT 1 FROM playoff_pick p WHERE p.user_id = u.id
+         )
          ORDER BY u.name, u.email`,
       ),
   },

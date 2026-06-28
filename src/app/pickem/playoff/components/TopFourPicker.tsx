@@ -122,7 +122,7 @@ export default function TopFourPicker({ teams, initialPicks, locked, picksLockAt
       ) : lockDate ? (
         <div className="playoff-lock-hint">
           Picks lock on {lockDate.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-          {' '}(1 hour before the first match).
+          {' '}(when the first match kicks off).
         </div>
       ) : null}
 

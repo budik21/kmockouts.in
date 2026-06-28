@@ -1,5 +1,5 @@
 import { SITE_URL } from '@/lib/seo';
-import { playoffPicksLockAtMs, PLAYOFF_PICKS_LOCK_LEAD_MS } from '@/lib/playoff-lock';
+import { playoffPicksLockAtMs } from '@/lib/playoff-lock';
 import {
   PLAYOFF_PICK_POINTS,
   PLAYOFF_PICK_WRONG_PLACE_POINTS,
@@ -26,19 +26,17 @@ function esc(str: string): string {
 export const PLAYOFF_OPEN_SUBJECT =
   '🏆 Play-off Pick’em is LIVE — tip today to grab the most points';
 
-const lockLeadHours = Math.round(PLAYOFF_PICKS_LOCK_LEAD_MS / (60 * 60 * 1000));
-
 /**
- * Absolute moment the top-4 picks lock, in UTC, or null when the knockout
- * schedule has no kick-off yet. Stated in UTC so it reads the same for every
- * recipient regardless of their timezone.
+ * Absolute moment the top-4 picks lock — i.e. the first knockout kick-off,
+ * 21:00 Czech time — or null when the knockout schedule has no kick-off yet.
+ * Shown in Czech (Europe/Prague) time, the reference timezone for kick-offs.
  */
 function lockLabel(): string | null {
   const ms = playoffPicksLockAtMs();
   if (ms === null) return null;
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return null;
-  return `${d.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
+  return `${d.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Europe/Prague' })} Czech time`;
 }
 
 /**
@@ -46,11 +44,11 @@ function lockLabel(): string | null {
  * finished and knockout tipping has opened. Distinct from the earlier
  * "Play-off Pick'em promo" (which only announced it was coming) — this one is
  * an urgent call to act, because the top-4 winner picks (champion + medalists)
- * lock one hour before the first knockout kick-off, which is only ~12–15 hours
- * after this e-mail goes out. Also introduces the three leaderboards and the
- * play-off-only league option. Default recipients: everyone who registered for
- * the group-stage Pick'em. Visual shell matches the other admin campaign
- * e-mails.
+ * lock the moment the first knockout match kicks off (21:00 Czech time), which
+ * is only ~12–15 hours after this e-mail goes out. Also introduces the three
+ * leaderboards and the play-off-only league option. Default recipients:
+ * everyone who registered for the group-stage Pick'em but has not yet locked in
+ * a top-4 pick. Visual shell matches the other admin campaign e-mails.
  */
 export function buildPlayoffOpenEmail(data: PlayoffOpenEmailData): TemplateOutput {
   const playoffUrl = `${SITE_URL}/pickem/playoff`;
@@ -108,7 +106,7 @@ export function buildPlayoffOpenEmail(data: PlayoffOpenEmailData): TemplateOutpu
                 It&rsquo;s live. Go pick your <strong>champion</strong>, name the rest of the
                 top 4 and tip your way through the entire knockout bracket.
                 <strong>Tip today and you&rsquo;ll bag the most points</strong> &mdash; the top 4
-                is the biggest haul on offer, and it locks before the first match.
+                is the biggest haul on offer, and it locks the moment the first match kicks off.
               </p>
             </td>
           </tr>
@@ -116,9 +114,9 @@ export function buildPlayoffOpenEmail(data: PlayoffOpenEmailData): TemplateOutpu
           <tr>
             <td style="padding:4px 28px 4px;">
               <div style="background:#fff4ed;border:1px solid #f7caa6;border-left:4px solid #e8590c;border-radius:10px;padding:16px 18px;color:#7a3408;font-size:14px;line-height:1.55;">
-                <div style="font-size:15px;font-weight:700;color:#b34700;margin-bottom:6px;">⏳ Tip today &mdash; your top 4 locks first</div>
-                Your <strong>top-4 picks</strong> (champion &amp; medalists) are worth the most points, and they lock <strong>${lockLeadHours} hour before the very first play-off kick-off</strong>${lockAt ? ` &mdash; around <strong>${esc(lockAt)}</strong>` : ''}.
-                Miss that window and those points are gone &mdash; so lock them in <strong>today</strong>.
+                <div style="font-size:15px;font-weight:700;color:#b34700;margin-bottom:6px;">⏳ Tip today &mdash; your top 4 locks at the first kick-off</div>
+                Your <strong>top-4 picks</strong> (champion &amp; medalists) are worth the most points, and they lock <strong>the moment the very first play-off match kicks off</strong>${lockAt ? ` &mdash; <strong>${esc(lockAt)}</strong>` : ''}.
+                Miss that whistle and those points are gone &mdash; so lock them in <strong>today</strong>.
                 <br/><br/>
                 Individual knockout matches stay open until shortly before each match &mdash; but the top 4 won&rsquo;t wait.
               </div>

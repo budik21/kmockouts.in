@@ -6,7 +6,7 @@
  *      (better FIFA rank wins 2-0; ties → home wins 1-0).
  *   3. Rebuilds the knockout bracket (R32 from final standings via Annex C).
  *
- * Tipping windows are schedule-based (top-4 lock 1h before the first KO match,
+ * Tipping windows are schedule-based (top-4 lock at the first KO kick-off,
  * match tips 5 min before kick-off) — all in the future, so everything is open.
  *
  * Run: node --env-file=.env --import tsx scripts/simulate-playoff-ready.mjs

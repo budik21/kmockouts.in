@@ -5,14 +5,17 @@
  *   before that match's kick-off, or once the match is no longer SCHEDULED. They
  *   also require both participants to be known (handled where tips are saved).
  * - The "top-4" winner picks (champion / runner-up / semifinalists) lock once,
- *   PLAYOFF_PICKS_LOCK_LEAD_MS before the very first knockout kick-off.
+ *   exactly at the very first knockout kick-off (21:00 Czech time).
  */
 import { ROUND_OF_32, KNOCKOUT_SCHEDULE } from './knockout-bracket';
 
 export { isTipLocked, isTipLastCall, TIP_LOCK_LEAD_MS, TIP_LOCK_LEAD_MINUTES } from './tip-lock';
 
-/** Top-4 picks lock 1 hour before the first knockout match kicks off. */
-export const PLAYOFF_PICKS_LOCK_LEAD_MS = 60 * 60 * 1000;
+/**
+ * Top-4 picks lock exactly when the first knockout match kicks off — no lead
+ * time. Tipsters can keep editing right up to the opening whistle.
+ */
+export const PLAYOFF_PICKS_LOCK_LEAD_MS = 0;
 
 /**
  * Whether the play-off tipping game is open. The single condition: the whole
