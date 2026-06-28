@@ -28,11 +28,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    const [defaultRecipients, allUsers] = await Promise.all([
+    const [defaultRecipients, allUsers, shared] = await Promise.all([
       campaign.defaultRecipients(),
       query<CampaignRecipient>(
         'SELECT id, email, name FROM tipster_user ORDER BY name, email',
       ),
+      campaign.prepare?.(),
     ]);
 
     return NextResponse.json({
@@ -45,8 +46,10 @@ export async function GET(req: Request) {
       templateId: campaign.id,
       defaultRecipients,
       allUsers,
-      previewHtml: campaign.build({ id: 0, email: 'preview@knockouts.in', name: 'Sample Tipster' })
-        .html,
+      previewHtml: campaign.build(
+        { id: 0, email: 'preview@knockouts.in', name: 'Sample Tipster' },
+        shared,
+      ).html,
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -104,11 +107,15 @@ export async function POST(req: Request) {
     const resend = new Resend(apiKey);
     const from = process.env.RESEND_FROM_EMAIL ?? 'Knockouts.in <onboarding@resend.dev>';
 
+    // Fetch any campaign-shared data (e.g. leaderboard standings) once, not per
+    // recipient — it's identical for everyone in the batch.
+    const shared = await campaign.prepare?.();
+
     let sent = 0;
     const failures: SendFailure[] = [];
     for (let i = 0; i < users.length; i++) {
       const user = users[i];
-      const { subject, html } = campaign.build(user);
+      const { subject, html } = campaign.build(user, shared);
       try {
         // Resend does NOT throw on API-level rejections — it returns
         // { data, error }, so check both (same contract as tip-notifications).

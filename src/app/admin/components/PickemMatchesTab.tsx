@@ -5,9 +5,10 @@ import { useHasMounted } from '@/lib/use-has-mounted';
 import { matchColors, DRAW_COLOR } from '@/lib/flag-colors';
 import { buildInfographicPrompt, tipShares } from '@/lib/infographic-prompt';
 
-/** Per-match tip distribution for a single group-stage fixture. */
+/** Per-match tip distribution for a single fixture (group stage or knockout). */
 export interface MatchTipStats {
   id: number;
+  /** Group letter for the group stage, or the round label for a knockout tie. */
   groupId: string;
   round: number;
   kickOff: string; // ISO 8601 (UTC)
@@ -22,6 +23,8 @@ export interface MatchTipStats {
   draws: number;
   awayWins: number;
   topScore: { homeGoals: number; awayGoals: number; count: number } | null;
+  /** Which tournament stage this fixture belongs to. Defaults to the group stage. */
+  stage?: 'group' | 'knockout';
 }
 
 // Local-timezone YYYY-MM-DD, used both as the grouping key and for sorting.
@@ -181,7 +184,7 @@ function MatchCard({ m, past }: { m: MatchTipStats; past: boolean }) {
           <FlagIcon code={m.awayCc} />
         </span>
         <span style={{ color: 'var(--wc-text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-          Group {m.groupId} · {formatTime(m.kickOff)} · {m.totalTips} {m.totalTips === 1 ? 'tip' : 'tips'}
+          {m.stage === 'knockout' ? m.groupId : `Group ${m.groupId}`} · {formatTime(m.kickOff)} · {m.totalTips} {m.totalTips === 1 ? 'tip' : 'tips'}
         </span>
       </div>
 
@@ -201,35 +204,63 @@ function MatchCard({ m, past }: { m: MatchTipStats; past: boolean }) {
   );
 }
 
-export default function PickemMatchesTab({ matches }: { matches: MatchTipStats[] }) {
+export default function PickemMatchesTab({
+  matches,
+  playoffMatches = [],
+  playoffEnabled = false,
+}: {
+  matches: MatchTipStats[];
+  playoffMatches?: MatchTipStats[];
+  playoffEnabled?: boolean;
+}) {
   // Dates are formatted in the admin's local timezone; gate on mount so the
   // grouped markup is client-only and can't trigger a hydration mismatch.
   const mounted = useHasMounted();
   const [futureOnly, setFutureOnly] = useState(true);
+  const [view, setView] = useState<'group' | 'playoff'>('group');
+
+  const activeMatches = view === 'playoff' ? playoffMatches : matches;
 
   // A match counts as "played" once its kick-off time has passed.
   const isPast = (m: MatchTipStats) => new Date(m.kickOff).getTime() < Date.now();
 
   const groups = useMemo(() => {
     const map = new Map<string, MatchTipStats[]>();
-    for (const m of matches) {
+    for (const m of activeMatches) {
       if (futureOnly && isPast(m)) continue;
       const key = dayKey(m.kickOff);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(m);
     }
     return Array.from(map.entries());
-  }, [matches, futureOnly]);
+  }, [activeMatches, futureOnly]);
 
   if (!mounted) {
     return <p style={{ color: 'var(--wc-text-muted)' }}>Loading…</p>;
   }
 
-  if (matches.length === 0) {
-    return <p style={{ color: 'var(--wc-text-muted)' }}>No group-stage matches found.</p>;
-  }
+  const stageSwitch = playoffEnabled ? (
+    <div className="d-flex gap-2">
+      {(['group', 'playoff'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => setView(v)}
+          className="btn btn-sm"
+          style={{
+            backgroundColor: view === v ? 'var(--wc-accent)' : 'var(--wc-surface)',
+            color: view === v ? '#fff' : 'var(--wc-text)',
+            border: '1px solid var(--wc-border)',
+            fontSize: '0.8rem',
+          }}
+        >
+          {v === 'group' ? 'Group stage' : 'Play-off'}
+        </button>
+      ))}
+    </div>
+  ) : null;
 
-  const toggle = (
+  const futureToggle = (
     <label
       className="d-flex align-items-center gap-2"
       style={{ color: 'var(--wc-text)', fontSize: '0.85rem', cursor: 'pointer', userSelect: 'none' }}
@@ -243,10 +274,30 @@ export default function PickemMatchesTab({ matches }: { matches: MatchTipStats[]
     </label>
   );
 
+  const controls = (
+    <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      {futureToggle}
+      {stageSwitch}
+    </div>
+  );
+
+  if (activeMatches.length === 0) {
+    return (
+      <div className="d-flex flex-column gap-3">
+        {controls}
+        <p style={{ color: 'var(--wc-text-muted)' }}>
+          {view === 'playoff'
+            ? 'No play-off fixtures yet — run Sync in the Play-off tab to seed the bracket.'
+            : 'No group-stage matches found.'}
+        </p>
+      </div>
+    );
+  }
+
   if (groups.length === 0) {
     return (
       <div className="d-flex flex-column gap-3">
-        {toggle}
+        {controls}
         <p style={{ color: 'var(--wc-text-muted)' }}>No upcoming matches.</p>
       </div>
     );
@@ -254,7 +305,7 @@ export default function PickemMatchesTab({ matches }: { matches: MatchTipStats[]
 
   return (
     <div className="d-flex flex-column gap-4">
-      {toggle}
+      {controls}
       {groups.map(([key, rows]) => (
         <div key={key}>
           <h3 style={{ color: 'var(--wc-text)', fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>

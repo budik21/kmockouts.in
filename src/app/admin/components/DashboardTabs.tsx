@@ -12,6 +12,7 @@ import TipstersTab, { type TipsterRow } from './TipstersTab';
 import LeaguesTab, { type LeagueRow } from './LeaguesTab';
 import TipsTab, { type TipRow } from './TipsTab';
 import PickemMatchesTab, { type MatchTipStats } from './PickemMatchesTab';
+import type { PlayoffTipRow, PlayoffPickRow } from './PlayoffTipsTab';
 import UsersClient from '../users/UsersClient';
 import EmailsTab from './EmailsTab';
 import FeatureFlagsClient from './FeatureFlagsClient';
@@ -29,6 +30,9 @@ interface DashboardTabsProps {
   leagues: LeagueRow[];
   tips: TipRow[];
   matchTipStats: MatchTipStats[];
+  playoffMatchTipStats: MatchTipStats[];
+  playoffTips: PlayoffTipRow[];
+  playoffPicks: PlayoffPickRow[];
   isSuperadmin: boolean;
   adminEmails: string[];
   superadminEmail: string;
@@ -57,6 +61,9 @@ export default function DashboardTabs({
   leagues,
   tips,
   matchTipStats,
+  playoffMatchTipStats,
+  playoffTips,
+  playoffPicks,
   isSuperadmin,
   adminEmails,
   superadminEmail,
@@ -320,16 +327,21 @@ export default function DashboardTabs({
               </div>
             )}
 
-            {/* Matches sub-tab — group-stage fixtures with tip distribution */}
+            {/* Matches sub-tab — group-stage + play-off fixtures with tip distribution */}
             {pickemSubTab === 'matches' && (
               <div>
                 <p style={{ color: 'var(--wc-text-muted)', marginBottom: '1.5rem' }}>
-                  Every group-stage fixture with its tip distribution — how many tips were placed,
+                  Every fixture with its tip distribution — how many tips were placed,
                   the share predicting a home win, draw or away win, and the most-tipped exact score.
                   Use <strong>Copy AI prompt</strong> to grab a ready-made image-generation prompt
                   (filled with this match&apos;s data) for a social-media infographic collage.
+                  {playoffEnabled && <> Switch to <strong>Play-off</strong> for the knockout bracket.</>}
                 </p>
-                <PickemMatchesTab matches={matchTipStats} />
+                <PickemMatchesTab
+                  matches={matchTipStats}
+                  playoffMatches={playoffMatchTipStats}
+                  playoffEnabled={playoffEnabled}
+                />
               </div>
             )}
 
@@ -377,6 +389,7 @@ export default function DashboardTabs({
                     Every tip placed in the prediction game, grouped by the day it was
                     submitted (newest first). Finished matches show the points earned.
                     Click a day to expand it.
+                    {playoffEnabled && <> Switch to <strong>Play-off</strong> for knockout tips and top-4 picks.</>}
                   </p>
                   <span style={{ color: 'var(--wc-text)', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
                     Total:{' '}
@@ -384,7 +397,12 @@ export default function DashboardTabs({
                     {tips.length === 1 ? 'tip' : 'tips'}
                   </span>
                 </div>
-                <TipsTab tips={tips} />
+                <TipsTab
+                  tips={tips}
+                  playoffTips={playoffTips}
+                  playoffPicks={playoffPicks}
+                  playoffEnabled={playoffEnabled}
+                />
               </div>
             )}
           </div>

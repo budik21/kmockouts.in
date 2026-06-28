@@ -21,7 +21,10 @@ export interface InfographicPromptInput {
   awayName: string;
   awayShort: string;
   awayCc: string;
+  /** Group letter for the group stage, or the round label for a knockout tie. */
   groupId: string;
+  /** Which tournament stage this fixture belongs to. Defaults to the group stage. */
+  stage?: 'group' | 'knockout';
   kickOff: string; // ISO 8601 (UTC), as stored
   totalTips: number;
   homeWins: number;
@@ -56,6 +59,7 @@ function isoUtc(kickOff: string): string {
 
 export function buildInfographicPrompt(m: InfographicPromptInput): string {
   const { homePct, drawPct, awayPct } = tipShares(m);
+  const isKnockout = m.stage === 'knockout';
 
   // Unanimous case: everyone tipped the same outcome (one share is 100%). In
   // that case the bar is meaningless, so we replace it with a single sentence.
@@ -72,8 +76,8 @@ export function buildInfographicPrompt(m: InfographicPromptInput): string {
 
   const data = {
     competition: 'FIFA World Cup 2026',
-    stage: 'Group stage',
-    group: m.groupId,
+    stage: isKnockout ? 'Knockout stage' : 'Group stage',
+    ...(isKnockout ? { round: m.groupId } : { group: m.groupId }),
     kickoff_utc: isoUtc(m.kickOff),
     home: { country: m.homeName, code: m.homeCc.toUpperCase(), short: m.homeShort },
     away: { country: m.awayName, code: m.awayCc.toUpperCase(), short: m.awayShort },
@@ -99,7 +103,7 @@ OUTPUT FORMAT
 - A single cohesive, high-detail, photorealistic collage — not a flat vector graphic and not a cartoon.
 
 CONCEPT
-The image celebrates an upcoming FIFA World Cup 2026 group-stage match and visualises how fans predict it will end. The home nation occupies the LEFT side, the away nation the RIGHT side, and a prediction infographic card sits in the CENTRE.
+The image celebrates an upcoming FIFA World Cup 2026 ${isKnockout ? 'knockout-stage' : 'group-stage'} match and visualises how fans predict it will end. The home nation occupies the LEFT side, the away nation the RIGHT side, and a prediction infographic card sits in the CENTRE.
 
 COMPOSITION — keep the centre open for the card
 - Background: the upper part of the image, behind the waving flags, must be a blue sky with light, wispy clouds — never a white, plain or blank backdrop.

@@ -2,6 +2,12 @@ import { query } from '@/lib/db';
 import { buildReactivationEmail, REACTIVATION_SUBJECT } from './reactivate-sleeping-users';
 import { buildPlayoffLaunchEmail, PLAYOFF_LAUNCH_SUBJECT } from './playoff-launch';
 import { buildPlayoffOpenEmail, PLAYOFF_OPEN_SUBJECT } from './playoff-open';
+import {
+  buildGroupResultsEmail,
+  fetchGroupTopStandings,
+  GROUP_RESULTS_SUBJECT,
+  type GroupResultsShared,
+} from './group-results';
 
 /** A tipster_user row reduced to what an e-mail campaign needs. */
 export interface CampaignRecipient {
@@ -21,7 +27,14 @@ export interface AdminEmailCampaign {
   label: string;
   description: string;
   subject: string;
-  build(recipient: CampaignRecipient): { subject: string; html: string };
+  /**
+   * Optional async hook to fetch data shared by every recipient (e.g. the
+   * leaderboard standings). Called once per preview/send; its result is passed
+   * to each build() as the second argument. Campaigns that need no shared data
+   * omit it.
+   */
+  prepare?(): Promise<unknown>;
+  build(recipient: CampaignRecipient, shared?: unknown): { subject: string; html: string };
   defaultRecipients(): Promise<CampaignRecipient[]>;
 }
 
@@ -78,6 +91,30 @@ export const ADMIN_EMAIL_CAMPAIGNS: AdminEmailCampaign[] = [
       query<CampaignRecipient>(
         `SELECT u.id, u.email, u.name
          FROM tipster_user u
+         ORDER BY u.name, u.email`,
+      ),
+  },
+  {
+    id: 'group-results',
+    label: 'Group stage results & Top 10',
+    description:
+      'Sent once the group-stage Pick’em is fully scored. Celebrates the top 3 with ' +
+      'medals, lists the final Top 10, links to the full leaderboard, then hands off ' +
+      'to the now-live Play-off Pick’em and closes with a support-us ask. Default ' +
+      'recipients: everyone who scored at least one group-stage point.',
+    subject: GROUP_RESULTS_SUBJECT,
+    prepare: async (): Promise<GroupResultsShared> => ({
+      standings: await fetchGroupTopStandings(10),
+    }),
+    build: (recipient, shared) =>
+      buildGroupResultsEmail({ userName: recipient.name }, shared as GroupResultsShared | undefined),
+    defaultRecipients: () =>
+      query<CampaignRecipient>(
+        `SELECT u.id, u.email, u.name
+         FROM tipster_user u
+         JOIN tip t ON t.user_id = u.id
+         GROUP BY u.id, u.email, u.name
+         HAVING COALESCE(SUM(t.points), 0) >= 1
          ORDER BY u.name, u.email`,
       ),
   },

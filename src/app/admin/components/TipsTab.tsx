@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useHasMounted } from '@/lib/use-has-mounted';
+import PlayoffTipsTab, { type PlayoffTipRow, type PlayoffPickRow } from './PlayoffTipsTab';
 
 export interface TipRow {
   id: number;
@@ -67,12 +68,23 @@ function pointsLabel(points: number): string {
   return points > 0 ? `+${points}` : '0';
 }
 
-export default function TipsTab({ tips }: { tips: TipRow[] }) {
+export default function TipsTab({
+  tips,
+  playoffTips = [],
+  playoffPicks = [],
+  playoffEnabled = false,
+}: {
+  tips: TipRow[];
+  playoffTips?: PlayoffTipRow[];
+  playoffPicks?: PlayoffPickRow[];
+  playoffEnabled?: boolean;
+}) {
   // Dates are formatted in the admin's local timezone, which differs from the
   // server's — gate on mount so the grouped markup is client-only and can't
   // trigger a hydration mismatch.
   const mounted = useHasMounted();
   const [openDays, setOpenDays] = useState<Set<string>>(new Set());
+  const [view, setView] = useState<'group' | 'playoff'>('group');
 
   const groups = useMemo(() => {
     const map = new Map<string, TipRow[]>();
@@ -88,10 +100,6 @@ export default function TipsTab({ tips }: { tips: TipRow[] }) {
     return <p style={{ color: 'var(--wc-text-muted)' }}>Loading…</p>;
   }
 
-  if (tips.length === 0) {
-    return <p style={{ color: 'var(--wc-text-muted)' }}>No tips have been placed yet.</p>;
-  }
-
   const toggleDay = (key: string) => {
     setOpenDays((prev) => {
       const next = new Set(prev);
@@ -101,9 +109,44 @@ export default function TipsTab({ tips }: { tips: TipRow[] }) {
     });
   };
 
+  const stageSwitch = playoffEnabled ? (
+    <div className="d-flex gap-2">
+      {(['group', 'playoff'] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => setView(v)}
+          className="btn btn-sm"
+          style={{
+            backgroundColor: view === v ? 'var(--wc-accent)' : 'var(--wc-surface)',
+            color: view === v ? '#fff' : 'var(--wc-text)',
+            border: '1px solid var(--wc-border)',
+            fontSize: '0.8rem',
+          }}
+        >
+          {v === 'group' ? 'Group stage' : 'Play-off'}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  if (playoffEnabled && view === 'playoff') {
+    return (
+      <div className="d-flex flex-column gap-3">
+        {stageSwitch}
+        <PlayoffTipsTab tips={playoffTips} picks={playoffPicks} />
+      </div>
+    );
+  }
+
   return (
-    <div className="d-flex flex-column gap-2">
-      {groups.map(([key, rows]) => {
+    <div className="d-flex flex-column gap-3">
+      {stageSwitch}
+      {tips.length === 0 ? (
+        <p style={{ color: 'var(--wc-text-muted)' }}>No tips have been placed yet.</p>
+      ) : (
+        <div className="d-flex flex-column gap-2">
+          {groups.map(([key, rows]) => {
         const isOpen = openDays.has(key);
         return (
           <div
@@ -214,7 +257,9 @@ export default function TipsTab({ tips }: { tips: TipRow[] }) {
             )}
           </div>
         );
-      })}
+          })}
+        </div>
+      )}
     </div>
   );
 }
