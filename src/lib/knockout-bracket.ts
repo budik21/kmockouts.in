@@ -131,6 +131,22 @@ export const ANNEX_C_COLUMN_TO_GROUP: Record<string, GroupId> = {
   '1G': 'G', '1I': 'I', '1K': 'K', '1L': 'L',
 };
 
+/** Short placeholder label for a slot whose team is not yet known.
+ *  Mirrors the strings produced by the knockout resolver:
+ *  group → "A1"/"B2", third → "3rd ABCDF", winner → "W73", loser → "L101". */
+export function slotPlaceholder(slot: BracketSlot): string {
+  switch (slot.type) {
+    case 'group':
+      return `${slot.group}${slot.position}`;
+    case 'third':
+      return `3rd ${slot.possibleGroups.join('')}`;
+    case 'winner':
+      return `W${slot.matchNumber}`;
+    case 'loser':
+      return `L${slot.matchNumber}`;
+  }
+}
+
 /** Round display labels */
 export const ROUND_LABELS: Record<KnockoutRoundName, string> = {
   r32: 'Round of 32',

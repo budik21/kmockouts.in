@@ -2,7 +2,12 @@
  * Read helpers shared by the play-off pages, APIs and admin editor.
  */
 import { query } from './db';
-import { ROUND_LABELS, KnockoutRoundName } from './knockout-bracket';
+import {
+  ROUND_LABELS,
+  KnockoutRoundName,
+  ALL_KNOCKOUT_MATCHES,
+  slotPlaceholder,
+} from './knockout-bracket';
 
 export interface PlayoffTeam {
   id: number;
@@ -90,6 +95,112 @@ export async function getKnockoutMatches(): Promise<KnockoutMatchView[]> {
     advancingTeamId: r.advancing_team_id,
     participantsKnown: r.home_id != null && r.away_id != null,
   }));
+}
+
+/** A play-off fixture for the public Fixtures calendar. When a participant is
+ *  known it carries the resolved team (with its origin group, so we can link to
+ *  the team and group pages); otherwise only a static placeholder label. */
+export interface PlayoffFixtureTeam extends PlayoffTeam {
+  /** Origin group letter (A–L) — used to build team/group page links. */
+  groupId: string;
+}
+
+export interface PlayoffFixture {
+  matchNumber: number;
+  round: KnockoutRoundName;
+  roundLabel: string;
+  kickOff: string;
+  venue: string;
+  status: string;
+  homeTeam: PlayoffFixtureTeam | null;
+  awayTeam: PlayoffFixtureTeam | null;
+  /** Placeholder labels shown when the participant is not yet decided. */
+  homePlaceholder: string;
+  awayPlaceholder: string;
+  homeGoals: number | null;
+  awayGoals: number | null;
+  homeGoalsEt: number | null;
+  awayGoalsEt: number | null;
+  homePens: number | null;
+  awayPens: number | null;
+  advancingTeamId: number | null;
+}
+
+interface PlayoffFixtureRow {
+  match_number: number;
+  round: string;
+  kick_off: string;
+  venue: string;
+  status: string;
+  home_goals: number | null;
+  away_goals: number | null;
+  home_goals_et: number | null;
+  away_goals_et: number | null;
+  home_pens: number | null;
+  away_pens: number | null;
+  advancing_team_id: number | null;
+  home_id: number | null;
+  home_name: string | null;
+  home_short: string | null;
+  home_code: string | null;
+  home_group: string | null;
+  away_id: number | null;
+  away_name: string | null;
+  away_short: string | null;
+  away_code: string | null;
+  away_group: string | null;
+}
+
+/** All knockout fixtures for the public calendar: resolved teams (with origin
+ *  group) when known, static placeholder labels otherwise. Ordered by kick-off. */
+export async function getPlayoffFixtures(): Promise<PlayoffFixture[]> {
+  const rows = await query<PlayoffFixtureRow>(
+    `SELECT km.match_number, km.round, km.kick_off, km.venue, km.status,
+            km.home_goals, km.away_goals, km.home_goals_et, km.away_goals_et,
+            km.home_pens, km.away_pens, km.advancing_team_id,
+            ht.id AS home_id, ht.name AS home_name, ht.short_name AS home_short,
+            ht.country_code AS home_code, ht.group_id AS home_group,
+            at.id AS away_id, at.name AS away_name, at.short_name AS away_short,
+            at.country_code AS away_code, at.group_id AS away_group
+     FROM knockout_match km
+     LEFT JOIN team ht ON ht.id = km.home_team_id
+     LEFT JOIN team at ON at.id = km.away_team_id
+     ORDER BY km.kick_off, km.match_number`,
+  );
+
+  // Static slot definitions → placeholder labels, keyed by match number.
+  const defByNum = new Map(ALL_KNOCKOUT_MATCHES.map((m) => [m.matchNumber, m]));
+
+  const toTeam = (
+    id: number | null, name: string | null, short: string | null,
+    code: string | null, group: string | null,
+  ): PlayoffFixtureTeam | null =>
+    id != null
+      ? { id, name: name!, shortName: short!, countryCode: code!, groupId: group ?? '' }
+      : null;
+
+  return rows.map((r) => {
+    const def = defByNum.get(r.match_number);
+    return {
+      matchNumber: r.match_number,
+      round: r.round as KnockoutRoundName,
+      roundLabel: ROUND_LABELS[r.round as KnockoutRoundName] ?? r.round,
+      kickOff: r.kick_off,
+      venue: r.venue,
+      status: r.status,
+      homeTeam: toTeam(r.home_id, r.home_name, r.home_short, r.home_code, r.home_group),
+      awayTeam: toTeam(r.away_id, r.away_name, r.away_short, r.away_code, r.away_group),
+      homePlaceholder: def ? slotPlaceholder(def.home) : 'TBD',
+      awayPlaceholder: def ? slotPlaceholder(def.away) : 'TBD',
+      homeGoals: r.home_goals,
+      awayGoals: r.away_goals,
+      homeGoalsEt: r.home_goals_et,
+      awayGoalsEt: r.away_goals_et,
+      homePens: r.home_pens,
+      awayPens: r.away_pens,
+      advancingTeamId: r.advancing_team_id,
+    };
+  });
 }
 
 /**

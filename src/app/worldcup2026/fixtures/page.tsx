@@ -1,10 +1,18 @@
 import { cachedQuery } from '@/lib/cached-db';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import FixturesCalendar, { type FixtureItem } from '@/app/components/FixturesCalendar';
+import { type FixtureItem } from '@/app/components/FixturesCalendar';
+import FixturesView from '@/app/components/FixturesView';
 import Countdown from '@/app/components/Countdown';
 import JsonLd from '@/app/components/JsonLd';
 import { SITE_URL } from '@/lib/seo';
+import { getPlayoffFixtures } from '@/lib/playoff-data';
+import { unstable_cache } from 'next/cache';
+import { WC_TAG } from '@/lib/cache-tags';
+
+const getCachedPlayoffFixtures = unstable_cache(getPlayoffFixtures, ['fixtures-playoff'], {
+  tags: [WC_TAG],
+});
 
 // Opt out of build-time static prerendering. Without this, Next.js renders
 // the page during `next build` using whatever match data exists then and
@@ -18,7 +26,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'FIFA World Cup 2026 Fixtures, Results & Schedule',
   description:
-    'Complete schedule and live results for every FIFA World Cup 2026 group stage soccer match. Kick-off times, venues, scores and play-off implications for all 48 teams.',
+    'Complete schedule and live results for every FIFA World Cup 2026 match — group stage and knockout play-off. Kick-off times, venues, scores and the road to the final for all 48 teams.',
   keywords: [
     'FIFA World Cup 2026 fixtures',
     'World Cup 2026 schedule',
@@ -80,6 +88,10 @@ export default async function FixturesPage() {
     awayTeam: { name: r.away_name, shortName: r.away_short, countryCode: r.away_cc },
   }));
 
+  // Play-off (knockout) fixtures: resolved teams when known, placeholders
+  // otherwise. Cached under WC_TAG so entering a result invalidates it.
+  const playoffFixtures = await getCachedPlayoffFixtures();
+
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -119,10 +131,10 @@ export default async function FixturesPage() {
         <Countdown />
       </div>
       <p className="text-muted mb-4">
-        Complete schedule of all group stage matches &bull; kick-off times, venues and live scores
+        Complete schedule of every match &bull; kick-off times, venues and live scores
       </p>
 
-      <FixturesCalendar fixtures={fixtures} />
+      <FixturesView groupFixtures={fixtures} playoffFixtures={playoffFixtures} />
     </main>
   );
 }
